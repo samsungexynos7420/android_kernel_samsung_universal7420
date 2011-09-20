@@ -2412,8 +2412,8 @@ extern int intr_sync(int *);
 #ifdef CONFIG_BLOCK
 extern sector_t bmap(struct inode *, sector_t);
 #endif
-extern int notify_change(struct dentry *, struct iattr *);
-extern int notify_change2(struct vfsmount *, struct dentry *, struct iattr *);
+extern int notify_change(struct dentry *, struct iattr *, struct inode **);
+extern int notify_change2(struct vfsmount *, struct dentry *, struct iattr *, struct inode **);
 extern int inode_permission(struct inode *, int);
 extern int inode_permission2(struct vfsmount *, struct inode *, int);
 extern int __inode_permission(struct inode *, int);
