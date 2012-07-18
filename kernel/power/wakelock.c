@@ -188,6 +188,9 @@ int pm_wake_lock(const char *buf)
 	size_t len;
 	int ret = 0;
 
+	if (!capable(CAP_BLOCK_SUSPEND))
+		return -EPERM;
+
 	while (*str && !isspace(*str))
 		str++;
 
@@ -236,6 +239,9 @@ int pm_wake_unlock(const char *buf)
 
 	start_time = ktime_get();
 #endif
+
+	if (!capable(CAP_BLOCK_SUSPEND))
+		return -EPERM;
 
 	len = strlen(buf);
 	if (!len)
