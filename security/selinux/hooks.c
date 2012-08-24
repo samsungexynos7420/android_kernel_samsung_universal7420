@@ -103,7 +103,6 @@ unsigned int cmp_ns_integrity(void)
 	return 0;
 }
 #endif
-#define NUM_SEL_MNT_OPTS 5
 
 #ifdef CONFIG_RKP_KDP
 #include<linux/rkp_entry.h>
@@ -445,7 +444,10 @@ enum {
 	Opt_defcontext = 3,
 	Opt_rootcontext = 4,
 	Opt_labelsupport = 5,
+	Opt_nextmntopt = 6,
 };
+
+#define NUM_SEL_MNT_OPTS	(Opt_nextmntopt - 1)
 
 static const match_table_t tokens = {
 	{Opt_context, CONTEXT_STR "%s"},
