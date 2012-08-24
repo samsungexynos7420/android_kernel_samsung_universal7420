@@ -2539,17 +2539,14 @@ int security_genfs_sid(const char *fstype,
 
 /**
  * security_fs_use - Determine how to handle labeling for a filesystem.
- * @fstype: filesystem type
- * @behavior: labeling behavior
- * @sid: SID for filesystem (superblock)
+ * @sb: superblock in question
  */
-int security_fs_use(
-	const char *fstype,
-	short unsigned int *behavior,
-	u32 *sid)
+int security_fs_use(struct super_block *sb)
 {
 	int rc = 0;
 	struct ocontext *c;
+	struct superblock_security_struct *sbsec = sb->s_security;
+	const char *fstype = sb->s_type->name;
 	u32 tmpsid;
 
 	read_lock(&policy_rwlock);
@@ -2562,7 +2559,7 @@ int security_fs_use(
 	}
 
 	if (c) {
-		*behavior = c->v.behavior;
+		sbsec->behavior = c->v.behavior;
 		if (!c->sid[0]) {
 			rc = sidtab_context_to_sid(&sidtab, &c->context[0],
 						   &tmpsid);
@@ -2570,15 +2567,15 @@ int security_fs_use(
 			if (rc)
 				goto out;
 		}
-		*sid = c->sid[0];
+		sbsec->sid = c->sid[0];
 	} else {
 		rc = __security_genfs_sid(fstype, "/", SECCLASS_DIR,
-					sid);
+					  &sbsec->sid);
 		if (rc) {
-			*behavior = SECURITY_FS_USE_NONE;
+			sbsec->behavior = SECURITY_FS_USE_NONE;
 			rc = 0;
 		} else {
-			*behavior = SECURITY_FS_USE_GENFS;
+			sbsec->behavior = SECURITY_FS_USE_GENFS;
 		}
 	}
 
