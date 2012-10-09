@@ -54,7 +54,7 @@
 /* Non-mount related flags */
 #define SE_SBINITIALIZED	0x10
 #define SE_SBPROC		0x20
-#define SE_SBLABELSUPP	0x40
+#define SBLABEL_MNT	0x40
 #define SE_SBGENFS	0x80
 
 #define CONTEXT_STR	"context="
