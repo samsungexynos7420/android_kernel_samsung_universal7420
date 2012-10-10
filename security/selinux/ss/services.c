@@ -2545,7 +2545,7 @@ int security_genfs_sid(const char *fstype,
  */
 int security_fs_use(
 	const char *fstype,
-	unsigned int *behavior,
+	short unsigned int *behavior,
 	u32 *sid)
 {
 	int rc = 0;
