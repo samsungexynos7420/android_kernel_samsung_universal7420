@@ -1950,11 +1950,6 @@ SYSCALL_DEFINE1(unshare, unsigned long, unshare_flags)
 	if (unshare_flags & CLONE_NEWUSER)
 		unshare_flags |= CLONE_THREAD | CLONE_FS;
 	/*
-	 * If unsharing a pid namespace must also unshare the thread.
-	 */
-	if (unshare_flags & CLONE_NEWPID)
-		unshare_flags |= CLONE_THREAD;
-	/*
 	 * If unsharing vm, must also unshare signal handlers.
 	 */
 	if (unshare_flags & CLONE_VM)
