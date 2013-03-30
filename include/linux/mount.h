@@ -58,6 +58,7 @@ struct mnt_namespace;
 #define MNT_LOCK_NOSUID		0x100000
 #define MNT_LOCK_NODEV		0x200000
 #define MNT_LOCK_READONLY	0x400000
+#define MNT_LOCKED		0x800000
 #define MNT_MARKED		0x4000000
 
 struct vfsmount {
