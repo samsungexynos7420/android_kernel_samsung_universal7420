@@ -53,35 +53,35 @@ obj-$(CONFIG_ARM_VEXPRESS_BL_CPUFREQ)	+= vexpress_big_little.o
 obj-$(CONFIG_ARM_DT_BL_CPUFREQ)		+= arm_big_little_dt.o
 
 obj-$(CONFIG_ARCH_DAVINCI)		+= davinci-cpufreq.o
-obj-$(CONFIG_UX500_SOC_DB8500)		+= dbx500-cpufreq.o
-obj-$(CONFIG_ARM_EXYNOS_CPUFREQ)	+= exynos-cpufreq.o
-obj-$(CONFIG_ARM_EXYNOS_MP_CPUFREQ)	+= exynos-mp-cpufreq.o
-obj-$(CONFIG_ARM_EXYNOS_SMP_CPUFREQ)	+= exynos-smp-cpufreq.o
+obj-$(CONFIG_ARCH_TEGRA)		+= tegra-cpufreq.o
 obj-$(CONFIG_ARM_EXYNOS4210_CPUFREQ)	+= exynos4210-cpufreq.o
 obj-$(CONFIG_ARM_EXYNOS4X12_CPUFREQ)	+= exynos4x12-cpufreq.o
 obj-$(CONFIG_ARM_EXYNOS5250_CPUFREQ)	+= exynos5250-cpufreq.o
-obj-$(CONFIG_ARM_EXYNOS5430_CPUFREQ)	+= exynos5430-eagle-cpufreq.o exynos5430-kfc-cpufreq.o
 obj-$(CONFIG_ARM_EXYNOS5422_CPUFREQ)	+= exynos5422-eagle-cpufreq.o exynos5422-kfc-cpufreq.o
+obj-$(CONFIG_ARM_EXYNOS5430_CPUFREQ)	+= exynos5430-eagle-cpufreq.o exynos5430-kfc-cpufreq.o
 obj-$(CONFIG_ARM_EXYNOS5433_CPUFREQ)	+= exynos5433-atlas-cpufreq.o exynos5433-apollo-cpufreq.o
-obj-$(CONFIG_ARM_EXYNOS7420_CPUFREQ)	+= exynos7420-atlas-cpufreq.o exynos7420-apollo-cpufreq.o
 obj-$(CONFIG_ARM_EXYNOS5440_CPUFREQ)	+= exynos5440-cpufreq.o
-obj-$(CONFIG_EXYNOS7580_DYNAMIC_CLUSTER_HOTPLUG)	+= dm_cluster_hotplug_7580.o
+obj-$(CONFIG_ARM_EXYNOS7420_CPUFREQ)	+= exynos7420-atlas-cpufreq.o exynos7420-apollo-cpufreq.o
+obj-$(CONFIG_ARM_EXYNOS_CPUFREQ)	+= exynos-cpufreq.o
+obj-$(CONFIG_ARM_EXYNOS_MP_CPUFREQ)	+= exynos-mp-cpufreq.o
+obj-$(CONFIG_ARM_EXYNOS_SMP_CPUFREQ)	+= exynos-smp-cpufreq.o
 obj-$(CONFIG_ARM_HIGHBANK_CPUFREQ)	+= highbank-cpufreq.o
 obj-$(CONFIG_ARM_IMX6Q_CPUFREQ)		+= imx6q-cpufreq.o
 obj-$(CONFIG_ARM_INTEGRATOR)		+= integrator-cpufreq.o
 obj-$(CONFIG_ARM_KIRKWOOD_CPUFREQ)	+= kirkwood-cpufreq.o
 obj-$(CONFIG_ARM_OMAP2PLUS_CPUFREQ)	+= omap-cpufreq.o
-obj-$(CONFIG_PXA25x)			+= pxa2xx-cpufreq.o
-obj-$(CONFIG_PXA27x)			+= pxa2xx-cpufreq.o
-obj-$(CONFIG_PXA3xx)			+= pxa3xx-cpufreq.o
 obj-$(CONFIG_ARM_S3C2416_CPUFREQ)	+= s3c2416-cpufreq.o
 obj-$(CONFIG_ARM_S3C64XX_CPUFREQ)	+= s3c64xx-cpufreq.o
 obj-$(CONFIG_ARM_S5PV210_CPUFREQ)	+= s5pv210-cpufreq.o
 obj-$(CONFIG_ARM_SA1100_CPUFREQ)	+= sa1100-cpufreq.o
 obj-$(CONFIG_ARM_SA1110_CPUFREQ)	+= sa1110-cpufreq.o
 obj-$(CONFIG_ARM_SPEAR_CPUFREQ)		+= spear-cpufreq.o
-obj-$(CONFIG_ARCH_TEGRA)		+= tegra-cpufreq.o
+obj-$(CONFIG_EXYNOS7580_DYNAMIC_CLUSTER_HOTPLUG)	+= dm_cluster_hotplug_7580.o
 obj-$(CONFIG_PMU_COREMEM_RATIO)		+= pmu_count.o coremem_ratio.o
+obj-$(CONFIG_PXA25x)			+= pxa2xx-cpufreq.o
+obj-$(CONFIG_PXA27x)			+= pxa2xx-cpufreq.o
+obj-$(CONFIG_PXA3xx)			+= pxa3xx-cpufreq.o
+obj-$(CONFIG_UX500_SOC_DB8500)		+= dbx500-cpufreq.o
 
 ##################################################################################
 # PowerPC platform drivers
