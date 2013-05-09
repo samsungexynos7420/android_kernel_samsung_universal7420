@@ -846,7 +846,8 @@ static unsigned long shrink_page_list(struct list_head *page_list,
 			goto keep;
 
 		VM_BUG_ON(PageActive(page));
-		VM_BUG_ON(page_zone(page) != zone);
+		if (zone)
+			VM_BUG_ON(page_zone(page) != zone);
 
 		sc->nr_scanned++;
 
@@ -928,7 +929,7 @@ static unsigned long shrink_page_list(struct list_head *page_list,
 			/* Case 1 above */
 			if (current_is_kswapd() &&
 			    PageReclaim(page) &&
-			    zone_is_reclaim_writeback(zone)) {
+			    (zone && zone_is_reclaim_writeback(zone))) {
 				nr_immediate++;
 				goto keep_locked;
 
@@ -1010,7 +1011,7 @@ static unsigned long shrink_page_list(struct list_head *page_list,
 			 */
 			if (page_is_file_cache(page) &&
 					(!current_is_kswapd() ||
-					 !zone_is_reclaim_dirty(zone))) {
+					 (zone && !zone_is_reclaim_dirty(zone)))) {
 				/*
 				 * Immediately reclaim when written back.
 				 * Similar in principal to deactivate_page()
