@@ -455,10 +455,10 @@ void bpf_jit_free(struct bpf_prog *fp);
 static inline void bpf_jit_dump(unsigned int flen, unsigned int proglen,
 				u32 pass, void *image)
 {
-	pr_err("flen=%u proglen=%u pass=%u image=%p\n",
+	pr_err("flen=%u proglen=%u pass=%u image=%pK\n",
 	       flen, proglen, pass, image);
 	if (image)
-		print_hex_dump(KERN_ERR, "JIT code: ", DUMP_PREFIX_ADDRESS,
+		print_hex_dump(KERN_ERR, "JIT code: ", DUMP_PREFIX_OFFSET,
 			       16, 1, image, proglen, false);
 }
 #else
