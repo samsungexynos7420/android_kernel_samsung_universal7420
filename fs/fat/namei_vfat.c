@@ -134,8 +134,7 @@ static unsigned int vfat_striptail_len(const struct qstr *qstr)
  * that the existing dentry can be used. The vfat fs routines will
  * return ENOENT or EINVAL as appropriate.
  */
-static int vfat_hash(const struct dentry *dentry, const struct inode *inode,
-		struct qstr *qstr)
+static int vfat_hash(const struct dentry *dentry, struct qstr *qstr)
 {
 	qstr->hash = full_name_hash(qstr->name, vfat_striptail_len(qstr));
 	return 0;
@@ -147,8 +146,7 @@ static int vfat_hash(const struct dentry *dentry, const struct inode *inode,
  * that the existing dentry can be used. The vfat fs routines will
  * return ENOENT or EINVAL as appropriate.
  */
-static int vfat_hashi(const struct dentry *dentry, const struct inode *inode,
-		struct qstr *qstr)
+static int vfat_hashi(const struct dentry *dentry, struct qstr *qstr)
 {
 	struct nls_table *t = MSDOS_SB(dentry->d_sb)->nls_io;
 	const unsigned char *name;
@@ -169,8 +167,7 @@ static int vfat_hashi(const struct dentry *dentry, const struct inode *inode,
 /*
  * Case insensitive compare of two vfat names.
  */
-static int vfat_cmpi(const struct dentry *parent, const struct inode *pinode,
-		const struct dentry *dentry, const struct inode *inode,
+static int vfat_cmpi(const struct dentry *parent, const struct dentry *dentry,
 		unsigned int len, const char *str, const struct qstr *name)
 {
 	struct nls_table *t = MSDOS_SB(parent->d_sb)->nls_io;
@@ -189,8 +186,7 @@ static int vfat_cmpi(const struct dentry *parent, const struct inode *pinode,
 /*
  * Case sensitive compare of two vfat names.
  */
-static int vfat_cmp(const struct dentry *parent, const struct inode *pinode,
-		const struct dentry *dentry, const struct inode *inode,
+static int vfat_cmp(const struct dentry *parent, const struct dentry *dentry,
 		unsigned int len, const char *str, const struct qstr *name)
 {
 	unsigned int alen, blen;
