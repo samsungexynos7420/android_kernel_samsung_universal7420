@@ -538,6 +538,7 @@ static int nfc_llcp_build_gb(struct nfc_llcp_local *local)
 	u8 lto_length, wks_length, miux_length;
 	u8 *version_tlv = NULL, *lto_tlv = NULL,
 	   *wks_tlv = NULL, *miux_tlv = NULL;
+	__be16 wks = cpu_to_be16(local->local_wks);
 	u8 gb_len = 0;
 	int ret = 0;
 
@@ -558,8 +559,7 @@ static int nfc_llcp_build_gb(struct nfc_llcp_local *local)
 	gb_len += lto_length;
 
 	pr_debug("Local wks 0x%lx\n", local->local_wks);
-	wks_tlv = nfc_llcp_build_tlv(LLCP_TLV_WKS, (u8 *)&local->local_wks, 2,
-				     &wks_length);
+	wks_tlv = nfc_llcp_build_tlv(LLCP_TLV_WKS, (u8 *)&wks, 2, &wks_length);
 	if (!wks_tlv) {
 		ret = -ENOMEM;
 		goto out;
