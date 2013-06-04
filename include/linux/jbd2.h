@@ -421,8 +421,15 @@ struct jbd2_revoke_table_s;
 
 struct jbd2_journal_handle
 {
-	/* Which compound transaction is this update a part of? */
-	transaction_t		*h_transaction;
+	union {
+		/* Which compound transaction is this update a part of? */
+		transaction_t	*h_transaction;
+		/* Which journal handle belongs to - used iff h_reserved set */
+		journal_t	*h_journal;
+	};
+
+	/* Handle reserved for finishing the logical operation */
+	handle_t		*h_rsv_handle;
 
 	/* Number of remaining buffers we are allowed to dirty: */
 	int			h_buffer_credits;
@@ -437,6 +444,7 @@ struct jbd2_journal_handle
 	/* Flags [no locking] */
 	unsigned int	h_sync:		1;	/* sync-on-close */
 	unsigned int	h_jdata:	1;	/* force data journaling */
+	unsigned int	h_reserved:	1;	/* handle with reserved credits */
 	unsigned int	h_aborted:	1;	/* fatal error on handle */
 	unsigned int	h_type:		8;	/* for handle statistics */
 	unsigned int	h_line_no:	16;	/* for handle statistics */
@@ -703,6 +711,7 @@ jbd2_time_diff(unsigned long start, unsigned long end)
  * @j_wait_checkpoint:  Wait queue to trigger checkpointing
  * @j_wait_commit: Wait queue to trigger commit
  * @j_wait_updates: Wait queue to wait for updates to complete
+ * @j_wait_reserved: Wait queue to wait for reserved buffer credits to drop
  * @j_checkpoint_mutex: Mutex for locking against concurrent checkpoints
  * @j_head: Journal head - identifies the first unused block in the journal
  * @j_tail: Journal tail - identifies the oldest still-used block in the
@@ -716,6 +725,7 @@ jbd2_time_diff(unsigned long start, unsigned long end)
  *     journal
  * @j_fs_dev: Device which holds the client fs.  For internal journal this will
  *     be equal to j_dev
+ * @j_reserved_credits: Number of buffers reserved from the running transaction
  * @j_maxlen: Total maximum capacity of the journal region on disk.
  * @j_list_lock: Protects the buffer lists and internal buffer state.
  * @j_inode: Optional inode where we store the journal.  If present, all journal
@@ -820,6 +830,9 @@ struct journal_s
 	/* Wait queue to wait for updates to complete */
 	wait_queue_head_t	j_wait_updates;
 
+	/* Wait queue to wait for reserved buffer credits to drop */
+	wait_queue_head_t	j_wait_reserved;
+
 	/* Semaphore for locking against concurrent checkpoints */
 	struct mutex		j_checkpoint_mutex;
 
@@ -873,6 +886,9 @@ struct journal_s
 
 	/* Total maximum capacity of the journal region on disk. */
 	unsigned int		j_maxlen;
+
+	/* Number of buffers reserved from the running transaction */
+	atomic_t		j_reserved_credits;
 
 	/*
 	 * Protects the buffer lists and internal buffer state.
@@ -1115,10 +1131,14 @@ static inline handle_t *journal_current_handle(void)
  */
 
 extern handle_t *jbd2_journal_start(journal_t *, int nblocks);
-extern handle_t *jbd2__journal_start(journal_t *, int nblocks, gfp_t gfp_mask,
-				     unsigned int type, unsigned int line_no);
+extern handle_t *jbd2__journal_start(journal_t *, int blocks, int rsv_blocks,
+				     gfp_t gfp_mask, unsigned int type,
+				     unsigned int line_no);
 extern int	 jbd2_journal_restart(handle_t *, int nblocks);
 extern int	 jbd2__journal_restart(handle_t *, int nblocks, gfp_t gfp_mask);
+extern int	 jbd2_journal_start_reserved(handle_t *handle,
+				unsigned int type, unsigned int line_no);
+extern void	 jbd2_journal_free_reserved(handle_t *handle);
 extern int	 jbd2_journal_extend (handle_t *, int nblocks);
 extern int	 jbd2_journal_get_write_access(handle_t *, struct buffer_head *);
 extern int	 jbd2_journal_get_create_access (handle_t *, struct buffer_head *);
