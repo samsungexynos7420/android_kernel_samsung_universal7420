@@ -1841,7 +1841,7 @@ out_no_pagelock:
  * lock so we have to do some magic.
  *
  * This function can get called via...
- *   - ext4_da_writepages after taking page lock (have journal handle)
+ *   - ext4_writepages after taking page lock (have journal handle)
  *   - journal_submit_inode_data_buffers (no journal handle)
  *   - shrink_page_list via the kswapd/direct reclaim (no journal handle)
  *   - grab_page_cache when doing write_begin (have journal handle)
@@ -2259,7 +2259,7 @@ static int mpage_map_and_submit_extent(handle_t *handle,
 
 /*
  * Calculate the total number of credits to reserve for one writepages
- * iteration. This is called from ext4_da_writepages(). We map an extent of
+ * iteration. This is called from ext4_writepages(). We map an extent of
  * upto MAX_WRITEPAGES_EXTENT_LEN blocks and then we go on and finish mapping
  * the last partial page. So in total we can map MAX_WRITEPAGES_EXTENT_LEN +
  * bpp - 1 blocks in bpp different extents.
@@ -2391,8 +2391,17 @@ out:
 	return err;
 }
 
-static int ext4_da_writepages(struct address_space *mapping,
-			      struct writeback_control *wbc)
+static int __writepage(struct page *page, struct writeback_control *wbc,
+		       void *data)
+{
+	struct address_space *mapping = data;
+	int ret = ext4_writepage(page, wbc);
+	mapping_set_error(mapping, ret);
+	return ret;
+}
+
+static int ext4_writepages(struct address_space *mapping,
+			   struct writeback_control *wbc)
 {
 	pgoff_t	writeback_index = 0;
 	long nr_to_write = wbc->nr_to_write;
@@ -2406,7 +2415,7 @@ static int ext4_da_writepages(struct address_space *mapping,
 	bool done;
 	struct blk_plug plug;
 
-	trace_ext4_da_writepages(inode, wbc);
+	trace_ext4_writepages(inode, wbc);
 
 	/*
 	 * No pages to write? This is mainly a kludge to avoid starting
@@ -2416,13 +2425,23 @@ static int ext4_da_writepages(struct address_space *mapping,
 	if (!mapping->nrpages || !mapping_tagged(mapping, PAGECACHE_TAG_DIRTY))
 		return 0;
 
+	if (ext4_should_journal_data(inode)) {
+		struct blk_plug plug;
+		int ret;
+
+		blk_start_plug(&plug);
+		ret = write_cache_pages(mapping, wbc, __writepage, mapping);
+		blk_finish_plug(&plug);
+		return ret;
+	}
+
 	/*
 	 * If the filesystem has aborted, it is read-only, so return
 	 * right away instead of dumping stack traces later on that
 	 * will obscure the real source of the problem.  We test
 	 * EXT4_MF_FS_ABORTED instead of sb->s_flag's MS_RDONLY because
 	 * the latter could be true if the filesystem is mounted
-	 * read-only, and in that case, ext4_da_writepages should
+	 * read-only, and in that case, ext4_writepages should
 	 * *never* be called, so if that ever happens, we would want
 	 * the stack trace.
 	 */
@@ -2562,8 +2581,8 @@ retry:
 		mapping->writeback_index = mpd.first_page;
 
 out_writepages:
-	trace_ext4_da_writepages_result(inode, wbc, ret,
-					nr_to_write - wbc->nr_to_write);
+	trace_ext4_writepages_result(inode, wbc, ret,
+				     nr_to_write - wbc->nr_to_write);
 	return ret;
 }
 
@@ -2826,7 +2845,7 @@ int ext4_alloc_da_blocks(struct inode *inode)
 	 * laptop_mode, not even desirable).  However, to do otherwise
 	 * would require replicating code paths in:
 	 *
-	 * ext4_da_writepages() ->
+	 * ext4_writepages() ->
 	 *    write_cache_pages() ---> (via passed in callback function)
 	 *        __mpage_da_writepage() -->
 	 *           mpage_add_bh_to_extent()
@@ -3270,6 +3289,7 @@ static const struct address_space_operations ext4_aops = {
 	.readpage		= ext4_readpage,
 	.readpages		= ext4_readpages,
 	.writepage		= ext4_writepage,
+	.writepages		= ext4_writepages,
 	.write_begin		= ext4_write_begin,
 	.write_end		= ext4_write_end,
 	.bmap			= ext4_bmap,
@@ -3285,6 +3305,7 @@ static const struct address_space_operations ext4_journalled_aops = {
 	.readpage		= ext4_readpage,
 	.readpages		= ext4_readpages,
 	.writepage		= ext4_writepage,
+	.writepages		= ext4_writepages,
 	.write_begin		= ext4_write_begin,
 	.write_end		= ext4_journalled_write_end,
 	.set_page_dirty		= ext4_journalled_set_page_dirty,
@@ -3300,7 +3321,7 @@ static const struct address_space_operations ext4_da_aops = {
 	.readpage		= ext4_readpage,
 	.readpages		= ext4_readpages,
 	.writepage		= ext4_writepage,
-	.writepages		= ext4_da_writepages,
+	.writepages		= ext4_writepages,
 	.write_begin		= ext4_da_write_begin,
 	.write_end		= ext4_da_write_end,
 	.bmap			= ext4_bmap,
