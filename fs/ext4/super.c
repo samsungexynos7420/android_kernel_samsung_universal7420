@@ -409,6 +409,11 @@ static void ext4_handle_error(struct super_block *sb, char* buf)
 	}
 	if (test_opt(sb, ERRORS_RO)) {
 		ext4_msg(sb, KERN_CRIT, "Remounting filesystem read-only");
+		/*
+		 * Make sure updated value of ->s_mount_flags will be visible
+		 * before ->s_flags update
+		 */
+		smp_wmb();
 		sb->s_flags |= MS_RDONLY;
 	}
 
@@ -638,8 +643,13 @@ void __ext4_abort(struct super_block *sb, const char *function,
 
 	if ((sb->s_flags & MS_RDONLY) == 0) {
 		ext4_msg(sb, KERN_CRIT, "Remounting filesystem read-only");
-		sb->s_flags |= MS_RDONLY;
 		EXT4_SB(sb)->s_mount_flags |= EXT4_MF_FS_ABORTED;
+		/*
+		 * Make sure updated value of ->s_mount_flags will be visible
+		 * before ->s_flags update
+		 */
+		smp_wmb();
+		sb->s_flags |= MS_RDONLY;
 		if (EXT4_SB(sb)->s_journal)
 			jbd2_journal_abort(EXT4_SB(sb)->s_journal, -EIO);
 		save_error_info(sb, function, line);
