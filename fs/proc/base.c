@@ -1733,10 +1733,8 @@ bool proc_fill_cache(struct file *file, struct dir_context *ctx,
 		}
 	}
 	inode = child->d_inode;
-	if (inode) {
-		ino = inode->i_ino;
-		type = inode->i_mode >> 12;
-	}
+	ino = inode->i_ino;
+	type = inode->i_mode >> 12;
 	dput(child);
 	return dir_emit(ctx, name, len, ino, type);
 
