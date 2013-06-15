@@ -668,8 +668,6 @@ end_advance:
 		ctl.valid = 0;
 	if (!ctl.filled && (ctl.fpos == filp->f_pos)) {
 		if (!ino)
-			ino = find_inode_number(dentry, &qname);
-		if (!ino)
 			ino = iunique(dir->i_sb, 2);
 		ctl.filled = filldir(dirent, qname.name, qname.len,
 				     filp->f_pos, ino, DT_UNKNOWN);
