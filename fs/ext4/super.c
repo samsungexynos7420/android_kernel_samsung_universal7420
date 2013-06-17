@@ -2070,7 +2070,6 @@ static int ext4_fill_flex_info(struct super_block *sb)
 	struct ext4_group_desc *gdp = NULL;
 	struct flex_groups *fg;
 	ext4_group_t flex_group;
-	unsigned int groups_per_flex = 0;
 	int i, err;
 
 	sbi->s_log_groups_per_flex = sbi->s_es->s_log_groups_per_flex;
@@ -2078,7 +2077,6 @@ static int ext4_fill_flex_info(struct super_block *sb)
 		sbi->s_log_groups_per_flex = 0;
 		return 1;
 	}
-	groups_per_flex = 1U << sbi->s_log_groups_per_flex;
 
 	err = ext4_alloc_flex_bg_array(sb, sbi->s_groups_count);
 	if (err)
