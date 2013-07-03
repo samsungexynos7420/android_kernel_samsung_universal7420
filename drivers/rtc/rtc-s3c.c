@@ -431,8 +431,6 @@ static int s3c_rtc_remove(struct platform_device *pdev)
 {
 	struct s3c_rtc *info = platform_get_drvdata(pdev);
 
-	platform_set_drvdata(pdev, NULL);
-
 	s3c_rtc_setaie(info->dev, 0);
 
 	clk_unprepare(info->rtc_clk);
@@ -526,14 +524,14 @@ static int s3c_rtc_probe(struct platform_device *pdev)
 			  0,  "s3c2410-rtc alarm", info);
 	if (ret) {
 		dev_err(&pdev->dev, "IRQ%d error %d\n", info->irq_alarm, ret);
-		goto err_alarm_irq;
+		goto err_nortc;
 	}
 
 	ret = devm_request_irq(&pdev->dev, info->irq_tick, s3c_rtc_tickirq,
 			  0,  "s3c2410-rtc tick", info);
 	if (ret) {
 		dev_err(&pdev->dev, "IRQ%d error %d\n", info->irq_tick, ret);
-		goto err_alarm_irq;
+		goto err_nortc;
 	}
 
 	/* Check RTC Time */
@@ -568,9 +566,6 @@ static int s3c_rtc_probe(struct platform_device *pdev)
 	clk_disable(info->rtc_clk);
 
 	return 0;
-
- err_alarm_irq:
-	platform_set_drvdata(pdev, NULL);
 
  err_nortc:
 	s3c_rtc_enable(info, 0);
