@@ -140,7 +140,7 @@ static void move_ptes(struct vm_area_struct *vma, pmd_t *old_pmd,
 		if (pte_present(pte))
 			force_flush = true;
 		pte = move_pte(pte, new_vma->vm_page_prot, old_addr, new_addr);
-		set_pte_at(mm, new_addr, new_pte, pte);
+		set_pte_at(mm, new_addr, new_pte, pte_mksoft_dirty(pte));
 	}
 
 	arch_leave_lazy_mmu_mode();
