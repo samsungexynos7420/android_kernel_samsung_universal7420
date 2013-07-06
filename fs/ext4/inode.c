@@ -2152,7 +2152,7 @@ static int mpage_map_and_submit_extent(handle_t *handle,
 
 	mpd->io_submit.io_end->offset =
 				((loff_t)map->m_lblk) << inode->i_blkbits;
-	while (map->m_len) {
+	do {
 		err = mpage_map_one_extent(handle, mpd);
 		if (err < 0) {
 			struct super_block *sb = inode->i_sb;
@@ -2190,7 +2190,7 @@ static int mpage_map_and_submit_extent(handle_t *handle,
 		err = mpage_map_and_submit_buffers(mpd);
 		if (err < 0)
 			return err;
-	}
+	} while (map->m_len);
 
 	/*
 	 * Update on-disk size after IO is submitted.  Races with
