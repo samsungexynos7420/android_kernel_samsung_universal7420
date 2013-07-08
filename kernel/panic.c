@@ -443,10 +443,11 @@ static void warn_slowpath_common(const char *file, int line, void *caller,
 				 unsigned taint, struct slowpath_args *args)
 {
 #if defined(CONFIG_SEC_BAT_AUT) && !defined(CONFIG_SAMSUNG_PRODUCT_SHIP)
-	printk(BAT_AUTOMAION_TEST_PREFIX_WARN "KERNEL WARN START\n");
+	pr_warn(BAT_AUTOMAION_TEST_PREFIX_WARN "KERNEL WARN START\n");
 #endif
-	printk(KERN_WARNING "------------[ cut here ]------------\n");
-	printk(KERN_WARNING "WARNING: at %s:%d %pS()\n", file, line, caller);
+	pr_warn("------------[ cut here ]------------\n");
+	pr_warn("WARNING: CPU: %d PID: %d at %s:%d %pS()\n",
+		raw_smp_processor_id(), current->pid, file, line, caller);
 
 	if (args)
 		vprintk(args->fmt, args->args);
@@ -457,7 +458,7 @@ static void warn_slowpath_common(const char *file, int line, void *caller,
 	/* Just a warning, don't kill lockdep. */
 	add_taint(taint, LOCKDEP_STILL_OK);
 #if defined(CONFIG_SEC_BAT_AUT) && !defined(CONFIG_SAMSUNG_PRODUCT_SHIP)
-	printk(BAT_AUTOMAION_TEST_PREFIX_WARN "KERNEL WARN END\n");
+	pr_warn(BAT_AUTOMAION_TEST_PREFIX_WARN "KERNEL WARN END\n");
 #endif
 }
 
