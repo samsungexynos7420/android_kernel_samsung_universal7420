@@ -104,6 +104,7 @@ enum ctype {
 	CT_WRITE_AFTER_FREE,
 	CT_SOFTLOCKUP,
 	CT_HARDLOCKUP,
+	CT_SPINLOCKUP,
 	CT_HUNG_TASK,
 	CT_EXEC_DATA,
 	CT_EXEC_STACK,
@@ -143,6 +144,7 @@ static char* cp_type[] = {
 	"WRITE_AFTER_FREE",
 	"SOFTLOCKUP",
 	"HARDLOCKUP",
+	"SPINLOCKUP",
 	"HUNG_TASK",
 	"EXEC_DATA",
 	"EXEC_STACK",
@@ -168,6 +170,7 @@ static enum cname cpoint = CN_INVALID;
 static enum ctype cptype = CT_NONE;
 static int count = DEFAULT_COUNT;
 static DEFINE_SPINLOCK(count_lock);
+static DEFINE_SPINLOCK(lock_me_up);
 
 static u8 data_area[EXEC_SIZE];
 
@@ -425,6 +428,10 @@ static void lkdtm_do_action(enum ctype which)
 		local_irq_disable();
 		for (;;)
 			cpu_relax();
+		break;
+	case CT_SPINLOCKUP:
+		/* Must be called twice to trigger. */
+		spin_lock(&lock_me_up);
 		break;
 	case CT_HUNG_TASK:
 		set_current_state(TASK_UNINTERRUPTIBLE);
