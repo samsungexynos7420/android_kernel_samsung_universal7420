@@ -168,7 +168,7 @@ static void rcu_preempt_qs(int cpu)
 	struct rcu_data *rdp = &per_cpu(rcu_preempt_data, cpu);
 
 	if (rdp->passed_quiesce == 0)
-		trace_rcu_grace_period("rcu_preempt", rdp->gpnum, "cpuqs");
+		trace_rcu_grace_period(TPS("rcu_preempt"), rdp->gpnum, TPS("cpuqs"));
 	rdp->passed_quiesce = 1;
 	current->rcu_read_unlock_special &= ~RCU_READ_UNLOCK_NEED_QS;
 }
@@ -387,7 +387,7 @@ void rcu_read_unlock_special(struct task_struct *t)
 		np = rcu_next_node_entry(t, rnp);
 		list_del_init(&t->rcu_node_entry);
 		t->rcu_blocked_node = NULL;
-		trace_rcu_unlock_preempted_task("rcu_preempt",
+		trace_rcu_unlock_preempted_task(TPS("rcu_preempt"),
 						rnp->gpnum, t->pid);
 		if (&t->rcu_node_entry == rnp->gp_tasks)
 			rnp->gp_tasks = np;
@@ -411,7 +411,7 @@ void rcu_read_unlock_special(struct task_struct *t)
 		 */
 		empty_exp_now = !rcu_preempted_readers_exp(rnp);
 		if (!empty && !rcu_preempt_blocked_readers_cgp(rnp)) {
-			trace_rcu_quiescent_state_report("preempt_rcu",
+			trace_rcu_quiescent_state_report(TPS("preempt_rcu"),
 							 rnp->gpnum,
 							 0, rnp->qsmask,
 							 rnp->level,
@@ -1223,12 +1223,12 @@ static int rcu_boost_kthread(void *arg)
 	int spincnt = 0;
 	int more2boost;
 
-	trace_rcu_utilization("Start boost kthread@init");
+	trace_rcu_utilization(TPS("Start boost kthread@init"));
 	for (;;) {
 		rnp->boost_kthread_status = RCU_KTHREAD_WAITING;
-		trace_rcu_utilization("End boost kthread@rcu_wait");
+		trace_rcu_utilization(TPS("End boost kthread@rcu_wait"));
 		rcu_wait(rnp->boost_tasks || rnp->exp_tasks);
-		trace_rcu_utilization("Start boost kthread@rcu_wait");
+		trace_rcu_utilization(TPS("Start boost kthread@rcu_wait"));
 		rnp->boost_kthread_status = RCU_KTHREAD_RUNNING;
 		more2boost = rcu_boost(rnp);
 		if (more2boost)
@@ -1237,14 +1237,14 @@ static int rcu_boost_kthread(void *arg)
 			spincnt = 0;
 		if (spincnt > 10) {
 			rnp->boost_kthread_status = RCU_KTHREAD_YIELDING;
-			trace_rcu_utilization("End boost kthread@rcu_yield");
+			trace_rcu_utilization(TPS("End boost kthread@rcu_yield"));
 			schedule_timeout_interruptible(2);
-			trace_rcu_utilization("Start boost kthread@rcu_yield");
+			trace_rcu_utilization(TPS("Start boost kthread@rcu_yield"));
 			spincnt = 0;
 		}
 	}
 	/* NOTREACHED */
-	trace_rcu_utilization("End boost kthread@notreached");
+	trace_rcu_utilization(TPS("End boost kthread@notreached"));
 	return 0;
 }
 
@@ -1392,7 +1392,7 @@ static void rcu_cpu_kthread(unsigned int cpu)
 	int spincnt;
 
 	for (spincnt = 0; spincnt < 10; spincnt++) {
-		trace_rcu_utilization("Start CPU kthread@rcu_wait");
+		trace_rcu_utilization(TPS("Start CPU kthread@rcu_wait"));
 		local_bh_disable();
 		*statusp = RCU_KTHREAD_RUNNING;
 		this_cpu_inc(rcu_cpu_kthread_loops);
@@ -1404,15 +1404,15 @@ static void rcu_cpu_kthread(unsigned int cpu)
 			rcu_kthread_do_work();
 		local_bh_enable();
 		if (*workp == 0) {
-			trace_rcu_utilization("End CPU kthread@rcu_wait");
+			trace_rcu_utilization(TPS("End CPU kthread@rcu_wait"));
 			*statusp = RCU_KTHREAD_WAITING;
 			return;
 		}
 	}
 	*statusp = RCU_KTHREAD_YIELDING;
-	trace_rcu_utilization("Start CPU kthread@rcu_yield");
+	trace_rcu_utilization(TPS("Start CPU kthread@rcu_yield"));
 	schedule_timeout_interruptible(2);
-	trace_rcu_utilization("End CPU kthread@rcu_yield");
+	trace_rcu_utilization(TPS("End CPU kthread@rcu_yield"));
 	*statusp = RCU_KTHREAD_WAITING;
 }
 
@@ -2175,7 +2175,7 @@ static void rcu_nocb_wait_gp(struct rcu_data *rdp)
 	 * Wait for the grace period.  Do so interruptibly to avoid messing
 	 * up the load average.
 	 */
-	trace_rcu_future_gp(rnp, rdp, c, "StartWait");
+	trace_rcu_future_gp(rnp, rdp, c, TPS("StartWait"));
 	for (;;) {
 		wait_event_interruptible(
 			rnp->nocb_gp_wq[c & 0x1],
@@ -2183,9 +2183,9 @@ static void rcu_nocb_wait_gp(struct rcu_data *rdp)
 		if (likely(d))
 			break;
 		flush_signals(current);
-		trace_rcu_future_gp(rnp, rdp, c, "ResumeWait");
+		trace_rcu_future_gp(rnp, rdp, c, TPS("ResumeWait"));
 	}
-	trace_rcu_future_gp(rnp, rdp, c, "EndWait");
+	trace_rcu_future_gp(rnp, rdp, c, TPS("EndWait"));
 	smp_mb(); /* Ensure that CB invocation happens after GP end. */
 }
 
