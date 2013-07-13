@@ -448,7 +448,7 @@ static void ext4_es_insert_extent_ext_check(struct inode *inode,
 		 */
 		if (!ext4_es_is_written(es) && !ext4_es_is_unwritten(es)) {
 			if (in_range(es->es_lblk, ee_block, ee_len)) {
-				pr_warn("ES insert assertation failed for "
+				pr_warn("ES insert assertion failed for "
 					"inode: %lu we can find an extent "
 					"at block [%d/%d/%llu/%c], but we "
 					"want to add a delayed/hole extent "
@@ -467,7 +467,7 @@ static void ext4_es_insert_extent_ext_check(struct inode *inode,
 		 */
 		if (es->es_lblk < ee_block ||
 		    ext4_es_pblock(es) != ee_start + es->es_lblk - ee_block) {
-			pr_warn("ES insert assertation failed for inode: %lu "
+			pr_warn("ES insert assertion failed for inode: %lu "
 				"ex_status [%d/%d/%llu/%c] != "
 				"es_status [%d/%d/%llu/%c]\n", inode->i_ino,
 				ee_block, ee_len, ee_start,
@@ -477,7 +477,7 @@ static void ext4_es_insert_extent_ext_check(struct inode *inode,
 		}
 
 		if (ee_status ^ es_status) {
-			pr_warn("ES insert assertation failed for inode: %lu "
+			pr_warn("ES insert assertion failed for inode: %lu "
 				"ex_status [%d/%d/%llu/%c] != "
 				"es_status [%d/%d/%llu/%c]\n", inode->i_ino,
 				ee_block, ee_len, ee_start,
@@ -490,7 +490,7 @@ static void ext4_es_insert_extent_ext_check(struct inode *inode,
 		 * that we don't want to add an written/unwritten extent.
 		 */
 		if (!ext4_es_is_delayed(es) && !ext4_es_is_hole(es)) {
-			pr_warn("ES insert assertation failed for inode: %lu "
+			pr_warn("ES insert assertion failed for inode: %lu "
 				"can't find an extent at block %d but we want "
 				"to add a written/unwritten extent "
 				"[%d/%d/%llu/%x]\n", inode->i_ino,
@@ -526,7 +526,7 @@ static void ext4_es_insert_extent_ind_check(struct inode *inode,
 			 * We want to add a delayed/hole extent but this
 			 * block has been allocated.
 			 */
-			pr_warn("ES insert assertation failed for inode: %lu "
+			pr_warn("ES insert assertion failed for inode: %lu "
 				"We can find blocks but we want to add a "
 				"delayed/hole extent [%d/%d/%llu/%x]\n",
 				inode->i_ino, es->es_lblk, es->es_len,
@@ -534,13 +534,13 @@ static void ext4_es_insert_extent_ind_check(struct inode *inode,
 			return;
 		} else if (ext4_es_is_written(es)) {
 			if (retval != es->es_len) {
-				pr_warn("ES insert assertation failed for "
+				pr_warn("ES insert assertion failed for "
 					"inode: %lu retval %d != es_len %d\n",
 					inode->i_ino, retval, es->es_len);
 				return;
 			}
 			if (map.m_pblk != ext4_es_pblock(es)) {
-				pr_warn("ES insert assertation failed for "
+				pr_warn("ES insert assertion failed for "
 					"inode: %lu m_pblk %llu != "
 					"es_pblk %llu\n",
 					inode->i_ino, map.m_pblk,
@@ -556,7 +556,7 @@ static void ext4_es_insert_extent_ind_check(struct inode *inode,
 		}
 	} else if (retval == 0) {
 		if (ext4_es_is_written(es)) {
-			pr_warn("ES insert assertation failed for inode: %lu "
+			pr_warn("ES insert assertion failed for inode: %lu "
 				"We can't find the block but we want to add "
 				"a written extent [%d/%d/%llu/%x]\n",
 				inode->i_ino, es->es_lblk, es->es_len,
@@ -639,10 +639,8 @@ out:
 }
 
 /*
- * ext4_es_insert_extent() adds a space to a extent status tree.
- *
- * ext4_es_insert_extent is called by ext4_da_write_begin and
- * ext4_es_remove_extent.
+ * ext4_es_insert_extent() adds information to an inode's extent
+ * status tree.
  *
  * Return 0 on success, error code on failure.
  */
