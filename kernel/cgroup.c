@@ -886,7 +886,6 @@ static struct cgroup *task_cgroup_from_root(struct task_struct *task,
  */
 
 static int cgroup_mkdir(struct inode *dir, struct dentry *dentry, umode_t mode);
-static struct dentry *cgroup_lookup(struct inode *, struct dentry *, unsigned int);
 static int cgroup_rmdir(struct inode *unused_dir, struct dentry *dentry);
 static int cgroup_populate_dir(struct cgroup *cgrp, unsigned long subsys_mask);
 static const struct inode_operations cgroup_dir_inode_operations;
@@ -2591,7 +2590,7 @@ static const struct inode_operations cgroup_file_inode_operations = {
 };
 
 static const struct inode_operations cgroup_dir_inode_operations = {
-	.lookup = cgroup_lookup,
+	.lookup = simple_lookup,
 	.mkdir = cgroup_mkdir,
 	.rmdir = cgroup_rmdir,
 	.rename = cgroup_rename,
@@ -2600,14 +2599,6 @@ static const struct inode_operations cgroup_dir_inode_operations = {
 	.listxattr = cgroup_listxattr,
 	.removexattr = cgroup_removexattr,
 };
-
-static struct dentry *cgroup_lookup(struct inode *dir, struct dentry *dentry, unsigned int flags)
-{
-	if (dentry->d_name.len > NAME_MAX)
-		return ERR_PTR(-ENAMETOOLONG);
-	d_add(dentry, NULL);
-	return NULL;
-}
 
 static int cgroup_create_file(struct dentry *dentry, umode_t mode,
 				struct super_block *sb)
