@@ -1262,6 +1262,10 @@ static int fuse_direntplus_link(struct file *file,
 			fi->nlookup++;
 			spin_unlock(&fc->lock);
 
+			fuse_change_attributes(inode, &o->attr,
+					       entry_attr_timeout(o),
+					       attr_version);
+
 			/*
 			 * The other branch to 'found' comes via fuse_iget()
 			 * which bumps nlookup inside
@@ -1293,9 +1297,6 @@ static int fuse_direntplus_link(struct file *file,
 	}
 
 found:
-	fuse_change_attributes(inode, &o->attr, entry_attr_timeout(o),
-			       attr_version);
-
 	fuse_change_entry_timeout(dentry, o);
 
 	err = 0;
