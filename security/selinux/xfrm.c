@@ -221,34 +221,36 @@ int selinux_xfrm_state_pol_flow_match(struct xfrm_state *x,
 static int selinux_xfrm_skb_sid_ingress(struct sk_buff *skb,
 					u32 *sid, int ckall)
 {
+	u32 sid_session = SECSID_NULL;
 	struct sec_path *sp = skb->sp;
 #ifdef CONFIG_RKP_KDP
 	int rc;
 	if ((rc = security_integrity_current()))
 		return rc;
 #endif
-	*sid = SECSID_NULL;
 
 	if (sp) {
-		int i, sid_set = 0;
+		int i;
 
-		for (i = sp->len-1; i >= 0; i--) {
+		for (i = sp->len - 1; i >= 0; i--) {
 			struct xfrm_state *x = sp->xvec[i];
 			if (selinux_authorizable_xfrm(x)) {
 				struct xfrm_sec_ctx *ctx = x->security;
 
-				if (!sid_set) {
-					*sid = ctx->ctx_sid;
-					sid_set = 1;
-
+				if (sid_session == SECSID_NULL) {
+					sid_session = ctx->ctx_sid;
 					if (!ckall)
-						break;
-				} else if (*sid != ctx->ctx_sid)
+						goto out;
+				} else if (sid_session != ctx->ctx_sid) {
+					*sid = SECSID_NULL;
 					return -EINVAL;
+				}
 			}
 		}
 	}
 
+out:
+	*sid = sid_session;
 	return 0;
 }
 
