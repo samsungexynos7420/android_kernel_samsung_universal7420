@@ -1463,9 +1463,10 @@ static int fmeter_getrate(struct fmeter *fmp)
 }
 
 /* Called by cgroups to determine if a cpuset is usable; cpuset_mutex held */
-static int cpuset_can_attach(struct cgroup *cgrp, struct cgroup_taskset *tset)
+static int cpuset_can_attach(struct cgroup_subsys_state *css,
+			     struct cgroup_taskset *tset)
 {
-	struct cpuset *cs = cgroup_cs(cgrp);
+	struct cpuset *cs = css_cs(css);
 	struct task_struct *task;
 	int ret;
 
@@ -1476,11 +1477,11 @@ static int cpuset_can_attach(struct cgroup *cgrp, struct cgroup_taskset *tset)
 	 * flag is set.
 	 */
 	ret = -ENOSPC;
-	if (!cgroup_sane_behavior(cgrp) &&
+	if (!cgroup_sane_behavior(css->cgroup) &&
 	    (cpumask_empty(cs->cpus_allowed) || nodes_empty(cs->mems_allowed)))
 		goto out_unlock;
 
-	cgroup_taskset_for_each(task, cgrp, tset) {
+	cgroup_taskset_for_each(task, css->cgroup, tset) {
 		/*
 		 * Kthreads which disallow setaffinity shouldn't be moved
 		 * to a new cpuset; we don't want to change their cpu
@@ -1509,11 +1510,11 @@ out_unlock:
 	return ret;
 }
 
-static void cpuset_cancel_attach(struct cgroup *cgrp,
+static void cpuset_cancel_attach(struct cgroup_subsys_state *css,
 				 struct cgroup_taskset *tset)
 {
 	mutex_lock(&cpuset_mutex);
-	cgroup_cs(cgrp)->attach_in_progress--;
+	css_cs(css)->attach_in_progress--;
 	mutex_unlock(&cpuset_mutex);
 }
 
@@ -1524,7 +1525,8 @@ static void cpuset_cancel_attach(struct cgroup *cgrp,
  */
 static cpumask_var_t cpus_attach;
 
-static void cpuset_attach(struct cgroup *cgrp, struct cgroup_taskset *tset)
+static void cpuset_attach(struct cgroup_subsys_state *css,
+			  struct cgroup_taskset *tset)
 {
 	/* static buf protected by cpuset_mutex */
 	static nodemask_t cpuset_attach_nodemask_to;
@@ -1532,7 +1534,7 @@ static void cpuset_attach(struct cgroup *cgrp, struct cgroup_taskset *tset)
 	struct task_struct *task;
 	struct task_struct *leader = cgroup_taskset_first(tset);
 	struct cgroup *oldcgrp = cgroup_taskset_cur_cgroup(tset);
-	struct cpuset *cs = cgroup_cs(cgrp);
+	struct cpuset *cs = css_cs(css);
 	struct cpuset *oldcs = cgroup_cs(oldcgrp);
 	struct cpuset *cpus_cs = effective_cpumask_cpuset(cs);
 	struct cpuset *mems_cs = effective_nodemask_cpuset(cs);
@@ -1547,7 +1549,7 @@ static void cpuset_attach(struct cgroup *cgrp, struct cgroup_taskset *tset)
 
 	guarantee_online_mems(mems_cs, &cpuset_attach_nodemask_to);
 
-	cgroup_taskset_for_each(task, cgrp, tset) {
+	cgroup_taskset_for_each(task, css->cgroup, tset) {
 		/*
 		 * can_attach beforehand should guarantee that this doesn't
 		 * fail.  TODO: have a better way to handle failure here
@@ -1950,11 +1952,12 @@ static struct cftype files[] = {
  *	cgrp:	control group that the new cpuset will be part of
  */
 
-static struct cgroup_subsys_state *cpuset_css_alloc(struct cgroup *cgrp)
+static struct cgroup_subsys_state *
+cpuset_css_alloc(struct cgroup_subsys_state *parent_css)
 {
 	struct cpuset *cs;
 
-	if (!cgrp->parent)
+	if (!parent_css)
 		return &top_cpuset.css;
 
 	cs = kzalloc(sizeof(*cs), GFP_KERNEL);
@@ -1981,9 +1984,9 @@ error_allowed:
 	return ERR_PTR(-ENOMEM);
 }
 
-static int cpuset_css_online(struct cgroup *cgrp)
+static int cpuset_css_online(struct cgroup_subsys_state *css)
 {
-	struct cpuset *cs = cgroup_cs(cgrp);
+	struct cpuset *cs = css_cs(css);
 	struct cpuset *parent = parent_cs(cs);
 	struct cpuset *tmp_cs;
 	struct cgroup *pos_cgrp;
@@ -2001,7 +2004,7 @@ static int cpuset_css_online(struct cgroup *cgrp)
 
 	number_of_cpusets++;
 
-	if (!test_bit(CGRP_CPUSET_CLONE_CHILDREN, &cgrp->flags))
+	if (!test_bit(CGRP_CPUSET_CLONE_CHILDREN, &css->cgroup->flags))
 		goto out_unlock;
 
 	/*
@@ -2042,9 +2045,9 @@ out_unlock:
  * will call rebuild_sched_domains_locked().
  */
 
-static void cpuset_css_offline(struct cgroup *cgrp)
+static void cpuset_css_offline(struct cgroup_subsys_state *css)
 {
-	struct cpuset *cs = cgroup_cs(cgrp);
+	struct cpuset *cs = css_cs(css);
 
 	mutex_lock(&cpuset_mutex);
 
@@ -2057,9 +2060,9 @@ static void cpuset_css_offline(struct cgroup *cgrp)
 	mutex_unlock(&cpuset_mutex);
 }
 
-static void cpuset_css_free(struct cgroup *cgrp)
+static void cpuset_css_free(struct cgroup_subsys_state *css)
 {
-	struct cpuset *cs = cgroup_cs(cgrp);
+	struct cpuset *cs = css_cs(css);
 
 	free_cpumask_var(cs->cpus_allowed);
 	free_cpumask_var(cs->cpus_requested);
