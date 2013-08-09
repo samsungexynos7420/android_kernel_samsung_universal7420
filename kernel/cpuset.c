@@ -1611,9 +1611,10 @@ typedef enum {
 	FILE_SPREAD_SLAB,
 } cpuset_filetype_t;
 
-static int cpuset_write_u64(struct cgroup *cgrp, struct cftype *cft, u64 val)
+static int cpuset_write_u64(struct cgroup_subsys_state *css, struct cftype *cft,
+			    u64 val)
 {
-	struct cpuset *cs = cgroup_cs(cgrp);
+	struct cpuset *cs = css_cs(css);
 	cpuset_filetype_t type = cft->private;
 	int retval = 0;
 
@@ -1660,9 +1661,10 @@ out_unlock:
 	return retval;
 }
 
-static int cpuset_write_s64(struct cgroup *cgrp, struct cftype *cft, s64 val)
+static int cpuset_write_s64(struct cgroup_subsys_state *css, struct cftype *cft,
+			    s64 val)
 {
-	struct cpuset *cs = cgroup_cs(cgrp);
+	struct cpuset *cs = css_cs(css);
 	cpuset_filetype_t type = cft->private;
 	int retval = -ENODEV;
 
@@ -1686,10 +1688,10 @@ out_unlock:
 /*
  * Common handling for a write to a "cpus" or "mems" file.
  */
-static int cpuset_write_resmask(struct cgroup *cgrp, struct cftype *cft,
-				const char *buf)
+static int cpuset_write_resmask(struct cgroup_subsys_state *css,
+				struct cftype *cft, const char *buf)
 {
-	struct cpuset *cs = cgroup_cs(cgrp);
+	struct cpuset *cs = css_cs(css);
 	struct cpuset *trialcs;
 	int retval = -ENODEV;
 
@@ -1768,13 +1770,12 @@ static size_t cpuset_sprintf_memlist(char *page, struct cpuset *cs)
 	return count;
 }
 
-static ssize_t cpuset_common_file_read(struct cgroup *cgrp,
-				       struct cftype *cft,
-				       struct file *file,
-				       char __user *buf,
-				       size_t nbytes, loff_t *ppos)
+static ssize_t cpuset_common_file_read(struct cgroup_subsys_state *css,
+				       struct cftype *cft, struct file *file,
+				       char __user *buf, size_t nbytes,
+				       loff_t *ppos)
 {
-	struct cpuset *cs = cgroup_cs(cgrp);
+	struct cpuset *cs = css_cs(css);
 	cpuset_filetype_t type = cft->private;
 	char *page;
 	ssize_t retval = 0;
@@ -1804,9 +1805,9 @@ out:
 	return retval;
 }
 
-static u64 cpuset_read_u64(struct cgroup *cgrp, struct cftype *cft)
+static u64 cpuset_read_u64(struct cgroup_subsys_state *css, struct cftype *cft)
 {
-	struct cpuset *cs = cgroup_cs(cgrp);
+	struct cpuset *cs = css_cs(css);
 	cpuset_filetype_t type = cft->private;
 	switch (type) {
 	case FILE_CPU_EXCLUSIVE:
@@ -1835,9 +1836,9 @@ static u64 cpuset_read_u64(struct cgroup *cgrp, struct cftype *cft)
 	return 0;
 }
 
-static s64 cpuset_read_s64(struct cgroup *cgrp, struct cftype *cft)
+static s64 cpuset_read_s64(struct cgroup_subsys_state *css, struct cftype *cft)
 {
-	struct cpuset *cs = cgroup_cs(cgrp);
+	struct cpuset *cs = css_cs(css);
 	cpuset_filetype_t type = cft->private;
 	switch (type) {
 	case FILE_SCHED_RELAX_DOMAIN_LEVEL:
