@@ -631,6 +631,8 @@ resizefs_out:
 
 		return 0;
 	}
+	case EXT4_IOC_PRECACHE_EXTENTS:
+		return ext4_ext_precache(inode);
 
 	case FS_IOC_INVAL_MAPPING:
 	{
@@ -700,6 +702,7 @@ long ext4_compat_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	case EXT4_IOC_MOVE_EXT:
 	case FITRIM:
 	case EXT4_IOC_RESIZE_FS:
+	case EXT4_IOC_PRECACHE_EXTENTS:
 		break;
 	default:
 		return -ENOIOCTLCMD;
