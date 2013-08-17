@@ -563,7 +563,7 @@ int ext4_map_blocks(handle_t *handle, struct inode *inode,
 	}
 	if (retval > 0) {
 		int ret;
-		unsigned long long status;
+		unsigned int status;
 
 #ifdef ES_AGGRESSIVE_TEST
 		if (retval != map->m_len) {
@@ -665,7 +665,7 @@ found:
 
 	if (retval > 0) {
 		int ret;
-		unsigned long long status;
+		unsigned int status;
 
 #ifdef ES_AGGRESSIVE_TEST
 		if (retval != map->m_len) {
@@ -1663,7 +1663,7 @@ add_delayed:
 		set_buffer_delay(bh);
 	} else if (retval > 0) {
 		int ret;
-		unsigned long long status;
+		unsigned int status;
 
 #ifdef ES_AGGRESSIVE_TEST
 		if (retval != map->m_len) {
