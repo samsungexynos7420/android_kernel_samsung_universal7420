@@ -828,8 +828,8 @@ static int dev_attrs_store_iter(struct device *dev,
 {
 	int i;
 
-	for (i = 0; attr_name(dev_attrs[i]); i++) {
-		if (!strcmp(name, attr_name(dev_attrs[i])))
+	for (i = 0; dev_attrs[i].attr.name; i++) {
+		if (!strcmp(name, dev_attrs[i].attr.name))
 			attr_store(dev, &dev_attrs[i].attr, buf, size);
 	}
 
