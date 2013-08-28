@@ -348,14 +348,14 @@ static void jbd2_block_tag_csum_set(journal_t *j, journal_block_tag_t *tag,
 	struct page *page = bh->b_page;
 	__u8 *addr;
 	__u32 csum32;
+	__be32 seq;
 
 	if (!jbd2_journal_has_csum_v2or3(j))
 		return;
 
-	sequence = cpu_to_be32(sequence);
+	seq = cpu_to_be32(sequence);
 	addr = kmap_atomic(page);
-	csum32 = jbd2_chksum(j, j->j_csum_seed, (__u8 *)&sequence,
-			     sizeof(sequence));
+	csum32 = jbd2_chksum(j, j->j_csum_seed, (__u8 *)&seq, sizeof(seq));
 	csum32 = jbd2_chksum(j, csum32, addr + offset_in_page(bh->b_data),
 			     bh->b_size);
 	kunmap_atomic(addr);
