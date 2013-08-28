@@ -88,6 +88,7 @@ ext4_read_inode_bitmap(struct super_block *sb, ext4_group_t block_group)
 	struct ext4_group_desc *desc;
 	struct buffer_head *bh = NULL;
 	ext4_fsblk_t bitmap_blk;
+	struct ext4_group_info *grp;
 
 	desc = ext4_get_group_desc(sb, block_group, NULL);
 	if (!desc)
@@ -167,6 +168,8 @@ verify:
 		put_bh(bh);
 		ext4_error(sb, "Corrupt inode bitmap - block_group = %u, "
 			   "inode_bitmap = %llu", block_group, bitmap_blk);
+		grp = ext4_get_group_info(sb, block_group);
+		set_bit(EXT4_GROUP_INFO_IBITMAP_CORRUPT_BIT, &grp->bb_state);
 		return NULL;
 	}
 	ext4_unlock_group(sb, block_group);
@@ -203,6 +206,7 @@ void ext4_free_inode(handle_t *handle, struct inode *inode)
 	struct ext4_super_block *es;
 	struct ext4_sb_info *sbi;
 	int fatal = 0, err, count, cleared;
+	struct ext4_group_info *grp;
 
 	if (!sb) {
 		printk(KERN_ERR "EXT4-fs: %s:%d: inode on "
@@ -248,7 +252,9 @@ void ext4_free_inode(handle_t *handle, struct inode *inode)
 	block_group = (ino - 1) / EXT4_INODES_PER_GROUP(sb);
 	bit = (ino - 1) % EXT4_INODES_PER_GROUP(sb);
 	bitmap_bh = ext4_read_inode_bitmap(sb, block_group);
-	if (!bitmap_bh)
+	/* Don't bother if the inode bitmap is corrupt. */
+	grp = ext4_get_group_info(sb, block_group);
+	if (unlikely(EXT4_MB_GRP_IBITMAP_CORRUPT(grp)) || !bitmap_bh)
 		goto error_return;
 
 	BUFFER_TRACE(bitmap_bh, "get_write_access");
@@ -302,6 +308,7 @@ out:
 		print_bh(sb, bitmap_bh, 0, EXT4_BLOCK_SIZE(sb));
 		/* for debugging */
 		ext4_error(sb, "bit already cleared for inode %lu", ino);
+		set_bit(EXT4_GROUP_INFO_IBITMAP_CORRUPT_BIT, &grp->bb_state);
 	}
 
 error_return:
@@ -664,6 +671,7 @@ struct inode *__ext4_new_inode(handle_t *handle, struct inode *dir,
 	struct inode *ret;
 	ext4_group_t i;
 	ext4_group_t flex_group;
+	struct ext4_group_info *grp;
 
 	/* Cannot create files in a deleted directory */
 	if (!dir || !dir->i_nlink)
@@ -742,10 +750,22 @@ got_group:
 			continue;
 		}
 
+		grp = ext4_get_group_info(sb, group);
+		/* Skip groups with already-known suspicious inode tables */
+		if (EXT4_MB_GRP_IBITMAP_CORRUPT(grp)) {
+			if (++group == ngroups)
+				group = 0;
+			continue;
+		}
+
 		brelse(inode_bitmap_bh);
 		inode_bitmap_bh = ext4_read_inode_bitmap(sb, group);
-		if (!inode_bitmap_bh)
-			goto out;
+		/* Skip groups with suspicious inode tables */
+		if (EXT4_MB_GRP_IBITMAP_CORRUPT(grp) || !inode_bitmap_bh) {
+			if (++group == ngroups)
+				group = 0;
+			continue;
+		}
 
 repeat_in_this_group:
 		ino = ext4_find_next_zero_bit((unsigned long *)
