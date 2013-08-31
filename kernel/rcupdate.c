@@ -125,7 +125,7 @@ EXPORT_SYMBOL_GPL(rcu_sched_lock_map);
 
 #ifdef CONFIG_DEBUG_LOCK_ALLOC
 
-int debug_lockdep_rcu_enabled(void)
+int notrace debug_lockdep_rcu_enabled(void)
 {
 	return rcu_scheduler_active && debug_locks &&
 	       current->lockdep_recursion == 0;
