@@ -37,11 +37,11 @@ enum bh_state_bits {
 	BH_Meta,	/* Buffer contains metadata */
 	BH_Prio,	/* Buffer should be submitted with REQ_PRIO */
 	BH_Sync_Flush,
+	BH_Defer_Completion, /* Defer AIO completion to workqueue */
 #ifdef CONFIG_JOURNAL_DATA_TAG
 	BH_Journal, /* Buffer contains journal data */
 	BH_Jmeta,   /* Buffer contains metadata */
 #endif
-
 	BH_PrivateStart,/* not a state bit, but the first bit available
 			 * for private allocation by other entities
 			 */
@@ -134,6 +134,7 @@ BUFFER_FNS(Unwritten, unwritten)
 BUFFER_FNS(Meta, meta)
 BUFFER_FNS(Prio, prio)
 BUFFER_FNS(Sync_Flush, sync_flush)
+BUFFER_FNS(Defer_Completion, defer_completion)
 #ifdef CONFIG_JOURNAL_DATA_TAG
 BUFFER_FNS(Journal, journal)
 BUFFER_FNS(Jmeta, jmeta)
