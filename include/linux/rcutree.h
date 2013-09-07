@@ -88,4 +88,6 @@ extern void rcu_sched_force_quiescent_state(void);
 extern void rcu_scheduler_starting(void);
 extern int rcu_scheduler_active __read_mostly;
 
+extern bool __rcu_is_watching(void);
+
 #endif /* __LINUX_RCUTREE_H */
