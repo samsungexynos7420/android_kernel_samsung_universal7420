@@ -59,6 +59,13 @@ struct fpsimd_context {
 	___uint128_t vregs[32];
 };
 
+/* ESR_EL1 context */
+#define ESR_MAGIC	0x45535201
+
+struct esr_context {
+	struct _aarch64_ctx head;
+	u64 esr;
+};
 
 #else /* CONFIG_64BIT */
 
