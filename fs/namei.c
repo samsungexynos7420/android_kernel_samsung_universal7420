@@ -2796,16 +2796,6 @@ static int atomic_open(struct nameidata *nd, struct dentry *dentry,
 		goto out;
 	}
 
-	acc_mode = op->acc_mode;
-	if (WARN_ON(excl && !(*opened & FILE_CREATED)))
-		*opened |= FILE_CREATED;
-
-	if (*opened & FILE_CREATED) {
-		WARN_ON(!(open_flag & O_CREAT));
-		fsnotify_create(dir, dentry);
-		acc_mode = MAY_OPEN;
-	}
-
 	if (error) {	/* returned 1, that is */
 		if (WARN_ON(file->f_path.dentry == DENTRY_NOT_SET)) {
 			error = -EIO;
@@ -2815,10 +2805,19 @@ static int atomic_open(struct nameidata *nd, struct dentry *dentry,
 			dput(dentry);
 			dentry = file->f_path.dentry;
 		}
-		WARN_ON(!dentry->d_inode && (*opened & FILE_CREATED));
-		if (create_error && dentry->d_inode == NULL) {
-			error = create_error;
-			goto out;
+		if (*opened & FILE_CREATED)
+			fsnotify_create(dir, dentry);
+		if (!dentry->d_inode) {
+			WARN_ON(*opened & FILE_CREATED);
+			if (create_error) {
+				error = create_error;
+				goto out;
+			}
+		} else {
+			if (excl && !(*opened & FILE_CREATED)) {
+				error = -EEXIST;
+				goto out;
+			}
 		}
 		goto looked_up;
 	}
@@ -2827,6 +2826,12 @@ static int atomic_open(struct nameidata *nd, struct dentry *dentry,
 	 * We didn't have the inode before the open, so check open permission
 	 * here.
 	 */
+	acc_mode = op->acc_mode;
+	if (*opened & FILE_CREATED) {
+		WARN_ON(!(open_flag & O_CREAT));
+		fsnotify_create(dir, dentry);
+		acc_mode = MAY_OPEN;
+	}
 	error = may_open(&file->f_path, acc_mode, open_flag);
 	if (error)
 		fput(file);
