@@ -995,6 +995,12 @@ set_rcvbuf:
 		sock_valbool_flag(sk, SOCK_SELECT_ERR_QUEUE, valbool);
 		break;
 
+	case SO_MAX_PACING_RATE:
+		sk->sk_max_pacing_rate = val;
+		sk->sk_pacing_rate = min(sk->sk_pacing_rate,
+					 sk->sk_max_pacing_rate);
+		break;
+
 	default:
 		ret = -ENOPROTOOPT;
 		break;
@@ -1250,6 +1256,10 @@ int sock_getsockopt(struct socket *sock, int level, int optname,
 
 	case SO_SELECT_ERR_QUEUE:
 		v.val = sock_flag(sk, SOCK_SELECT_ERR_QUEUE);
+		break;
+
+	case SO_MAX_PACING_RATE:
+		v.val = sk->sk_max_pacing_rate;
 		break;
 
 	default:
@@ -2404,6 +2414,7 @@ void sock_init_data(struct socket *sock, struct sock *sk)
 
 	sk->sk_stamp = ktime_set(-1L, 0);
 	
+	sk->sk_max_pacing_rate = ~0U;
 #ifndef CONFIG_MPTCP
 	sk->sk_pacing_rate = ~0U;
 #endif
