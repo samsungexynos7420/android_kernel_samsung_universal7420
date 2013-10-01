@@ -1126,6 +1126,8 @@ static int fuse_access(struct inode *inode, int mask)
 	struct fuse_access_in inarg;
 	int err;
 
+	BUG_ON(mask & MAY_NOT_BLOCK);
+
 	if (fc->no_access)
 		return 0;
 
@@ -1213,9 +1215,6 @@ static int fuse_permission(struct inode *inode, int mask)
 		   noticed immediately, only after the attribute
 		   timeout has expired */
 	} else if (mask & (MAY_ACCESS | MAY_CHDIR)) {
-		if (mask & MAY_NOT_BLOCK)
-			return -ECHILD;
-
 		err = fuse_access(inode, mask);
 	} else if ((mask & MAY_EXEC) && S_ISREG(inode->i_mode)) {
 		if (!(inode->i_mode & S_IXUGO)) {
