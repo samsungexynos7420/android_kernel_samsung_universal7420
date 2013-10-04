@@ -386,6 +386,8 @@ struct fuse_conn {
 	/** Refcount */
 	atomic_t count;
 
+	struct rcu_head rcu;
+
 	/** The user id for this mount */
 	kuid_t user_id;
 
