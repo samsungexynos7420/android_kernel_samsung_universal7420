@@ -1717,11 +1717,6 @@ static int inode_has_perm(const struct cred *cred,
 	sid = cred_sid(cred);
 	isec = inode->i_security;
 
-	if (unlikely(!isec)){
-		printk(KERN_CRIT "[SELinux] isec is NULL, inode->i_security is already freed. \n");
-		return -EINVAL;
-	}
-
 	return avc_has_perm(sid, isec->sid, isec->sclass, perms, adp);
 }
 
