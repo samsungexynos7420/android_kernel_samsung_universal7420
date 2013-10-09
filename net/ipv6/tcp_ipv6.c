@@ -572,7 +572,7 @@ static int tcp_v6_send_synack(struct sock *sk, struct dst_entry *dst,
 			      u16 queue_mapping)
 #endif
 {
-	struct inet6_request_sock *treq = inet6_rsk(req);
+	struct inet_request_sock *ireq = inet_rsk(req);
 	struct ipv6_pinfo *np = inet6_sk(sk);
 #ifdef CONFIG_MPTCP
 	struct flowi6 *fl6 = &fl->u.ip6;
@@ -591,9 +591,10 @@ static int tcp_v6_send_synack(struct sock *sk, struct dst_entry *dst,
 #endif
 
 	if (skb) {
-		__tcp_v6_send_check(skb, &treq->loc_addr, &treq->rmt_addr);
+		__tcp_v6_send_check(skb, &ireq->ir_v6_loc_addr,
+				    &ireq->ir_v6_rmt_addr);
 
-		fl6->daddr = treq->rmt_addr;
+		fl6->daddr = ireq->ir_v6_rmt_addr;
 		skb_set_queue_mapping(skb, queue_mapping);
 		err = ip6_xmit(sk, skb, fl6, rcu_dereference(np->opt),
 			       np->tclass);
@@ -636,7 +637,7 @@ static
 #endif
 void tcp_v6_reqsk_destructor(struct request_sock *req)
 {
-	kfree_skb(inet6_rsk(req)->pktopts);
+	kfree_skb(inet_rsk(req)->pktopts);
 }
 
 #ifdef CONFIG_TCP_MD5SIG
@@ -655,7 +656,7 @@ static struct tcp_md5sig_key *tcp_v6_md5_lookup(struct sock *sk,
 static struct tcp_md5sig_key *tcp_v6_reqsk_md5_lookup(struct sock *sk,
 						      struct request_sock *req)
 {
-	return tcp_v6_md5_do_lookup(sk, &inet6_rsk(req)->rmt_addr);
+	return tcp_v6_md5_do_lookup(sk, &inet_rsk(req)->ir_v6_rmt_addr);
 }
 
 static int tcp_v6_parse_md5_keys (struct sock *sk, char __user *optval,
@@ -757,8 +758,8 @@ static int tcp_v6_md5_hash_skb(char *md5_hash, struct tcp_md5sig_key *key,
 		saddr = &inet6_sk(sk)->saddr;
 		daddr = &sk->sk_v6_daddr;
 	} else if (req) {
-		saddr = &inet6_rsk(req)->loc_addr;
-		daddr = &inet6_rsk(req)->rmt_addr;
+		saddr = &inet_rsk(req)->ir_v6_loc_addr;
+		daddr = &inet_rsk(req)->ir_v6_rmt_addr;
 	} else {
 		const struct ipv6hdr *ip6h = ipv6_hdr(skb);
 		saddr = &ip6h->saddr;
@@ -1250,7 +1251,7 @@ int tcp_v6_conn_request(struct sock *sk, struct sk_buff *skb)
 #ifndef CONFIG_MPTCP
 	struct tcp_options_received tmp_opt;
 	struct request_sock *req;
-	struct inet6_request_sock *treq;
+	struct inet_request_sock *ireq;
 	struct ipv6_pinfo *np = inet6_sk(sk);
 	struct tcp_sock *tp = tcp_sk(sk);
 	__u32 isn = TCP_SKB_CB(skb)->when;
@@ -1299,26 +1300,26 @@ int tcp_v6_conn_request(struct sock *sk, struct sk_buff *skb)
 	tmp_opt.tstamp_ok = tmp_opt.saw_tstamp;
 	tcp_openreq_init(req, &tmp_opt, skb);
 
-	treq = inet6_rsk(req);
-	treq->rmt_addr = ipv6_hdr(skb)->saddr;
-	treq->loc_addr = ipv6_hdr(skb)->daddr;
+	ireq = inet_rsk(req);
+	ireq->ir_v6_rmt_addr = ipv6_hdr(skb)->saddr;
+	ireq->ir_v6_loc_addr = ipv6_hdr(skb)->daddr;
 	if (!want_cookie || tmp_opt.tstamp_ok)
 		TCP_ECN_create_request(req, skb, sock_net(sk));
 
-	treq->iif = sk->sk_bound_dev_if;
+	ireq->ir_iif = sk->sk_bound_dev_if;
 	inet_rsk(req)->ir_mark = inet_request_mark(sk, skb);
 
 	/* So that link locals have meaning */
 	if (!sk->sk_bound_dev_if &&
-	    ipv6_addr_type(&treq->rmt_addr) & IPV6_ADDR_LINKLOCAL)
-		treq->iif = inet6_iif(skb);
+	    ipv6_addr_type(&ireq->ir_v6_rmt_addr) & IPV6_ADDR_LINKLOCAL)
+		ireq->ir_iif = inet6_iif(skb);
 
 	if (!isn) {
 		if (ipv6_opt_accepted(sk, skb) ||
 		    np->rxopt.bits.rxinfo || np->rxopt.bits.rxoinfo ||
 		    np->rxopt.bits.rxhlim || np->rxopt.bits.rxohlim) {
 			atomic_inc(&skb->users);
-			treq->pktopts = skb;
+			ireq->pktopts = skb;
 		}
 
 		if (want_cookie) {
@@ -1357,7 +1358,7 @@ int tcp_v6_conn_request(struct sock *sk, struct sk_buff *skb)
 			 * to the moment of synflood.
 			 */
 			LIMIT_NETDEBUG(KERN_DEBUG "TCP: drop open request from %pI6/%u\n",
-				       &treq->rmt_addr, ntohs(tcp_hdr(skb)->source));
+				       &ireq->ir_v6_rmt_addr, ntohs(tcp_hdr(skb)->source));
 			goto drop_and_release;
 		}
 
@@ -1397,7 +1398,7 @@ struct sock * tcp_v6_syn_recv_sock(struct sock *sk, struct sk_buff *skb,
 					  struct request_sock *req,
 					  struct dst_entry *dst)
 {
-	struct inet6_request_sock *treq;
+	struct inet_request_sock *ireq;
 	struct ipv6_pinfo *newnp, *np = inet6_sk(sk);
 	struct tcp6_sock *newtcp6sk;
 	struct ipv6_txoptions *opt;
@@ -1472,7 +1473,7 @@ struct sock * tcp_v6_syn_recv_sock(struct sock *sk, struct sk_buff *skb,
 		return newsk;
 	}
 
-	treq = inet6_rsk(req);
+	ireq = inet_rsk(req);
 
 	if (sk_acceptq_is_full(sk))
 		goto out_overflow;
@@ -1506,10 +1507,10 @@ struct sock * tcp_v6_syn_recv_sock(struct sock *sk, struct sk_buff *skb,
 
 	memcpy(newnp, np, sizeof(struct ipv6_pinfo));
 
-	newsk->sk_v6_daddr = treq->rmt_addr;
-	newnp->saddr = treq->loc_addr;
-	newsk->sk_v6_rcv_saddr = treq->loc_addr;
-	newsk->sk_bound_dev_if = treq->iif;
+	newsk->sk_v6_daddr = ireq->ir_v6_rmt_addr;
+	newnp->saddr = ireq->ir_v6_loc_addr;
+	newsk->sk_v6_rcv_saddr = ireq->ir_v6_loc_addr;
+	newsk->sk_bound_dev_if = ireq->ir_iif;
 
 	/* Now IPv6 options...
 
@@ -1525,11 +1526,11 @@ struct sock * tcp_v6_syn_recv_sock(struct sock *sk, struct sk_buff *skb,
 
 	/* Clone pktoptions received with SYN */
 	newnp->pktoptions = NULL;
-	if (treq->pktopts != NULL) {
-		newnp->pktoptions = skb_clone(treq->pktopts,
+	if (ireq->pktopts != NULL) {
+		newnp->pktoptions = skb_clone(ireq->pktopts,
 					      sk_gfp_atomic(sk, GFP_ATOMIC));
-		consume_skb(treq->pktopts);
-		treq->pktopts = NULL;
+		consume_skb(ireq->pktopts);
+		ireq->pktopts = NULL;
 		if (newnp->pktoptions)
 			skb_set_owner_r(newnp->pktoptions, newsk);
 	}
@@ -2159,8 +2160,8 @@ static void get_openreq6(struct seq_file *seq,
 			 const struct sock *sk, struct request_sock *req, int i, kuid_t uid)
 {
 	int ttd = req->expires - jiffies;
-	const struct in6_addr *src = &inet6_rsk(req)->loc_addr;
-	const struct in6_addr *dest = &inet6_rsk(req)->rmt_addr;
+	const struct in6_addr *src = &inet_rsk(req)->ir_v6_loc_addr;
+	const struct in6_addr *dest = &inet_rsk(req)->ir_v6_rmt_addr;
 
 	if (ttd < 0)
 		ttd = 0;
@@ -2171,10 +2172,10 @@ static void get_openreq6(struct seq_file *seq,
 		   i,
 		   src->s6_addr32[0], src->s6_addr32[1],
 		   src->s6_addr32[2], src->s6_addr32[3],
-		   ntohs(inet_rsk(req)->loc_port),
+		   ntohs(inet_rsk(req)->ir_loc_port),
 		   dest->s6_addr32[0], dest->s6_addr32[1],
 		   dest->s6_addr32[2], dest->s6_addr32[3],
-		   ntohs(inet_rsk(req)->rmt_port),
+		   ntohs(inet_rsk(req)->ir_rmt_port),
 		   TCP_SYN_RECV,
 		   0,0, /* could print option size, but that is af dependent. */
 		   1,   /* timers active (only the expire timer) */

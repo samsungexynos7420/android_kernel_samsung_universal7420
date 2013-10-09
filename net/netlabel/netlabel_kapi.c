@@ -832,7 +832,7 @@ int netlbl_req_setattr(struct request_sock *req,
 		if (dom_entry->type == NETLBL_NLTYPE_ADDRSELECT) {
 			struct inet_request_sock *req_inet = inet_rsk(req);
 			af4_entry = netlbl_domhsh_getentry_af4(secattr->domain,
-							    req_inet->rmt_addr);
+							    req_inet->ir_rmt_addr);
 			if (af4_entry == NULL) {
 				ret_val = -ENOENT;
 				goto req_setattr_return;

@@ -1291,8 +1291,8 @@ static inline void tcp_openreq_init(struct request_sock *req,
 	ireq->mptcp_rqsk = 0;
 	ireq->saw_mpc = 0;
 #endif
-	ireq->rmt_port = tcp_hdr(skb)->source;
-	ireq->loc_port = tcp_hdr(skb)->dest;
+	ireq->ir_rmt_port = tcp_hdr(skb)->source;
+	ireq->ir_loc_port = tcp_hdr(skb)->dest;
 #ifdef CONFIG_MPTCP
 	ireq->ir_mark = inet_request_mark(sk, skb);
 #endif
