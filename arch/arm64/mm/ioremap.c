@@ -81,9 +81,14 @@ EXPORT_SYMBOL(__ioremap);
 
 void __iounmap(volatile void __iomem *io_addr)
 {
-	void *addr = (void *)(PAGE_MASK & (unsigned long)io_addr);
+	unsigned long addr = (unsigned long)io_addr & PAGE_MASK;
 
-	vunmap(addr);
+	/*
+	 * We could get an address outside vmalloc range in case
+	 * of ioremap_cache() reusing a RAM mapping.
+	 */
+	if (VMALLOC_START <= addr && addr < VMALLOC_END)
+		vunmap((void *)addr);
 }
 EXPORT_SYMBOL(__iounmap);
 
