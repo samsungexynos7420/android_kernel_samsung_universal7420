@@ -2653,11 +2653,11 @@ rebalance:
 #ifdef CONFIG_SEC_OOM_KILLER
 #define SHOULD_CONSIDER_OOM (!did_some_progress || time_after(jiffies, oom_invoke_timeout)) && (boot_mode != 2)
 #else
-#define SHOULD_CONSIDER_OOM !did_some_progress && (boot_mode != 2)
+#define SHOULD_CONSIDER_OOM ((!did_some_progress) && (boot_mode != 2))
 #endif
 
 	if (SHOULD_CONSIDER_OOM) {
-		if ((gfp_mask & __GFP_FS) && !(gfp_mask & __GFP_NORETRY)) {
+		if (oom_gfp_allowed(gfp_mask)) {
 			if (oom_killer_disabled)
 				goto nopage;
 			/* Coredumps can quickly deplete all memory reserves */
