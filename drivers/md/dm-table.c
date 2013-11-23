@@ -169,7 +169,6 @@ static int alloc_targets(struct dm_table *t, unsigned int num)
 {
 	sector_t *n_highs;
 	struct dm_target *n_targets;
-	int n = t->num_targets;
 
 	/*
 	 * Allocate both the target array and offset array at once.
@@ -183,12 +182,7 @@ static int alloc_targets(struct dm_table *t, unsigned int num)
 
 	n_targets = (struct dm_target *) (n_highs + num);
 
-	if (n) {
-		memcpy(n_highs, t->highs, sizeof(*n_highs) * n);
-		memcpy(n_targets, t->targets, sizeof(*n_targets) * n);
-	}
-
-	memset(n_highs + n, -1, sizeof(*n_highs) * (num - n));
+	memset(n_highs, -1, sizeof(*n_highs) * num);
 	vfree(t->highs);
 
 	t->num_allocated = num;
@@ -294,17 +288,6 @@ void dm_table_put(struct dm_table *t)
 	atomic_dec(&t->holders);
 }
 EXPORT_SYMBOL(dm_table_put);
-
-/*
- * Checks to see if we need to extend highs or targets.
- */
-static inline int check_space(struct dm_table *t)
-{
-	if (t->num_targets >= t->num_allocated)
-		return alloc_targets(t, t->num_allocated * 2);
-
-	return 0;
-}
 
 /*
  * See if we've already got a device in the list.
@@ -765,8 +748,7 @@ int dm_table_add_target(struct dm_table *t, const char *type,
 		return -EINVAL;
 	}
 
-	if ((r = check_space(t)))
-		return r;
+	BUG_ON(t->num_targets >= t->num_allocated);
 
 	tgt = t->targets + t->num_targets;
 	memset(tgt, 0, sizeof(*tgt));
