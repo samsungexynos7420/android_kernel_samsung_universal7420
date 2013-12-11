@@ -17,7 +17,7 @@
 
 #include "kernfs-internal.h"
 
-DEFINE_MUTEX(sysfs_mutex);
+DEFINE_MUTEX(kernfs_mutex);
 
 #define rb_to_kn(X) rb_entry((X), struct kernfs_node, rb)
 
@@ -68,7 +68,7 @@ static int sysfs_sd_compare(const struct kernfs_node *left,
  *	@kn->parent->dir.children.
  *
  *	Locking:
- *	mutex_lock(sysfs_mutex)
+ *	mutex_lock(kernfs_mutex)
  *
  *	RETURNS:
  *	0 on susccess -EEXIST on failure.
@@ -109,7 +109,7 @@ static int sysfs_link_sibling(struct kernfs_node *kn)
  *	kn->parent->dir.children.
  *
  *	Locking:
- *	mutex_lock(sysfs_mutex)
+ *	mutex_lock(kernfs_mutex)
  */
 static void sysfs_unlink_sibling(struct kernfs_node *kn)
 {
@@ -251,7 +251,7 @@ void kernfs_put(struct kernfs_node *kn)
 	}
 	kfree(kn->iattr);
 	ida_simple_remove(&root->ino_ida, kn->ino);
-	kmem_cache_free(sysfs_dir_cachep, kn);
+	kmem_cache_free(kernfs_node_cache, kn);
 
 	kn = parent;
 	if (kn) {
@@ -280,7 +280,7 @@ static int sysfs_dentry_revalidate(struct dentry *dentry, unsigned int flags)
 		return -ECHILD;
 
 	kn = dentry->d_fsdata;
-	mutex_lock(&sysfs_mutex);
+	mutex_lock(&kernfs_mutex);
 
 	/* The sysfs dirent has been deleted */
 	if (kn->flags & KERNFS_REMOVED)
@@ -299,7 +299,7 @@ static int sysfs_dentry_revalidate(struct dentry *dentry, unsigned int flags)
 	    kernfs_info(dentry->d_sb)->ns != kn->ns)
 		goto out_bad;
 
-	mutex_unlock(&sysfs_mutex);
+	mutex_unlock(&kernfs_mutex);
 out_valid:
 	return 1;
 out_bad:
@@ -314,7 +314,7 @@ out_bad:
 	 * to the dcache hashes.
 	 */
 	is_dir = (kernfs_type(kn) == KERNFS_DIR);
-	mutex_unlock(&sysfs_mutex);
+	mutex_unlock(&kernfs_mutex);
 
 	if (is_dir) {
 		/* If we have submounts we must allow the vfs caches
@@ -334,7 +334,7 @@ static void sysfs_dentry_release(struct dentry *dentry)
 	kernfs_put(dentry->d_fsdata);
 }
 
-const struct dentry_operations sysfs_dentry_ops = {
+const struct dentry_operations kernfs_dops = {
 	.d_revalidate	= sysfs_dentry_revalidate,
 	.d_delete	= sysfs_dentry_delete,
 	.d_release	= sysfs_dentry_release,
@@ -353,7 +353,7 @@ struct kernfs_node *sysfs_new_dirent(struct kernfs_root *root,
 			return NULL;
 	}
 
-	kn = kmem_cache_zalloc(sysfs_dir_cachep, GFP_KERNEL);
+	kn = kmem_cache_zalloc(kernfs_node_cache, GFP_KERNEL);
 	if (!kn)
 		goto err_out1;
 
@@ -372,7 +372,7 @@ struct kernfs_node *sysfs_new_dirent(struct kernfs_root *root,
 	return kn;
 
  err_out2:
-	kmem_cache_free(sysfs_dir_cachep, kn);
+	kmem_cache_free(kernfs_node_cache, kn);
  err_out1:
 	kfree(dup_name);
 	return NULL;
@@ -383,19 +383,19 @@ struct kernfs_node *sysfs_new_dirent(struct kernfs_root *root,
  *	@acxt: pointer to kernfs_addrm_cxt to be used
  *
  *	This function is called when the caller is about to add or remove
- *	kernfs_node.  This function acquires sysfs_mutex.  @acxt is used to
- *	keep and pass context to other addrm functions.
+ *	kernfs_node.  This function acquires kernfs_mutex.  @acxt is used
+ *	to keep and pass context to other addrm functions.
  *
  *	LOCKING:
- *	Kernel thread context (may sleep).  sysfs_mutex is locked on
+ *	Kernel thread context (may sleep).  kernfs_mutex is locked on
  *	return.
  */
 void sysfs_addrm_start(struct kernfs_addrm_cxt *acxt)
-	__acquires(sysfs_mutex)
+	__acquires(kernfs_mutex)
 {
 	memset(acxt, 0, sizeof(*acxt));
 
-	mutex_lock(&sysfs_mutex);
+	mutex_lock(&kernfs_mutex);
 }
 
 /**
@@ -508,13 +508,13 @@ static void sysfs_remove_one(struct kernfs_addrm_cxt *acxt,
  *	cleaned up.
  *
  *	LOCKING:
- *	sysfs_mutex is released.
+ *	kernfs_mutex is released.
  */
 void sysfs_addrm_finish(struct kernfs_addrm_cxt *acxt)
-	__releases(sysfs_mutex)
+	__releases(kernfs_mutex)
 {
 	/* release resources acquired by sysfs_addrm_start() */
-	mutex_unlock(&sysfs_mutex);
+	mutex_unlock(&kernfs_mutex);
 
 	/* kill removed kernfs_nodes */
 	while (acxt->removed) {
@@ -545,7 +545,7 @@ static struct kernfs_node *kernfs_find_ns(struct kernfs_node *parent,
 	bool has_ns = kernfs_ns_enabled(parent);
 	unsigned int hash;
 
-	lockdep_assert_held(&sysfs_mutex);
+	lockdep_assert_held(&kernfs_mutex);
 
 	if (has_ns != (bool)ns) {
 		WARN(1, KERN_WARNING "sysfs: ns %s in '%s' for '%s'\n",
@@ -585,10 +585,10 @@ struct kernfs_node *kernfs_find_and_get_ns(struct kernfs_node *parent,
 {
 	struct kernfs_node *kn;
 
-	mutex_lock(&sysfs_mutex);
+	mutex_lock(&kernfs_mutex);
 	kn = kernfs_find_ns(parent, name, ns);
 	kernfs_get(kn);
-	mutex_unlock(&sysfs_mutex);
+	mutex_unlock(&kernfs_mutex);
 
 	return kn;
 }
@@ -688,7 +688,7 @@ static struct dentry *sysfs_lookup(struct inode *dir, struct dentry *dentry,
 	struct inode *inode;
 	const void *ns = NULL;
 
-	mutex_lock(&sysfs_mutex);
+	mutex_lock(&kernfs_mutex);
 
 	if (kernfs_ns_enabled(parent))
 		ns = kernfs_info(dir->i_sb)->ns;
@@ -713,11 +713,11 @@ static struct dentry *sysfs_lookup(struct inode *dir, struct dentry *dentry,
 	/* instantiate and hash dentry */
 	ret = d_materialise_unique(dentry, inode);
  out_unlock:
-	mutex_unlock(&sysfs_mutex);
+	mutex_unlock(&kernfs_mutex);
 	return ret;
 }
 
-const struct inode_operations sysfs_dir_inode_operations = {
+const struct inode_operations kernfs_dir_iops = {
 	.lookup		= sysfs_lookup,
 	.permission	= sysfs_permission,
 	.setattr	= sysfs_setattr,
@@ -764,7 +764,7 @@ static struct kernfs_node *sysfs_next_descendant_post(struct kernfs_node *pos,
 {
 	struct rb_node *rbn;
 
-	lockdep_assert_held(&sysfs_mutex);
+	lockdep_assert_held(&kernfs_mutex);
 
 	/* if first iteration, visit leftmost descendant which may be root */
 	if (!pos)
@@ -864,7 +864,7 @@ int kernfs_rename_ns(struct kernfs_node *kn, struct kernfs_node *new_parent,
 {
 	int error;
 
-	mutex_lock(&sysfs_mutex);
+	mutex_lock(&kernfs_mutex);
 
 	error = 0;
 	if ((kn->parent == new_parent) && (kn->ns == new_ns) &&
@@ -899,7 +899,7 @@ int kernfs_rename_ns(struct kernfs_node *kn, struct kernfs_node *new_parent,
 
 	error = 0;
  out:
-	mutex_unlock(&sysfs_mutex);
+	mutex_unlock(&kernfs_mutex);
 	return error;
 }
 
@@ -973,7 +973,7 @@ static int sysfs_readdir(struct file *file, struct dir_context *ctx)
 
 	if (!dir_emit_dots(file, ctx))
 		return 0;
-	mutex_lock(&sysfs_mutex);
+	mutex_lock(&kernfs_mutex);
 
 	if (kernfs_ns_enabled(parent))
 		ns = kernfs_info(dentry->d_sb)->ns;
@@ -990,12 +990,12 @@ static int sysfs_readdir(struct file *file, struct dir_context *ctx)
 		file->private_data = pos;
 		kernfs_get(pos);
 
-		mutex_unlock(&sysfs_mutex);
+		mutex_unlock(&kernfs_mutex);
 		if (!dir_emit(ctx, name, len, ino, type))
 			return 0;
-		mutex_lock(&sysfs_mutex);
+		mutex_lock(&kernfs_mutex);
 	}
-	mutex_unlock(&sysfs_mutex);
+	mutex_unlock(&kernfs_mutex);
 	file->private_data = NULL;
 	ctx->pos = INT_MAX;
 	return 0;
@@ -1013,7 +1013,7 @@ static loff_t sysfs_dir_llseek(struct file *file, loff_t offset, int whence)
 	return ret;
 }
 
-const struct file_operations sysfs_dir_operations = {
+const struct file_operations kernfs_dir_fops = {
 	.read		= generic_read_dir,
 	.iterate	= sysfs_readdir,
 	.release	= sysfs_dir_release,
