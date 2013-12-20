@@ -292,7 +292,7 @@ MODULE_ALIAS("act_xt");
 static int __init ipt_init_module(void)
 {
 	int ret1, ret2, err;
-	err = tcf_hashinfo_init(&ipt_hash_info, IPT_TAB_MASK+1);
+	err = tcf_hashinfo_init(&ipt_hash_info, IPT_TAB_MASK);
 	if (err)
 		return err;
 
