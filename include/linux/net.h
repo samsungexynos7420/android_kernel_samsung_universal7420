@@ -256,9 +256,6 @@ bool __net_get_random_once(void *buf, int nbytes, bool *done,
 			   struct static_key *done_key);
 #endif
 
-#define net_random()		prandom_u32()
-#define net_srandom(seed)	prandom_seed((__force u32)(seed))
-
 #ifdef CONFIG_MPTCP
 #define net_get_random_once(buf, nbytes)				\
 	({								\
