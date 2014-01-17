@@ -78,5 +78,8 @@
 
 #define SO_MAX_PACING_RATE	46
 
+#define SO_BPF_EXTENSIONS	48
+
 #define SO_SET_DOMAIN_NAME 51
+
 #endif /* __ASM_GENERIC_SOCKET_H */
