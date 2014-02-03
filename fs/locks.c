@@ -2293,6 +2293,7 @@ static int locks_show(struct seq_file *f, void *v)
 }
 
 static void *locks_start(struct seq_file *f, loff_t *pos)
+	__acquires(&blocked_lock_lock)
 {
 	loff_t *p = f->private;
 
@@ -2309,6 +2310,7 @@ static void *locks_next(struct seq_file *f, void *v, loff_t *pos)
 }
 
 static void locks_stop(struct seq_file *f, void *v)
+	__releases(&blocked_lock_lock)
 {
 	spin_unlock(&file_lock_lock);
 }
