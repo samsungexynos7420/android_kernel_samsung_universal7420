@@ -103,8 +103,8 @@ static void *__dma_alloc_coherent(struct device *dev, size_t size,
 	if (IS_ENABLED(CONFIG_DMA_CMA) && (flags & __GFP_WAIT)) {
 		struct page *page;
 
-		page = dma_alloc_from_contiguous(dev,
-						PAGE_ALIGN(size) >> PAGE_SHIFT,
+		size = PAGE_ALIGN(size);
+		page = dma_alloc_from_contiguous(dev, size >> PAGE_SHIFT,
 							get_order(size));
 		if (page) {
 			*dma_handle = phys_to_dma(dev, page_to_phys(page));
@@ -133,7 +133,7 @@ static void __dma_free_coherent(struct device *dev, size_t size,
 
 	freed = dma_release_from_contiguous(dev,
 					phys_to_page(paddr),
-					PAGE_ALIGN(size) >> PAGE_SHIFT);
+					size >> PAGE_SHIFT);
 	if (!freed)
 		swiotlb_free_coherent(dev, size, vaddr, dma_handle);
 }
@@ -216,7 +216,7 @@ static void __dma_free_noncoherent(struct device *dev, size_t size,
 
 		if (dma_release_from_contiguous(dev,
 					phys_to_page(paddr),
-					PAGE_ALIGN(size) >> PAGE_SHIFT))
+					size >> PAGE_SHIFT))
 			return;
 	}
 
