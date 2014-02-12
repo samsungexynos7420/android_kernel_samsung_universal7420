@@ -271,6 +271,8 @@ enum {
 	 *
 	 * - rename(2) is disallowed.
 	 *
+	 * - "xattr" mount option is deprecated.  kernfs always enables it.
+	 *
 	 * - memcg: use_hierarchy is on by default and the cgroup file for
 	 *   the flag is not created.
 	 *
