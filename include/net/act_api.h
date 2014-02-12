@@ -109,7 +109,7 @@ extern int tcf_hash_create(u32 index, struct nlattr *est, struct tc_action *a,
 extern void tcf_hash_cleanup(struct tc_action *a, struct nlattr *est);
 extern void tcf_hash_insert(struct tc_action *a);
 
-extern int tcf_register_action(struct tc_action_ops *a);
+extern int tcf_register_action(struct tc_action_ops *a, unsigned int mask);
 extern int tcf_unregister_action(struct tc_action_ops *a);
 extern void tcf_action_destroy(struct list_head *actions, int bind);
 extern int tcf_action_exec(struct sk_buff *skb, const struct list_head *actions,
