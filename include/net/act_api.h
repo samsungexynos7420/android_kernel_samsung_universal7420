@@ -100,16 +100,14 @@ struct tc_action_ops {
 };
 
 extern int tcf_hash_search(struct tc_action *a, u32 index);
-extern void tcf_hash_destroy(struct tcf_common *p, struct tcf_hashinfo *hinfo);
-extern int tcf_hash_release(struct tcf_common *p, int bind,
-			    struct tcf_hashinfo *hinfo);
+extern void tcf_hash_destroy(struct tc_action *a);
+extern int tcf_hash_release(struct tc_action *a, int bind);
 extern u32 tcf_hash_new_index(struct tcf_hashinfo *hinfo);
-extern struct tcf_common *tcf_hash_check(u32 index, struct tc_action *a,
-					 int bind);
-extern struct tcf_common *tcf_hash_create(u32 index, struct nlattr *est,
-					  struct tc_action *a, int size,
-					  int bind);
-extern void tcf_hash_insert(struct tcf_common *p, struct tcf_hashinfo *hinfo);
+extern int tcf_hash_check(u32 index, struct tc_action *a, int bind);
+extern int tcf_hash_create(u32 index, struct nlattr *est, struct tc_action *a,
+			    int size, int bind);
+extern void tcf_hash_cleanup(struct tc_action *a, struct nlattr *est);
+extern void tcf_hash_insert(struct tc_action *a);
 
 extern int tcf_register_action(struct tc_action_ops *a);
 extern int tcf_unregister_action(struct tc_action_ops *a);
