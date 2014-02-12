@@ -4127,6 +4127,7 @@ ext4_ext_handle_unwritten_extents(handle_t *handle, struct inode *inode,
 		} else
 			err = ret;
 		map->m_flags |= EXT4_MAP_MAPPED;
+		map->m_pblk = newblock;
 		if (allocated > map->m_len)
 			allocated = map->m_len;
 		map->m_len = allocated;
