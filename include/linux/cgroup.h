@@ -227,8 +227,8 @@ enum {
 	 *
 	 * The followings are the behaviors currently affected this flag.
 	 *
-	 * - Mount options "noprefix" and "clone_children" are disallowed.
-	 *   Also, cgroupfs file cgroup.clone_children is not created.
+	 * - Mount options "noprefix", "xattr", "clone_children",
+	 *   "release_agent" and "name" are disallowed.
 	 *
 	 * - When mounting an existing superblock, mount options should
 	 *   match.
@@ -253,7 +253,7 @@ enum {
 	 *
 	 * - rename(2) is disallowed.
 	 *
-	 * - "xattr" mount option is deprecated.  kernfs always enables it.
+	 * - "cgroup.clone_children" is removed.
 	 *
 	 * - memcg: use_hierarchy is on by default and the cgroup file for
 	 *   the flag is not created.
