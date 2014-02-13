@@ -680,6 +680,8 @@ int dm_sm_metadata_create(struct dm_space_map *sm,
 
 	r = sm_ll_new_metadata(&smm->ll, tm);
 	if (!r) {
+		if (nr_blocks > DM_SM_METADATA_MAX_BLOCKS)
+			nr_blocks = DM_SM_METADATA_MAX_BLOCKS;
 		r = sm_ll_extend(&smm->ll, nr_blocks);
 	}
 	memcpy(&smm->sm, &ops, sizeof(smm->sm));
