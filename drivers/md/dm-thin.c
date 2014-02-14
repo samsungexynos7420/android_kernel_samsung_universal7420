@@ -1451,6 +1451,7 @@ static enum pool_mode get_pool_mode(struct pool *pool)
 static void set_pool_mode(struct pool *pool, enum pool_mode new_mode)
 {
 	int r;
+	struct pool_c *pt = pool->ti->private;
 	enum pool_mode old_mode = pool->pf.mode;
 
 	switch (new_mode) {
@@ -1497,6 +1498,11 @@ static void set_pool_mode(struct pool *pool, enum pool_mode new_mode)
 	}
 
 	pool->pf.mode = new_mode;
+	/*
+	 * The pool mode may have changed, sync it so bind_control_target()
+	 * doesn't cause an unexpected mode transition on resume.
+	 */
+	pt->adjusted_pf.mode = new_mode;
 }
 
 /*
