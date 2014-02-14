@@ -1728,8 +1728,11 @@ static int ip_route_input_slow(struct sk_buff *skb, __be32 daddr, __be32 saddr,
 	fl4.daddr = daddr;
 	fl4.saddr = saddr;
 	err = fib_lookup(net, &fl4, &res);
-	if (err != 0)
+	if (err != 0) {
+		if (!IN_DEV_FORWARD(in_dev))
+			err = -EHOSTUNREACH;
 		goto no_route;
+	}
 
 	if (res.type == RTN_BROADCAST)
 		goto brd_input;
@@ -1743,8 +1746,10 @@ static int ip_route_input_slow(struct sk_buff *skb, __be32 daddr, __be32 saddr,
 		goto local_input;
 	}
 
-	if (!IN_DEV_FORWARD(in_dev))
+	if (!IN_DEV_FORWARD(in_dev)) {
+		err = -EHOSTUNREACH;
 		goto no_route;
+	}
 	if (res.type != RTN_UNICAST)
 		goto martian_destination;
 
