@@ -287,7 +287,7 @@ long ion_page_pool_preload(struct ion_page_pool *pool,
 int ion_page_pool_shrink(struct ion_page_pool *pool, gfp_t gfp_mask,
 				int nr_to_scan)
 {
-	int i;
+	int freed;
 	bool high;
 
 	if (current_is_kswapd())
@@ -295,7 +295,7 @@ int ion_page_pool_shrink(struct ion_page_pool *pool, gfp_t gfp_mask,
 	else
 		high = !!(gfp_mask & __GFP_HIGHMEM);
 
-	for (i = 0; i < nr_to_scan; i += (1 << pool->order)) {
+	for (freed = 0; freed < nr_to_scan; freed++) {
 		struct page *page;
 
 		spin_lock(&pool->lock);
@@ -311,7 +311,7 @@ int ion_page_pool_shrink(struct ion_page_pool *pool, gfp_t gfp_mask,
 		ion_page_pool_free_pages(pool, page);
 	}
 
-	return ion_page_pool_total(pool, high);
+	return freed;
 }
 
 struct ion_page_pool *ion_page_pool_create(gfp_t gfp_mask, unsigned int order)
