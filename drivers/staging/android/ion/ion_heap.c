@@ -317,10 +317,10 @@ static unsigned long ion_heap_shrink_scan(struct shrinker *shrinker,
 
 	/*
 	 * shrink the free list first, no point in zeroing the memory if we're
-	 * just going to reclaim it
+	 * just going to reclaim it. Also, skip any possible page pooling.
 	 */
 	if (heap->flags & ION_HEAP_FLAG_DEFER_FREE)
-		freed = ion_heap_freelist_drain(heap, to_scan * PAGE_SIZE) /
+		freed = ion_heap_freelist_shrink(heap, to_scan * PAGE_SIZE) /
 				PAGE_SIZE;
 
 	to_scan -= freed;
