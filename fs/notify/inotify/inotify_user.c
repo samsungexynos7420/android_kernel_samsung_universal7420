@@ -638,10 +638,22 @@ retry:
 static struct fsnotify_group *inotify_new_group(unsigned int max_events)
 {
 	struct fsnotify_group *group;
+	struct inotify_event_info *oevent;
 
 	group = fsnotify_alloc_group(&inotify_fsnotify_ops);
 	if (IS_ERR(group))
 		return group;
+
+	oevent = kmalloc(sizeof(struct inotify_event_info), GFP_KERNEL);
+	if (unlikely(!oevent)) {
+		fsnotify_destroy_group(group);
+		return ERR_PTR(-ENOMEM);
+	}
+	group->overflow_event = &oevent->fse;
+	fsnotify_init_event(group->overflow_event, NULL, FS_Q_OVERFLOW);
+	oevent->wd = -1;
+	oevent->sync_cookie = 0;
+	oevent->name_len = 0;
 
 	group->max_events = max_events;
 
