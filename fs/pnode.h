@@ -20,9 +20,15 @@
 #ifdef CONFIG_RKP_NS_PROT
 #define CLEAR_MNT_SHARED(m) rkp_reset_mnt_flags((m)->mnt,MNT_SHARED)
 #define IS_MNT_UNBINDABLE(m) ((m)->mnt->mnt_flags & MNT_UNBINDABLE)
+#define IS_MNT_MARKED(m) ((m)->mnt->mnt_flags & MNT_MARKED)
+#define SET_MNT_MARK(m) rkp_set_mnt_flags((m)->mnt,MNT_MARKED)
+#define CLEAR_MNT_MARK(m) rkp_reset_mnt_flags((m)->mnt,MNT_MARKED)
 #else
 #define CLEAR_MNT_SHARED(m) ((m)->mnt.mnt_flags &= ~MNT_SHARED)
 #define IS_MNT_UNBINDABLE(m) ((m)->mnt.mnt_flags & MNT_UNBINDABLE)
+#define IS_MNT_MARKED(m) ((m)->mnt.mnt_flags & MNT_MARKED)
+#define SET_MNT_MARK(m) ((m)->mnt.mnt_flags |= MNT_MARKED)
+#define CLEAR_MNT_MARK(m) ((m)->mnt.mnt_flags &= ~MNT_MARKED)
 #endif
 
 #define CL_EXPIRE    		0x01
