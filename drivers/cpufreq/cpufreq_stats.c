@@ -29,7 +29,7 @@
 #include <linux/profile.h>
 #include <linux/sched.h>
 #include <linux/seq_file.h>
-#include <asm/cputime.h>
+#include <linux/cputime.h>
 #ifdef CONFIG_BL_SWITCHER
 #include <asm/bL_switcher.h>
 #endif
