@@ -15,6 +15,7 @@
 #include <linux/cpu.h>
 #include <linux/sysfs.h>
 #include <linux/cpufreq.h>
+#include <linux/cputime.h>
 #include <linux/hashtable.h>
 #include <linux/module.h>
 #include <linux/jiffies.h>
