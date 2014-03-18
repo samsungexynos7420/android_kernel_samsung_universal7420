@@ -4736,6 +4736,64 @@ retry:
 	ext4_std_error(inode->i_sb, err);
 }
 
+static int ext4_alloc_file_blocks(struct file *file, ext4_lblk_t offset,
+				  ext4_lblk_t len, int flags, int mode)
+{
+	struct inode *inode = file_inode(file);
+	handle_t *handle;
+	int ret = 0;
+	int ret2 = 0;
+	int retries = 0;
+	struct ext4_map_blocks map;
+	unsigned int credits;
+
+	map.m_lblk = offset;
+	/*
+	 * Don't normalize the request if it can fit in one extent so
+	 * that it doesn't get unnecessarily split into multiple
+	 * extents.
+	 */
+	if (len <= EXT_UNINIT_MAX_LEN)
+		flags |= EXT4_GET_BLOCKS_NO_NORMALIZE;
+
+	/*
+	 * credits to insert 1 extent into extent tree
+	 */
+	credits = ext4_chunk_trans_blocks(inode, len);
+
+retry:
+	while (ret >= 0 && ret < len) {
+		map.m_lblk = map.m_lblk + ret;
+		map.m_len = len = len - ret;
+		handle = ext4_journal_start(inode, EXT4_HT_MAP_BLOCKS,
+					    credits);
+		if (IS_ERR(handle)) {
+			ret = PTR_ERR(handle);
+			break;
+		}
+		ret = ext4_map_blocks(handle, inode, &map, flags);
+		if (ret <= 0) {
+			ext4_debug("inode #%lu: block %u: len %u: "
+				   "ext4_ext_map_blocks returned %d",
+				   inode->i_ino, map.m_lblk,
+				   map.m_len, ret);
+			ext4_mark_inode_dirty(handle, inode);
+			ret2 = ext4_journal_stop(handle);
+			break;
+		}
+		ret2 = ext4_journal_stop(handle);
+		if (ret2)
+			break;
+	}
+	if (ret == -ENOSPC &&
+			ext4_should_retry_alloc(inode->i_sb, &retries)) {
+		ret = 0;
+		goto retry;
+	}
+
+	return ret > 0 ? ret2 : ret;
+}
+
 static long ext4_zero_range(struct file *file, loff_t offset,
 			    loff_t len, int mode)
 {
@@ -4905,12 +4963,10 @@ long ext4_fallocate(struct file *file, int mode, loff_t offset, loff_t len)
 	loff_t new_size = 0;
 	unsigned int max_blocks;
 	int ret = 0;
-	int ret2 = 0;
-	int retries = 0;
 	int flags;
-	struct ext4_map_blocks map;
+	ext4_lblk_t lblk;
 	struct timespec tv;
-	unsigned int credits, blkbits = inode->i_blkbits;
+	unsigned int blkbits = inode->i_blkbits;
 
 	/* Return error if mode is not supported */
 	if (mode & ~(FALLOC_FL_KEEP_SIZE | FALLOC_FL_PUNCH_HOLE |
@@ -4938,17 +4994,18 @@ long ext4_fallocate(struct file *file, int mode, loff_t offset, loff_t len)
 		return ext4_zero_range(file, offset, len, mode);
 
 	trace_ext4_fallocate_enter(inode, offset, len, mode);
-	map.m_lblk = offset >> blkbits;
+	lblk = offset >> blkbits;
 	/*
 	 * We can't just convert len to max_blocks because
 	 * If blocksize = 4096 offset = 3072 and len = 2048
 	 */
 	max_blocks = (EXT4_BLOCK_ALIGN(len + offset, blkbits) >> blkbits)
-		- map.m_lblk;
-	/*
-	 * credits to insert 1 extent into extent tree
-	 */
-	credits = ext4_chunk_trans_blocks(inode, max_blocks);
+		- lblk;
+
+	flags = EXT4_GET_BLOCKS_CREATE_UNINIT_EXT;
+	if (mode & FALLOC_FL_KEEP_SIZE)
+		flags |= EXT4_GET_BLOCKS_KEEP_SIZE;
+
 	mutex_lock(&inode->i_mutex);
 
 	if (!(mode & FALLOC_FL_KEEP_SIZE) &&
@@ -4959,46 +5016,9 @@ long ext4_fallocate(struct file *file, int mode, loff_t offset, loff_t len)
 			goto out;
 	}
 
-	flags = EXT4_GET_BLOCKS_CREATE_UNINIT_EXT;
-	if (mode & FALLOC_FL_KEEP_SIZE)
-		flags |= EXT4_GET_BLOCKS_KEEP_SIZE;
-	/*
-	 * Don't normalize the request if it can fit in one extent so
-	 * that it doesn't get unnecessarily split into multiple
-	 * extents.
-	 */
-	if (len <= EXT_UNINIT_MAX_LEN << blkbits)
-		flags |= EXT4_GET_BLOCKS_NO_NORMALIZE;
-
-retry:
-	while (ret >= 0 && ret < max_blocks) {
-		map.m_lblk = map.m_lblk + ret;
-		map.m_len = max_blocks = max_blocks - ret;
-		handle = ext4_journal_start(inode, EXT4_HT_MAP_BLOCKS,
-					    credits);
-		if (IS_ERR(handle)) {
-			ret = PTR_ERR(handle);
-			break;
-		}
-		ret = ext4_map_blocks(handle, inode, &map, flags);
-		if (ret <= 0) {
-			ext4_debug("inode #%lu: block %u: len %u: "
-				   "ext4_ext_map_blocks returned %d",
-				   inode->i_ino, map.m_lblk,
-				   map.m_len, ret);
-			ext4_mark_inode_dirty(handle, inode);
-			ret2 = ext4_journal_stop(handle);
-			break;
-		}
-		ret2 = ext4_journal_stop(handle);
-		if (ret2)
-			break;
-	}
-	if (ret == -ENOSPC &&
-			ext4_should_retry_alloc(inode->i_sb, &retries)) {
-		ret = 0;
-		goto retry;
-	}
+	ret = ext4_alloc_file_blocks(file, lblk, max_blocks, flags, mode);
+	if (ret)
+		goto out;
 
 	handle = ext4_journal_start(inode, EXT4_HT_INODE, 2);
 	if (IS_ERR(handle))
@@ -5006,14 +5026,14 @@ retry:
 
 	tv = inode->i_ctime = ext4_current_time(inode);
 
-	if (ret > 0 && new_size) {
+	if (!ret && new_size) {
 		if (new_size > i_size_read(inode)) {
 			i_size_write(inode, new_size);
 			inode->i_mtime = tv;
 		}
 		if (new_size > EXT4_I(inode)->i_disksize)
 			ext4_update_i_disksize(inode, new_size);
-	} else if (ret > 0 && !new_size) {
+	} else if (!ret && !new_size) {
 		/*
 		* Mark that we allocate beyond EOF so the subsequent truncate
 		* can proceed even if the new size is the same as i_size.
@@ -5028,9 +5048,8 @@ retry:
 	ext4_journal_stop(handle);
 out:
 	mutex_unlock(&inode->i_mutex);
-	trace_ext4_fallocate_exit(inode, offset, max_blocks,
-				ret > 0 ? ret2 : ret);
-	return ret > 0 ? ret2 : ret;
+	trace_ext4_fallocate_exit(inode, offset, max_blocks, ret);
+	return ret;
 }
 
 /*
