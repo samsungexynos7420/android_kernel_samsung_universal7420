@@ -16,7 +16,7 @@ DOCBOOKS := z8530book.xml device-drivers.xml \
 	    alsa-driver-api.xml writing-an-alsa-driver.xml \
 	    tracepoint.xml drm.xml media_api.xml
 
-include $(srctree)/Documentation/DocBook/media/Makefile
+include $(src)/media/Makefile
 
 ###
 # The build process is as follows (targets):
@@ -58,14 +58,14 @@ mandocs: $(MAN)
 
 installmandocs: mandocs
 	mkdir -p /usr/local/man/man9/
-	install Documentation/DocBook/man/*.9.gz /usr/local/man/man9/
+	install $(obj)/man/*.9.gz /usr/local/man/man9/
 
 ###
 #External programs used
 KERNELDOC = $(srctree)/scripts/kernel-doc
 DOCPROC   = $(objtree)/scripts/docproc
 
-XMLTOFLAGS = -m $(srctree)/Documentation/DocBook/stylesheet.xsl
+XMLTOFLAGS = -m $(srctree)/$(src)/stylesheet.xsl
 XMLTOFLAGS += --skip-validation
 
 ###
@@ -127,7 +127,7 @@ quiet_cmd_db2pdf = PDF     $@
 
 
 index = index.html
-main_idx = Documentation/DocBook/$(index)
+main_idx = $(obj)/$(index)
 build_main_index = rm -rf $(main_idx); \
 		   echo '<h1>Linux Kernel HTML Documentation</h1>' >> $(main_idx) && \
 		   echo '<h2>Kernel Version: $(KERNELVERSION)</h2>' >> $(main_idx) && \
@@ -136,7 +136,7 @@ build_main_index = rm -rf $(main_idx); \
 quiet_cmd_db2html = HTML    $@
       cmd_db2html = xmlto xhtml $(XMLTOFLAGS) -o $(patsubst %.html,%,$@) $< && \
 		echo '<a HREF="$(patsubst %.html,%,$(notdir $@))/index.html"> \
-        $(patsubst %.html,%,$(notdir $@))</a><p>' > $@
+		$(patsubst %.html,%,$(notdir $@))</a><p>' > $@
 
 %.html:	%.xml
 	@(which xmlto > /dev/null 2>&1) || \
