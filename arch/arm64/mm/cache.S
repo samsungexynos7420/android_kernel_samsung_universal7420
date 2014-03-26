@@ -224,6 +224,7 @@ __dma_inv_range:
 	b.lo	2b
 	dsb	sy
 	ret
+ENDPROC(__inval_cache_range)
 ENDPROC(__dma_inv_range)
 
 /*
