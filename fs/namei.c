@@ -4231,13 +4231,12 @@ static int vfs_rename_dir(struct vfsmount *mnt,
 		target->i_flags |= S_DEAD;
 		dont_mount(new_dentry);
 	}
+	if (!(old_dir->i_sb->s_type->fs_flags & FS_RENAME_DOES_D_MOVE))
+		d_move(old_dentry, new_dentry);
 out:
 	if (target)
 		mutex_unlock(&target->i_mutex);
 	dput(new_dentry);
-	if (!error)
-		if (!(old_dir->i_sb->s_type->fs_flags & FS_RENAME_DOES_D_MOVE))
-			d_move(old_dentry,new_dentry);
 	return error;
 }
 
