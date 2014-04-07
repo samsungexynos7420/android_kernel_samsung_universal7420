@@ -1202,4 +1202,3 @@ void vmcore_cleanup(void)
 	}
 	free_elfcorebuf();
 }
-EXPORT_SYMBOL_GPL(vmcore_cleanup);
