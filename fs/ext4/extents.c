@@ -5258,6 +5258,7 @@ int ext4_collapse_range(struct inode *inode, loff_t offset, loff_t len)
 		up_write(&EXT4_I(inode)->i_data_sem);
 		goto out_stop;
 	}
+	ext4_discard_preallocations(inode);
 
 	ret = ext4_ext_shift_extents(inode, handle, punch_stop,
 				     punch_stop - punch_start);
@@ -5270,7 +5271,6 @@ int ext4_collapse_range(struct inode *inode, loff_t offset, loff_t len)
 	truncate_setsize(inode, new_size);
 	EXT4_I(inode)->i_disksize = new_size;
 
-	ext4_discard_preallocations(inode);
 	up_write(&EXT4_I(inode)->i_data_sem);
 	if (IS_SYNC(inode))
 		ext4_handle_sync(handle);
