@@ -19,6 +19,7 @@
 #ifndef __ASM_TLB_H
 #define __ASM_TLB_H
 
+#define  __tlb_remove_pmd_tlb_entry __tlb_remove_pmd_tlb_entry
 
 #include <asm-generic/tlb.h>
 
@@ -118,5 +119,10 @@ static inline void __pmd_free_tlb(struct mmu_gather *tlb, pmd_t *pmdp,
 #endif
 #endif
 
+static inline void __tlb_remove_pmd_tlb_entry(struct mmu_gather *tlb, pmd_t *pmdp,
+						unsigned long address)
+{
+	tlb_add_flush(tlb, address);
+}
 
 #endif
