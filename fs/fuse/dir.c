@@ -1647,7 +1647,7 @@ static void fuse_setattr_fill(struct fuse_conn *fc, struct fuse_req *req,
 /*
  * Flush inode->i_mtime to the server
  */
-int fuse_flush_mtime(struct inode *inode, struct fuse_file *ff)
+int fuse_flush_times(struct inode *inode, struct fuse_file *ff)
 {
 	struct fuse_conn *fc = get_fuse_conn(inode);
 	struct fuse_req *req;
@@ -1662,9 +1662,14 @@ int fuse_flush_mtime(struct inode *inode, struct fuse_file *ff)
 	memset(&inarg, 0, sizeof(inarg));
 	memset(&outarg, 0, sizeof(outarg));
 
-	inarg.valid |= FATTR_MTIME;
+	inarg.valid = FATTR_MTIME;
 	inarg.mtime = inode->i_mtime.tv_sec;
 	inarg.mtimensec = inode->i_mtime.tv_nsec;
+	if (fc->minor >= 23) {
+		inarg.valid |= FATTR_CTIME;
+		inarg.ctime = inode->i_ctime.tv_sec;
+		inarg.ctimensec = inode->i_ctime.tv_nsec;
+	}
 	if (ff) {
 		inarg.valid |= FATTR_FH;
 		inarg.fh = ff->fh;
