@@ -698,11 +698,8 @@ restart:
 		if (nslot == ndoms) {
 			static int warnings = 10;
 			if (warnings) {
-				printk(KERN_WARNING
-				 "rebuild_sched_domains confused:"
-				  " nslot %d, ndoms %d, csn %d, i %d,"
-				  " apn %d\n",
-				  nslot, ndoms, csn, i, apn);
+				pr_warn("rebuild_sched_domains confused: nslot %d, ndoms %d, csn %d, i %d, apn %d\n",
+					nslot, ndoms, csn, i, apn);
 				warnings--;
 			}
 			continue;
@@ -2140,7 +2137,7 @@ static void remove_tasks_in_empty_cpuset(struct cpuset *cs)
 
 	if (cgroup_transfer_tasks(parent->css.cgroup, cs->css.cgroup)) {
 		rcu_read_lock();
-		printk(KERN_ERR "cpuset: failed to transfer tasks out of empty cpuset %s\n",
+		pr_err("cpuset: failed to transfer tasks out of empty cpuset %s\n",
 		       cgroup_name(cs->css.cgroup));
 		rcu_read_unlock();
 	}
@@ -2679,7 +2676,7 @@ void cpuset_print_task_mems_allowed(struct task_struct *tsk)
 
 	nodelist_scnprintf(cpuset_nodelist, CPUSET_NODELIST_LEN,
 			   tsk->mems_allowed);
-	printk(KERN_INFO "%s cpuset=%s mems_allowed=%s\n",
+	pr_info("%s cpuset=%s mems_allowed=%s\n",
 	       tsk->comm, cgroup_name(cgrp), cpuset_nodelist);
 
 	spin_unlock(&cpuset_buffer_lock);
