@@ -343,6 +343,7 @@ static struct buffer_head *bclean(handle_t *handle, struct super_block *sb,
 	bh = sb_getblk(sb, blk);
 	if (unlikely(!bh))
 		return ERR_PTR(-ENOMEM);
+	BUFFER_TRACE(bh, "get_write_access");
 	if ((err = ext4_journal_get_write_access(handle, bh))) {
 		brelse(bh);
 		bh = ERR_PTR(err);
@@ -421,6 +422,7 @@ static int set_flexbg_block_bitmap(struct super_block *sb, handle_t *handle,
 		if (unlikely(!bh))
 			return -ENOMEM;
 
+		BUFFER_TRACE(bh, "get_write_access");
 		err = ext4_journal_get_write_access(handle, bh);
 		if (err)
 			return err;
@@ -513,6 +515,7 @@ static int setup_new_flex_group_blocks(struct super_block *sb,
 				goto out;
 			}
 
+			BUFFER_TRACE(gdb, "get_write_access");
 			err = ext4_journal_get_write_access(handle, gdb);
 			if (err) {
 				brelse(gdb);
@@ -785,14 +788,17 @@ static int add_new_gdb(handle_t *handle, struct inode *inode,
 		goto exit_dind;
 	}
 
+	BUFFER_TRACE(EXT4_SB(sb)->s_sbh, "get_write_access");
 	err = ext4_journal_get_write_access(handle, EXT4_SB(sb)->s_sbh);
 	if (unlikely(err))
 		goto exit_dind;
 
+	BUFFER_TRACE(gdb_bh, "get_write_access");
 	err = ext4_journal_get_write_access(handle, gdb_bh);
 	if (unlikely(err))
 		goto exit_dind;
 
+	BUFFER_TRACE(dind, "get_write_access");
 	err = ext4_journal_get_write_access(handle, dind);
 	if (unlikely(err))
 		ext4_std_error(sb, err);
@@ -897,6 +903,7 @@ static int add_new_gdb_meta_bg(struct super_block *sb,
 	EXT4_SB(sb)->s_group_desc = n_group_desc;
 	EXT4_SB(sb)->s_gdb_count++;
 	ext4_kvfree(o_group_desc);
+	BUFFER_TRACE(gdb_bh, "get_write_access");
 	err = ext4_journal_get_write_access(handle, gdb_bh);
 	if (unlikely(err))
 		brelse(gdb_bh);
@@ -972,6 +979,7 @@ static int reserve_backup_gdb(handle_t *handle, struct inode *inode,
 	}
 
 	for (i = 0; i < reserved_gdb; i++) {
+		BUFFER_TRACE(primary[i], "get_write_access");
 		if ((err = ext4_journal_get_write_access(handle, primary[i])))
 			goto exit_bh;
 	}
@@ -1079,6 +1087,7 @@ static void update_backups(struct super_block *sb, sector_t blk_off, char *data,
 		ext4_debug("update metadata backup %llu(+%llu)\n",
 			   backup_block, backup_block -
 			   ext4_group_first_block_no(sb, group));
+		BUFFER_TRACE(bh, "get_write_access");
 		if ((err = ext4_journal_get_write_access(handle, bh)))
 			break;
 		lock_buffer(bh);
@@ -1158,6 +1167,7 @@ static int ext4_add_new_descs(handle_t *handle, struct super_block *sb,
 		 */
 		if (gdb_off) {
 			gdb_bh = sbi->s_group_desc[gdb_num];
+			BUFFER_TRACE(gdb_bh, "get_write_access");
 			err = ext4_journal_get_write_access(handle, gdb_bh);
 
 			if (!err && reserved_gdb && ext4_bg_num_gdb(sb, group))
@@ -1428,6 +1438,7 @@ static int ext4_flex_group_add(struct super_block *sb,
 		goto exit;
 	}
 
+	BUFFER_TRACE(sbi->s_sbh, "get_write_access");
 	err = ext4_journal_get_write_access(handle, sbi->s_sbh);
 	if (err)
 		goto exit_journal;
@@ -1641,6 +1652,7 @@ static int ext4_group_extend_no_check(struct super_block *sb,
 		return err;
 	}
 
+	BUFFER_TRACE(EXT4_SB(sb)->s_sbh, "get_write_access");
 	err = ext4_journal_get_write_access(handle, EXT4_SB(sb)->s_sbh);
 	if (err) {
 		ext4_warning(sb, "error %d on journal write access", err);
@@ -1800,6 +1812,7 @@ static int ext4_convert_meta_bg(struct super_block *sb, struct inode *inode)
 	if (IS_ERR(handle))
 		return PTR_ERR(handle);
 
+	BUFFER_TRACE(sbi->s_sbh, "get_write_access");
 	err = ext4_journal_get_write_access(handle, sbi->s_sbh);
 	if (err)
 		goto errout;

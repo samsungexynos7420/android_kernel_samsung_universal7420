@@ -526,6 +526,7 @@ static void ext4_xattr_update_super_block(handle_t *handle,
 	if (EXT4_HAS_COMPAT_FEATURE(sb, EXT4_FEATURE_COMPAT_EXT_ATTR))
 		return;
 
+	BUFFER_TRACE(EXT4_SB(sb)->s_sbh, "get_write_access");
 	if (ext4_journal_get_write_access(handle, EXT4_SB(sb)->s_sbh) == 0) {
 		EXT4_SET_COMPAT_FEATURE(sb, EXT4_FEATURE_COMPAT_EXT_ATTR);
 		ext4_handle_dirty_super(handle, sb);
@@ -544,6 +545,7 @@ ext4_xattr_release_block(handle_t *handle, struct inode *inode,
 	int error = 0;
 
 	ce = mb_cache_entry_get(ext4_xattr_cache, bh->b_bdev, bh->b_blocknr);
+	BUFFER_TRACE(bh, "get_write_access");
 	error = ext4_journal_get_write_access(handle, bh);
 	if (error)
 		goto out;
@@ -790,6 +792,7 @@ ext4_xattr_block_set(handle_t *handle, struct inode *inode,
 	if (s->base) {
 		ce = mb_cache_entry_get(ext4_xattr_cache, bs->bh->b_bdev,
 					bs->bh->b_blocknr);
+		BUFFER_TRACE(bs->bh, "get_write_access");
 		error = ext4_journal_get_write_access(handle, bs->bh);
 		if (error)
 			goto cleanup;
@@ -873,6 +876,7 @@ inserted:
 						EXT4_C2B(EXT4_SB(sb), 1));
 				if (error)
 					goto cleanup;
+				BUFFER_TRACE(new_bh, "get_write_access");
 				error = ext4_journal_get_write_access(handle,
 								      new_bh);
 				if (error)
