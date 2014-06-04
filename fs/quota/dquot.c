@@ -1408,7 +1408,7 @@ static int dquot_active(const struct inode *inode)
  */
 static void __dquot_initialize(struct inode *inode, int type)
 {
-	int cnt;
+	int cnt, init_needed = 0;
 	struct dquot *got[MAXQUOTAS];
 	struct super_block *sb = inode->i_sb;
 	qsize_t rsv;
@@ -1424,6 +1424,15 @@ static void __dquot_initialize(struct inode *inode, int type)
 		got[cnt] = NULL;
 		if (type != -1 && cnt != type)
 			continue;
+		/*
+		 * The i_dquot should have been initialized in most cases,
+		 * we check it without locking here to avoid unnecessary
+		 * dqget()/dqput() calls.
+		 */
+		if (inode->i_dquot[cnt])
+			continue;
+		init_needed = 1;
+
 		switch (cnt) {
 		case USRQUOTA:
 			qid = make_kqid_uid(inode->i_uid);
@@ -1434,6 +1443,10 @@ static void __dquot_initialize(struct inode *inode, int type)
 		}
 		got[cnt] = dqget(sb, qid);
 	}
+
+	/* All required i_dquot has been initialized */
+	if (!init_needed)
+		return;
 
 	down_write(&sb_dqopt(sb)->dqptr_sem);
 	if (IS_NOQUOTA(inode))
