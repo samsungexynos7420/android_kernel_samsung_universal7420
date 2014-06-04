@@ -1524,8 +1524,8 @@ static int __migrate_cma_pinpage(struct page *page, struct vm_area_struct *vma)
 	inc_zone_page_state(page, NR_ISOLATED_ANON + page_is_file_cache(page));
 
 	while (!list_empty(&migratepages) && tries++ < 5) {
-		ret = migrate_pages(&migratepages,
-			__alloc_nonmovable_userpage, 0, MIGRATE_SYNC, MR_CMA);
+		ret = migrate_pages(&migratepages, __alloc_nonmovable_userpage,
+					NULL, 0, MIGRATE_SYNC, MR_CMA);
 	}
 
 	if (ret < 0) {
