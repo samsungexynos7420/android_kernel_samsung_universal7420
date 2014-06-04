@@ -13,6 +13,7 @@
 #include <linux/stat.h>
 #include <linux/file.h>
 #include <linux/fs.h>
+#include <linux/fsnotify.h>
 #include <linux/dirent.h>
 #include <linux/security.h>
 #include <linux/syscalls.h>
@@ -45,6 +46,7 @@ int iterate_dir(struct file *file, struct dir_context *ctx)
 			res = file->f_op->readdir(file, ctx, ctx->actor);
 			ctx->pos = file->f_pos;
 		}
+		fsnotify_access(file);
 		file_accessed(file);
 	}
 	mutex_unlock(&inode->i_mutex);
