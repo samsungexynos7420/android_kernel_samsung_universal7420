@@ -81,8 +81,6 @@ struct scan_control {
 
 	int order;
 
-	int swappiness;
-
 	/* Scan (total_size >> priority) pages at once */
 	int priority;
 
