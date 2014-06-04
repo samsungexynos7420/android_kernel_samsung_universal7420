@@ -180,7 +180,7 @@ EXPORT_SYMBOL_GPL(put_compat_timespec);
 int compat_get_timeval(struct timeval *tv, const void __user *utv)
 {
 	if (COMPAT_USE_64BIT_TIME)
-		return copy_from_user(tv, utv, sizeof *tv) ? -EFAULT : 0;
+		return copy_from_user(tv, utv, sizeof(*tv)) ? -EFAULT : 0;
 	else
 		return get_compat_timeval(tv, utv);
 }
@@ -189,7 +189,7 @@ EXPORT_SYMBOL_GPL(compat_get_timeval);
 int compat_put_timeval(const struct timeval *tv, void __user *utv)
 {
 	if (COMPAT_USE_64BIT_TIME)
-		return copy_to_user(utv, tv, sizeof *tv) ? -EFAULT : 0;
+		return copy_to_user(utv, tv, sizeof(*tv)) ? -EFAULT : 0;
 	else
 		return put_compat_timeval(tv, utv);
 }
@@ -198,7 +198,7 @@ EXPORT_SYMBOL_GPL(compat_put_timeval);
 int compat_get_timespec(struct timespec *ts, const void __user *uts)
 {
 	if (COMPAT_USE_64BIT_TIME)
-		return copy_from_user(ts, uts, sizeof *ts) ? -EFAULT : 0;
+		return copy_from_user(ts, uts, sizeof(*ts)) ? -EFAULT : 0;
 	else
 		return get_compat_timespec(ts, uts);
 }
@@ -207,7 +207,7 @@ EXPORT_SYMBOL_GPL(compat_get_timespec);
 int compat_put_timespec(const struct timespec *ts, void __user *uts)
 {
 	if (COMPAT_USE_64BIT_TIME)
-		return copy_to_user(uts, ts, sizeof *ts) ? -EFAULT : 0;
+		return copy_to_user(uts, ts, sizeof(*ts)) ? -EFAULT : 0;
 	else
 		return put_compat_timespec(ts, uts);
 }
