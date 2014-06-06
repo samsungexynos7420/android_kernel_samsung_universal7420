@@ -1551,7 +1551,7 @@ static unsigned long mem_cgroup_margin(struct mem_cgroup *memcg)
 int mem_cgroup_swappiness(struct mem_cgroup *memcg)
 {
 	/* root ? */
-	if (!memcg->css.parent)
+	if (mem_cgroup_disabled() || !memcg->css.parent)
 		return vm_swappiness;
 
 	return memcg->swappiness;
