@@ -1235,11 +1235,7 @@ static int tcp_match_skb_to_sack(struct sock *sk, struct sk_buff *skb,
 		if (pkt_len >= skb->len && !in_sack)
 			return 0;
 
-#ifdef CONFIG_MPTCP
 		err = tcp_fragment(sk, skb, pkt_len, mss, GFP_ATOMIC);
-#else
-		err = tcp_fragment(sk, skb, pkt_len, mss);
-#endif
 		if (err < 0)
 			return err;
 	}
@@ -2333,11 +2329,7 @@ static void tcp_mark_head_lost(struct sock *sk, int packets, int mark_head)
 			/* If needed, chop off the prefix to mark as lost. */
 			lost = (packets - oldcnt) * mss;
 			if (lost < skb->len &&
-#ifdef CONFIG_MPTCP			
 			    tcp_fragment(sk, skb, lost, mss, GFP_ATOMIC) < 0)
-#else
-				tcp_fragment(sk, skb, lost, mss) < 0)
-#endif
 				break;
 			cnt = packets;
 		}
