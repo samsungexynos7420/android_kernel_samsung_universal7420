@@ -662,11 +662,7 @@ extern void tcp_retransmit_timer(struct sock *sk);
 extern void tcp_xmit_retransmit_queue(struct sock *);
 extern void tcp_simple_retransmit(struct sock *);
 extern int tcp_trim_head(struct sock *, struct sk_buff *, u32);
-extern int tcp_fragment(struct sock *, struct sk_buff *, u32, unsigned int
-#ifdef CONFIG_MPTCP
-						, gfp_t
-#endif
-						);
+extern int tcp_fragment(struct sock *, struct sk_buff *, u32, unsigned int, gfp_t);
 
 extern void tcp_send_probe0(struct sock *);
 extern void tcp_send_partial(struct sock *);
