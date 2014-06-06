@@ -1221,11 +1221,7 @@ void tcp_adjust_pcount(struct sock *sk, const struct sk_buff *skb, int decr)
  * Remember, these are still headerless SKBs at this point.
  */
 int tcp_fragment(struct sock *sk, struct sk_buff *skb, u32 len,
-		 unsigned int mss_now
-#ifdef CONFIG_MPTCP
-		 , gfp_t gfp
-#endif
-		 )
+		 unsigned int mss_now, gfp_t gfp)
 {
 	struct tcp_sock *tp = tcp_sk(sk);
 	struct sk_buff *buff;
@@ -1240,15 +1236,11 @@ int tcp_fragment(struct sock *sk, struct sk_buff *skb, u32 len,
 	if (nsize < 0)
 		nsize = 0;
 
-	if (skb_unclone(skb, GFP_ATOMIC))
+	if (skb_unclone(skb, gfp))
 		return -ENOMEM;
 
 	/* Get a new skb... force flag on. */
-#ifdef CONFIG_MPTCP
 	buff = sk_stream_alloc_skb(sk, nsize, gfp);
-#else
-	buff = sk_stream_alloc_skb(sk, nsize, GFP_ATOMIC);
-#endif
 	if (buff == NULL)
 		return -ENOMEM; /* We'll just try again later. */
 
@@ -1787,11 +1779,7 @@ static int tso_fragment(struct sock *sk, struct sk_buff *skb, unsigned int len,
 
 	/* All of a TSO frame must be composed of paged data.  */
 	if (skb->len != skb->data_len)
-#ifdef CONFIG_MPTCP
 		return tcp_fragment(sk, skb, len, mss_now, gfp);
-#else
-		return tcp_fragment(sk, skb, len, mss_now);
-#endif
 
 	buff = sk_stream_alloc_skb(sk, 0, gfp);
 	if (unlikely(buff == NULL))
@@ -2301,12 +2289,8 @@ void tcp_send_loss_probe(struct sock *sk)
 		goto rearm_timer;
 
 	if ((pcount > 1) && (skb->len > (pcount - 1) * mss)) {
-#ifdef CONFIG_MPTCP
 		if (unlikely(tcp_fragment(sk, skb, (pcount - 1) * mss, mss,
 					  GFP_ATOMIC)))
-#else
-		if (unlikely(tcp_fragment(sk, skb, (pcount - 1) * mss, mss)))
-#endif
 			goto rearm_timer;
 		skb = tcp_write_queue_tail(sk);
 	}
@@ -2650,11 +2634,7 @@ int __tcp_retransmit_skb(struct sock *sk, struct sk_buff *skb)
 		return -EAGAIN;
 
 	if (skb->len > cur_mss) {
-#ifdef CONFIG_MPTCP
 		if (tcp_fragment(sk, skb, cur_mss, cur_mss, GFP_ATOMIC))
-#else
-		if (tcp_fragment(sk, skb, cur_mss, cur_mss))
-#endif
 			return -ENOMEM; /* We'll try again later. */
 	} else {
 		int oldpcount = tcp_skb_pcount(skb);
@@ -3539,11 +3519,7 @@ int tcp_write_wakeup(struct sock *sk)
 		    skb->len > mss) {
 			seg_size = min(seg_size, mss);
 			TCP_SKB_CB(skb)->tcp_flags |= TCPHDR_PSH;
-#ifdef CONFIG_MPTCP
 			if (tcp_fragment(sk, skb, seg_size, mss, GFP_ATOMIC))
-#else
-			if (tcp_fragment(sk, skb, seg_size, mss))
-#endif
 				return -1;
 		} else if (!tcp_skb_pcount(skb))
 			tcp_set_skb_tso_segs(sk, skb, mss);
