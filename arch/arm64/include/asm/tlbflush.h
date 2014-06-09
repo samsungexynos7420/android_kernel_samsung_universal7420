@@ -155,8 +155,8 @@ static inline void update_mmu_cache(struct vm_area_struct *vma,
 				    unsigned long addr, pte_t *ptep)
 {
 	/*
-	 * set_pte() does not have a DSB, so make sure that the page table
-	 * write is visible.
+	 * set_pte() does not have a DSB for user mappings, so make sure that
+	 * the page table write is visible.
 	 */
 	dsb(ishst);
 }
