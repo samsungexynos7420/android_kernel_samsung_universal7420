@@ -143,6 +143,8 @@ extern struct page *empty_zero_page;
 
 #define pte_valid_user(pte) \
 	((pte_val(pte) & (PTE_VALID | PTE_USER)) == (PTE_VALID | PTE_USER))
+#define pte_valid_not_user(pte) \
+	((pte_val(pte) & (PTE_VALID | PTE_USER)) == PTE_VALID)
 
 static inline pte_t clear_pte_bit(pte_t pte, pgprot_t prot)
 {
@@ -197,8 +199,8 @@ extern void panic(const char *fmt, ...);
 static inline void set_pte(pte_t *ptep, pte_t pte)
 {
 #ifdef CONFIG_TIMA_RKP
-	if (rkp_is_pg_dbl_mapped((u64)(pte)) ) {
-		panic("TIMA RKP : Double mapping Detected pte = %llx ptep = %p",(u64)pte, ptep);
+	if (pte && rkp_is_pg_dbl_mapped((u64)(pte)) ) {
+		panic("TIMA RKP : Double mapping Detected pte = 0x%llx ptep = %p",(u64)pte, ptep);
 		return;
 	}
 	if (rkp_is_pg_protected((u64)ptep)) {
@@ -210,11 +212,23 @@ static inline void set_pte(pte_t *ptep, pte_t pte)
 		:
 		: "r" (ptep), "r" (pte)
 		: "x1", "x2", "memory" );
+		if (pte_valid_not_user(pte)) {
+			dsb(ishst);
+			isb();
+		}
 	}
 #else
 	*ptep = pte;
-#endif /* CONFIG_TIMA_RKP */
 
+	/*
+	 * Only if the new pte is valid and kernel, otherwise TLB maintenance
+	 * or update_mmu_cache() have the necessary barriers.
+	 */
+	if (pte_valid_not_user(pte)) {
+		dsb(ishst);
+		isb();
+	}
+#endif /* CONFIG_TIMA_RKP */
 }
 
 extern void __sync_icache_dcache(pte_t pteval, unsigned long addr);
@@ -342,6 +356,7 @@ static inline void set_pmd(pmd_t *pmdp, pmd_t pmd)
 	*pmdp = pmd;
 #endif /* CONFIG_TIMA_RKP */
 	dsb(ishst);
+	isb();
 }
 
 static inline void pmd_clear(pmd_t *pmdp)
@@ -385,6 +400,7 @@ static inline void set_pud(pud_t *pudp, pud_t pud)
 	*pudp = pud;
 #endif
 	dsb(ishst);
+	isb();
 }
 
 static inline void pud_clear(pud_t *pudp)
