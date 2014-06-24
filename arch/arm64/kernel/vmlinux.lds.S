@@ -11,6 +11,8 @@
 #include <asm/page.h>
 #include <asm/pgtable.h>
 
+#include "image.h"
+
 #if (defined(CONFIG_GENERIC_BUG))
 #define ARM_EXIT_KEEP(x)        x
 #define ARM_EXIT_DISCARD(x)
@@ -194,6 +196,8 @@ SECTIONS
 	_end = .;
 
 	STABS_DEBUG
+
+	HEAD_SYMBOLS
 	.comment 0 : { *(.comment) }
 }
 
