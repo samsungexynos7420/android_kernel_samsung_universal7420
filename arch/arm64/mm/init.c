@@ -153,13 +153,6 @@ void __init arm64_memblock_init(void)
 		memblock_reserve(__virt_to_phys(initrd_start), initrd_end - initrd_start);
 #endif
 
-	/*
-	 * Reserve the page tables.  These are already in use,
-	 * and can only be in node 0.
-	 */
-	memblock_reserve(__pa(swapper_pg_dir), SWAPPER_DIR_SIZE);
-	memblock_reserve(__pa(idmap_pg_dir), IDMAP_DIR_SIZE);
-
 	/* Reserve the dtb region */
 	memblock_reserve(virt_to_phys(initial_boot_params),
 			 be32_to_cpu(initial_boot_params->totalsize));
