@@ -39,10 +39,12 @@
 
 #define __PHYS_OFFSET	(KERNEL_START - TEXT_OFFSET)
 
-#if 0
-#if (KERNEL_RAM_VADDR & 0xfffff) != 0x80000
-#error KERNEL_RAM_VADDR must start at 0xXXX80000
-#endif
+#if (TEXT_OFFSET & 0xf) != 0
+#error TEXT_OFFSET must be at least 16B aligned
+#elif (PAGE_OFFSET & 0xfffff) != 0
+#error PAGE_OFFSET must be at least 2MB aligned
+#elif TEXT_OFFSET > 0xfffff
+#error TEXT_OFFSET must be less than 2MB
 #endif
 
 #define KERNEL_START	_text

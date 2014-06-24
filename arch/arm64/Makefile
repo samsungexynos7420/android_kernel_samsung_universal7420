@@ -66,7 +66,15 @@ endif
 head-y		:= arch/arm64/kernel/head.o
 
 # The byte offset of the kernel image in RAM from the start of RAM.
-TEXT_OFFSET := 0x00205000
+ifeq ($(CONFIG_ARM64_RANDOMIZE_TEXT_OFFSET), y)
+TEXT_OFFSET := $(shell awk 'BEGIN {srand(); printf "0x%04x0\n", int(65535 * rand())}')
+else
+  ifeq ($(CONFIG_SOC_EXYNOS7420), y)
+    TEXT_OFFSET := 0x00205000
+  else
+TEXT_OFFSET := 0x00080000
+endif
+endif
 
 export	TEXT_OFFSET GZFLAGS
 
