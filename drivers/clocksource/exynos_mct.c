@@ -103,7 +103,7 @@ static void exynos4_mct_write(unsigned int value, unsigned long offset)
 	u32 mask;
 	u32 i;
 
-	__raw_writel(value, reg_base + offset);
+	writel_relaxed(value, reg_base + offset);
 
 	if (likely(offset >= EXYNOS4_MCT_L_BASE(0))) {
 		stat_addr = (offset & EXYNOS4_MCT_L_MASK) + MCT_L_WSTAT_OFFSET;
@@ -153,8 +153,8 @@ static void exynos4_mct_write(unsigned int value, unsigned long offset)
 
 	/* Wait until written values are applied */
 	for (i = 0; i < 0x1000; i++)
-		if (__raw_readl(reg_base + stat_addr) & mask) {
-			__raw_writel(mask, reg_base + stat_addr);
+		if (readl_relaxed(reg_base + stat_addr) & mask) {
+			writel_relaxed(mask, reg_base + stat_addr);
 			return;
 		}
 
@@ -166,7 +166,7 @@ static void exynos4_mct_frc_start(u32 hi, u32 lo)
 {
 	u32 reg;
 
-	reg = __raw_readl(reg_base + EXYNOS4_MCT_G_TCON);
+	reg = readl_relaxed(reg_base + EXYNOS4_MCT_G_TCON);
 	if (!(reg & MCT_G_TCON_START)) {
 		exynos4_mct_write(lo, EXYNOS4_MCT_G_CNT_L);
 		exynos4_mct_write(hi, EXYNOS4_MCT_G_CNT_U);
@@ -186,14 +186,14 @@ static notrace u32 exynos4_read_sched_clock(void)
 	if (soc_is_exynos5430() && samsung_rev() == EXYNOS5430_REV_0) {
 		local_irq_save(flags);
 		if (spin_trylock(&exynos_mct_spinlock)) {
-			val = __raw_readl(reg_base + EXYNOS4_MCT_G_CNT_L);
+			val = readl_relaxed(reg_base + EXYNOS4_MCT_G_CNT_L);
 			spin_unlock(&exynos_mct_spinlock);
 		} else {
 			spin_unlock_wait(&exynos_mct_spinlock);
 		}
 		local_irq_restore(flags);
 	} else {
-		val = __raw_readl(reg_base + EXYNOS4_MCT_G_CNT_L);
+		val = readl_relaxed(reg_base + EXYNOS4_MCT_G_CNT_L);
 	}
 
 	return val;
@@ -233,7 +233,7 @@ static void exynos4_mct_comp0_stop(void)
 {
 	unsigned int tcon;
 
-	tcon = __raw_readl(reg_base + EXYNOS4_MCT_G_TCON);
+	tcon = readl_relaxed(reg_base + EXYNOS4_MCT_G_TCON);
 	tcon &= ~(MCT_G_TCON_COMP0_ENABLE | MCT_G_TCON_COMP0_AUTO_INC);
 
 	exynos4_mct_write(tcon, EXYNOS4_MCT_G_TCON);
@@ -246,7 +246,7 @@ static void exynos4_mct_comp0_start(enum clock_event_mode mode,
 	unsigned int tcon;
 	cycle_t comp_cycle = 0;
 
-	tcon = __raw_readl(reg_base + EXYNOS4_MCT_G_TCON);
+	tcon = readl_relaxed(reg_base + EXYNOS4_MCT_G_TCON);
 
 	if (mode == CLOCK_EVT_MODE_PERIODIC) {
 		tcon |= MCT_G_TCON_COMP0_AUTO_INC;
@@ -254,7 +254,7 @@ static void exynos4_mct_comp0_start(enum clock_event_mode mode,
 	}
 
 	if (mct_frc.mask == (cycle_t)CLOCKSOURCE_MASK(32))
-		comp_cycle = __raw_readl(reg_base + EXYNOS4_MCT_G_CNT_U);
+		comp_cycle = readl_relaxed(reg_base + EXYNOS4_MCT_G_CNT_U);
 
 	comp_cycle += exynos4_frc_read(&mct_frc) + cycles;
 	exynos4_mct_write((u32)comp_cycle, EXYNOS4_MCT_G_COMP0_L);
@@ -337,10 +337,10 @@ static int tick_base_cnt;
 int exynos4_mct_tick_dump(int timer)
 {
 	pr_info("mct_tick%d - TCNTB:%08X, TCNTO:%08X, ICNTB:%08X, ICNTO:%08X\n",
-		timer, __raw_readl(reg_base + EXYNOS4_MCT_L_BASE(timer)),
-		__raw_readl(reg_base + EXYNOS4_MCT_L_BASE(timer) + 0x4),
-		__raw_readl(reg_base + EXYNOS4_MCT_L_BASE(timer) + 0x8),
-		__raw_readl(reg_base + EXYNOS4_MCT_L_BASE(timer) + 0xC));
+		timer, readl_relaxed(reg_base + EXYNOS4_MCT_L_BASE(timer)),
+		readl_relaxed(reg_base + EXYNOS4_MCT_L_BASE(timer) + 0x4),
+		readl_relaxed(reg_base + EXYNOS4_MCT_L_BASE(timer) + 0x8),
+		readl_relaxed(reg_base + EXYNOS4_MCT_L_BASE(timer) + 0xC));
 
 	return 0;
 }
@@ -356,7 +356,7 @@ static void exynos4_mct_tick_stop(struct mct_clock_event_device *mevt, int force
 	exynos4_mct_write(0x1, mevt->base + MCT_L_INT_CSTAT_OFFSET);
 
 	if (force || evt->mode != CLOCK_EVT_MODE_PERIODIC) {
-		tmp = __raw_readl(reg_base + mevt->base + MCT_L_TCON_OFFSET);
+		tmp = readl_relaxed(reg_base + mevt->base + MCT_L_TCON_OFFSET);
 		tmp &= ~(MCT_L_TCON_INT_START | MCT_L_TCON_TIMER_START);
 		exynos4_mct_write(tmp, mevt->base + MCT_L_TCON_OFFSET);
 	}
@@ -375,7 +375,7 @@ static void exynos4_mct_tick_start(unsigned long cycles, int periodic,
 	/* enable MCT tick interrupt */
 	exynos4_mct_write(0x1, mevt->base + MCT_L_INT_ENB_OFFSET);
 
-	tmp = __raw_readl(reg_base + mevt->base + MCT_L_TCON_OFFSET);
+	tmp = readl_relaxed(reg_base + mevt->base + MCT_L_TCON_OFFSET);
 	tmp |= MCT_L_TCON_INT_START | MCT_L_TCON_TIMER_START;
 
 	if (periodic)
