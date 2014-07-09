@@ -431,7 +431,6 @@ static int udf_translate_to_linux(uint8_t *newName, int newLen,
 	int extIndex = 0, newExtIndex = 0, hasExt = 0;
 	unsigned short valueCRC;
 	uint8_t curr;
-	const uint8_t hexChar[] = "0123456789ABCDEF";
 
 	if (udfName[0] == '.' &&
 	    (udfLen == 1 || (udfLen == 2 && udfName[1] == '.'))) {
@@ -496,10 +495,10 @@ static int udf_translate_to_linux(uint8_t *newName, int newLen,
 			newIndex = newLen - CRC_LEN;
 		newName[newIndex++] = CRC_MARK;
 		valueCRC = crc_itu_t(0, fidName, fidNameLen);
-		newName[newIndex++] = hexChar[(valueCRC & 0xf000) >> 12];
-		newName[newIndex++] = hexChar[(valueCRC & 0x0f00) >> 8];
-		newName[newIndex++] = hexChar[(valueCRC & 0x00f0) >> 4];
-		newName[newIndex++] = hexChar[(valueCRC & 0x000f)];
+		newName[newIndex++] = hex_asc_upper_hi(valueCRC >> 8);
+		newName[newIndex++] = hex_asc_upper_lo(valueCRC >> 8);
+		newName[newIndex++] = hex_asc_upper_hi(valueCRC);
+		newName[newIndex++] = hex_asc_upper_lo(valueCRC);
 
 		if (hasExt) {
 			newName[newIndex++] = EXT_MARK;
