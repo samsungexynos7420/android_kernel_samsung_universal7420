@@ -321,7 +321,7 @@ out:
 		print_bh(sb, bitmap_bh, 0, EXT4_BLOCK_SIZE(sb));
 		/* for debugging */
 		ext4_error(sb, "bit already cleared for inode %lu", ino);
-		if (!EXT4_MB_GRP_IBITMAP_CORRUPT(grp)) {
+		if (gdp && !EXT4_MB_GRP_IBITMAP_CORRUPT(grp)) {
 			int count;
 			count = ext4_free_inodes_count(sb, gdp);
 			percpu_counter_sub(&sbi->s_freeinodes_counter,
