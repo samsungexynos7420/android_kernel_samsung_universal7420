@@ -112,10 +112,10 @@ EXPORT_SYMBOL_GPL(pci_ioremap_io);
 #endif
 
 static pte_t bm_pte[PTRS_PER_PTE] __page_aligned_bss;
-#ifndef CONFIG_ARM64_2_LEVELS
+#if CONFIG_ARM64_PGTABLE_LEVELS > 2
 static pte_t bm_pmd[PTRS_PER_PMD] __page_aligned_bss;
 #endif
-#ifdef CONFIG_ARM64_4_LEVELS
+#if CONFIG_ARM64_PGTABLE_LEVELS > 3
 static pte_t bm_pud[PTRS_PER_PUD] __page_aligned_bss;
 #endif
 
