@@ -3524,7 +3524,7 @@ int ext4_punch_hole(struct file *file, loff_t offset, loff_t length)
 		ret = ext4_ext_remove_space(inode, first_block,
 					    stop_block - 1);
 	else
-		ret = ext4_free_hole_blocks(handle, inode, first_block,
+		ret = ext4_ind_remove_space(handle, inode, first_block,
 					    stop_block);
 
 	up_write(&EXT4_I(inode)->i_data_sem);
