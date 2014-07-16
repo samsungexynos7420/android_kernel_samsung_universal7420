@@ -47,7 +47,7 @@
 #endif
 #endif
 
-#define SWAPPER_DIR_SIZE	(3 * PAGE_SIZE)
+#define SWAPPER_DIR_SIZE	(2 * PAGE_SIZE)
 #define IDMAP_DIR_SIZE		(2 * PAGE_SIZE)
 
 	.globl	swapper_pg_dir
@@ -475,12 +475,6 @@ __create_page_tables:
 	sub	x6, x6, #1			// inclusive range
 	create_block_map x0, x7, x3, x5, x6
 1:
-	/*
-	 * Create the pgd entry for the fixed mappings.
-	 */
-	ldr	x5, =FIXADDR_TOP		// Fixed mapping virtual address
-	add	x0, x26, #2 * PAGE_SIZE		// section table address
-	create_pgd_entry x26, x0, x5, x6, x7
 	ret
 ENDPROC(__create_page_tables)
 	.ltorg
