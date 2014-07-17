@@ -387,9 +387,11 @@ static int cpu_psci_cpu_suspend(unsigned long index)
 	return psci_ops.cpu_suspend(state[index], virt_to_phys(cpu_resume));
 }
 #endif
+#endif
 
 const struct cpu_operations cpu_psci_ops = {
 	.name		= "psci",
+#ifdef CONFIG_SMP
 	.cpu_init	= cpu_psci_cpu_init,
 	.cpu_prepare	= cpu_psci_cpu_prepare,
 	.cpu_boot	= cpu_psci_cpu_boot,
@@ -400,6 +402,6 @@ const struct cpu_operations cpu_psci_ops = {
 #ifdef CONFIG_ARM64_CPU_SUSPEND
 	.cpu_suspend	= cpu_psci_cpu_suspend,
 #endif
+#endif
 };
 
-#endif
