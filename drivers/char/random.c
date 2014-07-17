@@ -919,12 +919,13 @@ void add_interrupt_randomness(int irq, int irq_flags)
 
 	/*
 	 * If we have architectural seed generator, produce a seed and
-	 * add it to the pool.  For the sake of paranoia count it as
-	 * 50% entropic.
+	 * add it to the pool.  For the sake of paranoia don't let the
+	 * architectural seed generator dominate the input from the
+	 * interrupt noise.
 	 */
 	if (arch_get_random_seed_long(&seed)) {
-		__mix_pool_bytes(r, &seed, sizeof(seed), NULL);
-		credit += sizeof(seed) * 4;
+		__mix_pool_bytes(r, &seed, sizeof(seed));
+		credit = 1;
 	}
 	spin_unlock(&r->lock);
 
