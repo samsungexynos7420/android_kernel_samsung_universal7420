@@ -263,6 +263,9 @@
 # include <linux/irq.h>
 #endif
 
+#include <linux/syscalls.h>
+#include <linux/completion.h>
+
 #include <asm/processor.h>
 #include <asm/uaccess.h>
 #include <asm/irq.h>
@@ -614,12 +617,13 @@ retry:
 		goto retry;
 
 	r->entropy_total += nbits;
-	if (!r->initialized && nbits > 0) {
-		if (r->entropy_total > 128) {
-			r->initialized = 1;
-			r->entropy_total = 0;
-			if (r == &nonblocking_pool)
-				prandom_reseed_late();
+	if (!r->initialized && r->entropy_total > 128) {
+		r->initialized = 1;
+		r->entropy_total = 0;
+		if (r == &nonblocking_pool) {
+			prandom_reseed_late();
+			wake_up_interruptible(&urandom_init_wait);
+			pr_notice("random: %s pool is initialized\n", r->name);
 		}
 	}
 
@@ -1242,8 +1246,8 @@ _random_read(int nonblock, char __user *buf, size_t nbytes)
 				  ENTROPY_BITS(&input_pool));
 		if (n > 0)
 			return n;
-		/* Pool is (near) empty.  Maybe wait and retry. */
 
+		/* Pool is (near) empty.  Maybe wait and retry. */
 		if (nonblock)
 			return -EAGAIN;
 
@@ -1397,14 +1401,11 @@ SYSCALL_DEFINE3(getrandom, char __user *, buf, size_t, count,
 {
 	if (flags & ~(GRND_NONBLOCK|GRND_RANDOM))
 		return -EINVAL;
-
-	if (count > INT_MAX)
+ 	if (count > INT_MAX)
 		count = INT_MAX;
-
-	if (flags & GRND_RANDOM)
+ 	if (flags & GRND_RANDOM)
 		return _random_read(flags & GRND_NONBLOCK, buf, count);
-
-	if (unlikely(nonblocking_pool.initialized == 0)) {
+ 	if (unlikely(nonblocking_pool.initialized == 0)) {
 		if (flags & GRND_NONBLOCK)
 			return -EAGAIN;
 		wait_event_interruptible(urandom_init_wait,
