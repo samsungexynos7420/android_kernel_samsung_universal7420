@@ -61,6 +61,17 @@ static int __init early_initrd(char *p)
 early_param("initrd", early_initrd);
 #endif
 
+/*
+ * Return the maximum physical address for ZONE_DMA (DMA_BIT_MASK(32)). It
+ * currently assumes that for memory starting above 4G, 32-bit devices will
+ * use a DMA offset.
+ */
+static phys_addr_t max_zone_dma_phys(void)
+{
+	phys_addr_t offset = memblock_start_of_DRAM() & GENMASK_ULL(63, 32);
+	return min(offset + (1ULL << 32), memblock_end_of_DRAM());
+}
+
 #ifdef CONFIG_ZONE_DMA_ALLOW_CUSTOM_SIZE
 #ifndef CONFIG_ZONE_DMA_SIZE_MBYTES
 #define ZONE_DMA_SIZE_BYTES	((u32)-1)
@@ -183,7 +194,7 @@ void __init arm64_memblock_init(void)
 
 	/* 4GB maximum for 32-bit only capable devices */
 	if (IS_ENABLED(CONFIG_ZONE_DMA))
-		dma_phys_limit = dma_to_phys(NULL, DMA_BIT_MASK(32)) + 1;
+		dma_phys_limit = max_zone_dma_phys();
 	dma_contiguous_reserve(dma_phys_limit);
 
 	memblock_allow_resize();
