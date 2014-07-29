@@ -5179,8 +5179,8 @@ int ext4_collapse_range(struct inode *inode, loff_t offset, loff_t len)
 	BUG_ON(offset + len > i_size_read(inode));
 
 	/* Collapse range works only on fs block size aligned offsets. */
-	if (offset & (EXT4_BLOCK_SIZE(sb) - 1) ||
-	    len & (EXT4_BLOCK_SIZE(sb) - 1))
+	if (offset & (EXT4_CLUSTER_SIZE(sb) - 1) ||
+	    len & (EXT4_CLUSTER_SIZE(sb) - 1))
 		return -EINVAL;
 
 	if (!S_ISREG(inode->i_mode))
