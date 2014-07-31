@@ -344,8 +344,7 @@ static inline unsigned int sk_filter_size(unsigned int proglen)
 		   offsetof(struct sk_filter, insns[proglen]));
 }
 
-#define sk_filter_proglen(fprog)			\
-		(fprog->len * sizeof(fprog->filter[0]))
+#define bpf_classic_proglen(fprog) (fprog->len * sizeof(fprog->filter[0]))
 
 int sk_filter_trim_cap(struct sock *sk, struct sk_buff *skb, unsigned int cap);
 static inline int sk_filter(struct sock *sk, struct sk_buff *skb)
