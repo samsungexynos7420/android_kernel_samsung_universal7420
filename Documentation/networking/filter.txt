@@ -587,7 +587,7 @@ filter, resp. sk_unattached_filter_destroy() for destroying it. The macro
 SK_RUN_FILTER(filter, ctx) transparently invokes the right BPF function to
 run the filter. 'filter' is a pointer to struct sk_filter that we got from
 sk_unattached_filter_create(), and 'ctx' the given context (e.g. skb pointer).
-All constraints and restrictions from sk_chk_filter() apply before a
+All constraints and restrictions from bpf_check_classic() apply before a
 conversion to the new layout is being done behind the scenes!
 
 Currently, for JITing, the user BPF format is being used and current BPF JIT
