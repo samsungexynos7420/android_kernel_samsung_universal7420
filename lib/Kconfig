@@ -436,4 +436,11 @@ config QMI_ENCDEC
 	  The kernel drivers receive the QMI message over a transport
 	  and then decode it into a C structure.
 
+#
+# sg chaining option
+#
+
+config ARCH_HAS_SG_CHAIN
+	def_bool n
+
 endmenu
