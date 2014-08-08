@@ -2495,7 +2495,7 @@ static int proc_tgid_io_accounting(struct seq_file *m, struct pid_namespace *ns,
 
 #ifdef CONFIG_USER_NS
 static int proc_id_map_open(struct inode *inode, struct file *file,
-	struct seq_operations *seq_ops)
+	const struct seq_operations *seq_ops)
 {
 	struct user_namespace *ns = NULL;
 	struct task_struct *task;
