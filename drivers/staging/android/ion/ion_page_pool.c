@@ -54,7 +54,7 @@ static int ion_page_pool_add(struct ion_page_pool *pool, struct page *page)
 	if (pool->cached)
 		ion_clear_page_clean(page);
 
-	spin_lock(&pool->lock);
+	mutex_lock(&pool->mutex);
 	if (PageHighMem(page)) {
 		list_add_tail(&page->lru, &pool->high_items);
 		pool->high_count++;
@@ -62,7 +62,7 @@ static int ion_page_pool_add(struct ion_page_pool *pool, struct page *page)
 		list_add_tail(&page->lru, &pool->low_items);
 		pool->low_count++;
 	}
-	spin_unlock(&pool->lock);
+	mutex_unlock(&pool->mutex);
 	return 0;
 }
 
@@ -90,12 +90,12 @@ struct page *ion_page_pool_alloc(struct ion_page_pool *pool)
 
 	BUG_ON(!pool);
 
-	spin_lock(&pool->lock);
+	mutex_lock(&pool->mutex);
 	if (pool->high_count)
 		page = ion_page_pool_remove(pool, true);
 	else if (pool->low_count)
 		page = ion_page_pool_remove(pool, false);
-	spin_unlock(&pool->lock);
+	mutex_unlock(&pool->mutex);
 
 	return page;
 }
@@ -183,9 +183,9 @@ void ion_page_pool_preload_prepare(struct ion_page_pool *pool, long num_pages)
 
 	while (pages_in_pool-- > num_pages) {
 		struct page *page;
-		spin_lock(&pool->lock);
+		mutex_lock(&pool->mutex);
 		page = ion_page_pool_remove(pool, !pool->low_count);
-		spin_unlock(&pool->lock);
+		mutex_unlock(&pool->mutex);
 		if (!page)
 			break;
 		ion_page_pool_free_pages(pool, page);
@@ -298,16 +298,16 @@ int ion_page_pool_shrink(struct ion_page_pool *pool, gfp_t gfp_mask,
 	for (i = 0; i < nr_to_scan; i += (1 << pool->order)) {
 		struct page *page;
 
-		spin_lock(&pool->lock);
+		mutex_lock(&pool->mutex);
 		if (pool->low_count) {
 			page = ion_page_pool_remove(pool, false);
 		} else if (high && pool->high_count) {
 			page = ion_page_pool_remove(pool, true);
 		} else {
-			spin_unlock(&pool->lock);
+			mutex_unlock(&pool->mutex);
 			break;
 		}
-		spin_unlock(&pool->lock);
+		mutex_unlock(&pool->mutex);
 		ion_page_pool_free_pages(pool, page);
 	}
 
@@ -326,7 +326,7 @@ struct ion_page_pool *ion_page_pool_create(gfp_t gfp_mask, unsigned int order)
 	INIT_LIST_HEAD(&pool->high_items);
 	pool->gfp_mask = gfp_mask | __GFP_COMP;
 	pool->order = order;
-	spin_lock_init(&pool->lock);
+	mutex_init(&pool->mutex);
 	plist_node_init(&pool->list, order);
 
 	return pool;

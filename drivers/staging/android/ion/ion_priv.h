@@ -40,7 +40,6 @@ struct ion_iovm_map {
 	struct list_head list;
 	unsigned int map_cnt;
 	struct device *dev;
-	struct iommu_domain *domain;
 	dma_addr_t iova;
 	int region_id;
 };
@@ -227,17 +226,6 @@ struct ion_heap {
 
 	int (*debug_show)(struct ion_heap *heap, struct seq_file *, void *);
 };
-
-/**
- * ion_buffer_sync_force - check if ION_FLAG_SYNC_FORCE is set
- * @buffer:		buffer
- *
- * indicates whether this ion buffer should be cache clean after allocation
- */
-static inline bool ion_buffer_sync_force(struct ion_buffer *buffer)
-{
-	return !!(buffer->flags & ION_FLAG_SYNC_FORCE);
-}
 
 /**
  * ion_buffer_cached - this ion buffer is cached
@@ -492,7 +480,7 @@ struct ion_page_pool {
 	int low_count;
 	struct list_head high_items;
 	struct list_head low_items;
-	spinlock_t lock;
+	struct mutex mutex;
 	gfp_t gfp_mask;
 	unsigned int order;
 	bool cached;
