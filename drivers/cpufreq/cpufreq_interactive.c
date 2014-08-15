@@ -1393,7 +1393,7 @@ static ssize_t store_timer_rate(struct cpufreq_interactive_tunables *tunables,
 		const char *buf, size_t count)
 {
 	int ret;
-	unsigned long val;
+	unsigned long val, val_round;
 #ifdef CONFIG_MODE_AUTO_CHANGE
 	unsigned long flags_idx;
 #endif
@@ -1407,7 +1407,12 @@ static ssize_t store_timer_rate(struct cpufreq_interactive_tunables *tunables,
 		tunables->timer_rate = val;
 	spin_unlock_irqrestore(&tunables->param_index_lock, flags_idx);
 #else
-	tunables->timer_rate = val;
+	val_round = jiffies_to_usecs(usecs_to_jiffies(val));
+	if (val != val_round)
+		pr_warn("timer_rate not aligned to jiffy. Rounded up to %lu\n",
+			val_round);
+
+	tunables->timer_rate = val_round;
 #endif
 	return count;
 }
