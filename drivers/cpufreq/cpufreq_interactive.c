@@ -1393,7 +1393,7 @@ static ssize_t store_timer_rate(struct cpufreq_interactive_tunables *tunables,
 
 #ifdef CONFIG_MODE_AUTO_CHANGE
 	spin_lock_irqsave(&tunables->param_index_lock, flags_idx);
-	tunables->timer_rate_set[tunables->param_index] = val;
+	tunables->timer_rate_set[tunables->param_index] = val_round;
 	if (tunables->cur_param_index == tunables->param_index)
 		tunables->timer_rate = val_round;
 	spin_unlock_irqrestore(&tunables->param_index_lock, flags_idx);
