@@ -387,11 +387,6 @@ void __init setup_arch(char **cmdline_p)
 {
 	struct machine_desc *mdesc;
 
-	/*
-	 * Unmask asynchronous aborts early to catch possible system errors.
-	 */
-	local_async_enable();
-
 	pr_info("Boot CPU: AArch64 Processor [%08x]\n", read_cpuid_id());
 
 	setup_machine_fdt(__fdt_pointer);
@@ -410,6 +405,11 @@ void __init setup_arch(char **cmdline_p)
 	early_ioremap_init();
 
 	parse_early_param();
+	
+	/*
+	 * Unmask asynchronous aborts early to catch possible system errors.
+	 */
+	local_async_enable();
 
 	arm64_memblock_init();
 
