@@ -31,6 +31,7 @@
 #include <asm/insn.h>
 
 #define AARCH64_INSN_SF_BIT	BIT(31)
+#define AARCH64_INSN_N_BIT	BIT(22)
 
 static int aarch64_insn_encoding_class[] = {
 	AARCH64_INSN_CLS_UNKNOWN,
@@ -296,6 +297,14 @@ static int __kprobes aarch64_get_imm_shift_mask(enum aarch64_insn_imm_type type,
 	case AARCH64_INSN_IMM_7:
 		mask = BIT(7) - 1;
 		shift = 15;
+		break;
+	case AARCH64_INSN_IMM_S:
+		mask = BIT(6) - 1;
+		shift = 10;
+		break;
+	case AARCH64_INSN_IMM_R:
+		mask = BIT(6) - 1;
+		shift = 16;
 		break;
 	default:
 		return -EINVAL;
@@ -695,6 +704,53 @@ u32 aarch64_insn_gen_add_sub_imm(enum aarch64_insn_register dst,
 	insn = aarch64_insn_encode_register(AARCH64_INSN_REGTYPE_RN, insn, src);
 
 	return aarch64_insn_encode_immediate(AARCH64_INSN_IMM_12, insn, imm);
+}
+
+u32 aarch64_insn_gen_bitfield(enum aarch64_insn_register dst,
+			      enum aarch64_insn_register src,
+			      int immr, int imms,
+			      enum aarch64_insn_variant variant,
+			      enum aarch64_insn_bitfield_type type)
+{
+	u32 insn;
+	u32 mask;
+
+	switch (type) {
+	case AARCH64_INSN_BITFIELD_MOVE:
+		insn = aarch64_insn_get_bfm_value();
+		break;
+	case AARCH64_INSN_BITFIELD_MOVE_UNSIGNED:
+		insn = aarch64_insn_get_ubfm_value();
+		break;
+	case AARCH64_INSN_BITFIELD_MOVE_SIGNED:
+		insn = aarch64_insn_get_sbfm_value();
+		break;
+	default:
+		BUG_ON(1);
+	}
+
+	switch (variant) {
+	case AARCH64_INSN_VARIANT_32BIT:
+		mask = GENMASK(4, 0);
+		break;
+	case AARCH64_INSN_VARIANT_64BIT:
+		insn |= AARCH64_INSN_SF_BIT | AARCH64_INSN_N_BIT;
+		mask = GENMASK(5, 0);
+		break;
+	default:
+		BUG_ON(1);
+	}
+
+	BUG_ON(immr & ~mask);
+	BUG_ON(imms & ~mask);
+
+	insn = aarch64_insn_encode_register(AARCH64_INSN_REGTYPE_RD, insn, dst);
+
+	insn = aarch64_insn_encode_register(AARCH64_INSN_REGTYPE_RN, insn, src);
+
+	insn = aarch64_insn_encode_immediate(AARCH64_INSN_IMM_R, insn, immr);
+
+	return aarch64_insn_encode_immediate(AARCH64_INSN_IMM_S, insn, imms);
 }
 
 bool aarch32_insn_is_wide(u32 insn)
