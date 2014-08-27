@@ -68,6 +68,7 @@ endif
 export	TEXT_OFFSET GZFLAGS
 
 core-y		+= arch/arm64/kernel/ arch/arm64/mm/
+core-$(CONFIG_NET) += arch/arm64/net/
 core-$(CONFIG_CRYPTO) += arch/arm64/crypto/
 core-y		+= $(machdirs) $(platdirs)
 libs-y		:= arch/arm64/lib/ $(libs-y)
