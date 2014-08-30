@@ -2185,8 +2185,7 @@ extern ssize_t ext4_mb_freefrag_show(struct ext4_sb_info *sbi, char *buf);
 extern void ext4_process_freed_data(struct super_block *sb, tid_t commit_tid);
 
 /* inode.c */
-struct buffer_head *ext4_getblk(handle_t *, struct inode *,
-						ext4_lblk_t, int, int *);
+struct buffer_head *ext4_getblk(handle_t *, struct inode *, ext4_lblk_t, int);
 struct buffer_head *ext4_bread(handle_t *, struct inode *,
 						ext4_lblk_t, int, int *);
 int ext4_get_block_write(struct inode *inode, sector_t iblock,
