@@ -915,7 +915,7 @@ ext4_ext_find_extent(struct inode *inode, ext4_lblk_t block,
 	if (!path) {
 		path = kzalloc(sizeof(struct ext4_ext_path) * (depth + 2),
 				GFP_NOFS);
-		if (!path)
+		if (unlikely(!path))
 			return ERR_PTR(-ENOMEM);
 		alloc = 1;
 	}
@@ -935,7 +935,7 @@ ext4_ext_find_extent(struct inode *inode, ext4_lblk_t block,
 
 		bh = read_extent_tree_block(inode, path[ppos].p_block, --i,
 					    flags);
-		if (IS_ERR(bh)) {
+		if (unlikely(IS_ERR(bh))) {
 			ret = PTR_ERR(bh);
 			goto err;
 		}
