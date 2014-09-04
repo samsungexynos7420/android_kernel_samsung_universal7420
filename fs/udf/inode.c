@@ -51,7 +51,6 @@ MODULE_LICENSE("GPL");
 
 static umode_t udf_convert_permissions(struct fileEntry *);
 static int udf_update_inode(struct inode *, int);
-static void udf_fill_inode(struct inode *, struct buffer_head *);
 static int udf_sync_inode(struct inode *inode);
 static int udf_alloc_i_data(struct inode *inode, size_t size);
 static sector_t inode_getblk(struct inode *, sector_t, int *, int *);
@@ -1282,8 +1281,11 @@ static void __udf_read_inode(struct inode *inode)
 {
 	struct buffer_head *bh = NULL;
 	struct fileEntry *fe;
+	struct extendedFileEntry *efe;
 	uint16_t ident;
 	struct udf_inode_info *iinfo = UDF_I(inode);
+	struct udf_sb_info *sbi = UDF_SB(inode->i_sb);
+	unsigned int link_count;
 	unsigned int indirections = 0;
 
 reread:
@@ -1316,6 +1318,7 @@ reread:
 	}
 
 	fe = (struct fileEntry *)bh->b_data;
+	efe = (struct extendedFileEntry *)bh->b_data;
 
 	if (fe->icbTag.strategyType == cpu_to_le16(4096)) {
 		struct buffer_head *ibh;
@@ -1353,22 +1356,6 @@ reread:
 		make_bad_inode(inode);
 		return;
 	}
-	udf_fill_inode(inode, bh);
-
-	brelse(bh);
-}
-
-static void udf_fill_inode(struct inode *inode, struct buffer_head *bh)
-{
-	struct fileEntry *fe;
-	struct extendedFileEntry *efe;
-	struct udf_sb_info *sbi = UDF_SB(inode->i_sb);
-	struct udf_inode_info *iinfo = UDF_I(inode);
-	unsigned int link_count;
-
-	fe = (struct fileEntry *)bh->b_data;
-	efe = (struct extendedFileEntry *)bh->b_data;
-
 	if (fe->icbTag.strategyType == cpu_to_le16(4))
 		iinfo->i_strat4096 = 0;
 	else /* if (fe->icbTag.strategyType == cpu_to_le16(4096)) */
@@ -1568,6 +1555,7 @@ static void udf_fill_inode(struct inode *inode, struct buffer_head *bh)
 		} else
 			make_bad_inode(inode);
 	}
+	brelse(bh);
 }
 
 static int udf_alloc_i_data(struct inode *inode, size_t size)
