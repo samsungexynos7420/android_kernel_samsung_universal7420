@@ -829,7 +829,6 @@ static void blkcg_css_free(struct cgroup *cgroup)
 
 static struct cgroup_subsys_state *blkcg_css_alloc(struct cgroup *cgroup)
 {
-	static atomic64_t id_seq = ATOMIC64_INIT(0);
 	struct blkcg *blkcg;
 	struct cgroup *parent = cgroup->parent;
 
@@ -844,7 +843,6 @@ static struct cgroup_subsys_state *blkcg_css_alloc(struct cgroup *cgroup)
 
 	blkcg->cfq_weight = CFQ_WEIGHT_DEFAULT;
 	blkcg->cfq_leaf_weight = CFQ_WEIGHT_DEFAULT;
-	blkcg->id = atomic64_inc_return(&id_seq); /* root is 0, start from 1 */
 done:
 	spin_lock_init(&blkcg->lock);
 	INIT_RADIX_TREE(&blkcg->blkg_tree, GFP_ATOMIC);
