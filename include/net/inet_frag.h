@@ -124,7 +124,7 @@ static inline void add_frag_mem_limit(struct inet_frag_queue *q, int i)
 
 static inline void init_frag_mem_limit(struct netns_frags *nf)
 {
-	percpu_counter_init(&nf->mem, 0);
+	percpu_counter_init(&nf->mem, 0, GFP_KERNEL);
 }
 
 static inline int sum_frag_mem_limit(struct netns_frags *nf)

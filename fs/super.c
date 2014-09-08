@@ -117,7 +117,7 @@ static int init_sb_writers(struct super_block *s, struct file_system_type *type)
 	int i;
 
 	for (i = 0; i < SB_FREEZE_LEVELS; i++) {
-		err = percpu_counter_init(&s->s_writers.counter[i], 0);
+		err = percpu_counter_init(&s->s_writers.counter[i], 0, GFP_KERNEL);
 		if (err < 0)
 			goto err_out;
 		lockdep_init_map(&s->s_writers.lock_map[i], sb_writers_name[i],
