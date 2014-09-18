@@ -434,7 +434,6 @@ int jbd2_cleanup_journal_tail(journal_t *journal)
  * Find all the written-back checkpoint buffers in the given list and
  * release them.
  *
- * Called with the journal locked.
  * Called with j_list_lock held.
  * Returns number of buffers reaped (for debug)
  */
@@ -454,12 +453,12 @@ static int journal_clean_one_cp_list(struct journal_head *jh, int *released)
 		jh = next_jh;
 		next_jh = jh->b_cpnext;
 		ret = __try_to_free_cp_buf(jh);
-		if (ret) {
-			freed++;
-			if (ret == 2) {
-				*released = 1;
-				return freed;
-			}
+		if (!ret)
+			return freed;
+		freed++;
+		if (ret == 2) {
+			*released = 1;
+			return freed;
 		}
 		/*
 		 * This function only frees up some memory
@@ -479,7 +478,6 @@ static int journal_clean_one_cp_list(struct journal_head *jh, int *released)
  *
  * Find all the written-back checkpoint buffers in the journal and release them.
  *
- * Called with the journal locked.
  * Called with j_list_lock held.
  * Returns number of buffers reaped (for debug)
  */
@@ -487,7 +485,8 @@ static int journal_clean_one_cp_list(struct journal_head *jh, int *released)
 int __jbd2_journal_clean_checkpoint_list(journal_t *journal)
 {
 	transaction_t *transaction, *last_transaction, *next_transaction;
-	int ret = 0;
+	int ret;
+	int freed = 0;
 	int released;
 
 	transaction = journal->j_checkpoint_transactions;
@@ -499,17 +498,21 @@ int __jbd2_journal_clean_checkpoint_list(journal_t *journal)
 	do {
 		transaction = next_transaction;
 		next_transaction = transaction->t_cpnext;
-		ret += journal_clean_one_cp_list(transaction->
+		ret = journal_clean_one_cp_list(transaction->
 				t_checkpoint_list, &released);
 		/*
 		 * This function only frees up some memory if possible so we
 		 * dont have an obligation to finish processing. Bail out if
 		 * preemption requested:
 		 */
-		if (need_resched())
+		if (need_resched()) {
+			freed += ret;
 			goto out;
-		if (released)
+		}
+		if (released) {
+			freed += ret;
 			continue;
+		}
 		/*
 		 * It is essential that we are as careful as in the case of
 		 * t_checkpoint_list with removing the buffer from the list as
@@ -517,11 +520,12 @@ int __jbd2_journal_clean_checkpoint_list(journal_t *journal)
 		 */
 		ret += journal_clean_one_cp_list(transaction->
 				t_checkpoint_io_list, &released);
-		if (need_resched())
+		freed += ret;
+		if (need_resched() || !ret)
 			goto out;
 	} while (transaction != last_transaction);
 out:
-	return ret;
+	return freed;
 }
 
 /*
