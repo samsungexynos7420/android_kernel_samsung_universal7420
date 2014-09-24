@@ -4559,7 +4559,6 @@ err:
 
 static void tcp_data_queue(struct sock *sk, struct sk_buff *skb)
 {
-	const struct tcphdr *th = tcp_hdr(skb);
 	struct tcp_sock *tp = tcp_sk(sk);
 	int eaten = -1;
 	bool fragstolen = false;
@@ -4574,7 +4573,7 @@ static void tcp_data_queue(struct sock *sk, struct sk_buff *skb)
 		goto drop;
 
 	skb_dst_drop(skb);
-	__skb_pull(skb, th->doff * 4);
+	__skb_pull(skb, tcp_hdr(skb)->doff * 4);
 
 	TCP_ECN_accept_cwr(tp, skb);
 
@@ -4622,7 +4621,7 @@ queue_and_out:
 #endif
 			)
 			tcp_event_data_recv(sk, skb);
-		if (th->fin)
+		if (TCP_SKB_CB(skb)->tcp_flags & TCPHDR_FIN)
 			tcp_fin(sk);
 
 		if (!skb_queue_empty(&tp->out_of_order_queue)) {
