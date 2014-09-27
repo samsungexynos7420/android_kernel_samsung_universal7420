@@ -2390,8 +2390,6 @@ static void __d_move(struct dentry * dentry, struct dentry * target)
 	/* Unhash the target: dput() will then get rid of it */
 	__d_drop(target);
 
-	list_del(&dentry->d_child);
-	list_del(&target->d_child);
 
 	/* Switch the names.. */
 	switch_names(dentry, target);
@@ -2401,15 +2399,15 @@ static void __d_move(struct dentry * dentry, struct dentry * target)
 	if (IS_ROOT(dentry)) {
 		dentry->d_parent = target->d_parent;
 		target->d_parent = target;
-		INIT_LIST_HEAD(&target->d_child);
+		list_del_init(&target->d_child);
 	} else {
 		swap(dentry->d_parent, target->d_parent);
 
 		/* And add them back to the (new) parent lists */
-		list_add(&target->d_child, &target->d_parent->d_subdirs);
+		list_move(&target->d_child, &target->d_parent->d_subdirs);
 	}
 
-	list_add(&dentry->d_child, &dentry->d_parent->d_subdirs);
+	list_move(&dentry->d_child, &dentry->d_parent->d_subdirs);
 
 	write_seqcount_end(&target->d_seq);
 	write_seqcount_end(&dentry->d_seq);
