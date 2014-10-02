@@ -274,7 +274,7 @@ extern void __iounmap(volatile void __iomem *addr);
  * (PHYS_OFFSET and PHYS_MASK taken into account).
  */
 #define ARCH_HAS_VALID_PHYS_ADDR_RANGE
-extern int valid_phys_addr_range(unsigned long addr, size_t size);
+extern int valid_phys_addr_range(phys_addr_t addr, size_t size);
 extern int valid_mmap_phys_addr_range(unsigned long pfn, size_t size);
 
 extern int devmem_is_allowed(unsigned long pfn);
