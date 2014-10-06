@@ -89,7 +89,7 @@ static void basic_delete_filter(struct rcu_head *head)
 	struct basic_filter *f = container_of(head, struct basic_filter, rcu);
 
 	tcf_exts_destroy(&f->exts);
-	tcf_em_tree_destroy(tp, &f->ematches);
+	tcf_em_tree_destroy(&f->ematches);
 	kfree(f);
 }
 
