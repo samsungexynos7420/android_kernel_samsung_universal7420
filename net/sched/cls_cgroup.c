@@ -83,7 +83,7 @@ static void cls_cgroup_destroy_rcu(struct rcu_head *root)
 						    rcu);
 
 	tcf_exts_destroy(&head->exts);
-	tcf_em_tree_destroy(head->tp, &head->ematches);
+	tcf_em_tree_destroy(&head->ematches);
 	kfree(head);
 }
 
@@ -154,7 +154,7 @@ static void cls_cgroup_destroy(struct tcf_proto *tp)
 
 	if (head) {
 		tcf_exts_destroy(&head->exts);
-		tcf_em_tree_destroy(tp, &head->ematches);
+		tcf_em_tree_destroy(&head->ematches);
 		RCU_INIT_POINTER(tp->root, NULL);
 		kfree_rcu(head, rcu);
 	}
