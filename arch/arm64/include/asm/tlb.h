@@ -138,7 +138,7 @@ static inline void __pud_free_tlb(struct mmu_gather *tlb, pud_t *pudp,
 				  unsigned long addr)
 {
 	tlb_add_flush(tlb, addr);
-	tlb_remove_page(tlb, virt_to_page(pudp));
+	tlb_remove_entry(tlb, virt_to_page(pudp));
 }
 #endif
 
