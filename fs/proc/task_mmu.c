@@ -197,19 +197,9 @@ static void vma_stop(struct proc_maps_private *priv)
 static void *m_start(struct seq_file *m, loff_t *pos)
 {
 	struct proc_maps_private *priv = m->private;
-	unsigned long last_addr = m->version;
 	struct mm_struct *mm;
 	struct vm_area_struct *vma, *tail_vma = NULL;
 	loff_t l = *pos;
-
-	/*
-	 * We remember last_addr rather than next_addr to hit with
-	 * vmacache most of the time. We have zero last_addr at
-	 * the beginning and also after lseek. We will have -1 last_addr
-	 * after the end of the vmas.
-	 */
-	if (last_addr == -1UL)
-		return NULL;
 
 	priv->task = get_pid_task(priv->pid, PIDTYPE_PID);
 	if (!priv->task)
@@ -223,12 +213,6 @@ static void *m_start(struct seq_file *m, loff_t *pos)
 	tail_vma = get_gate_vma(mm);
 	priv->tail_vma = tail_vma;
 	hold_task_mempolicy(priv);
-	/* Start with last addr hint */
-	vma = find_vma(mm, last_addr);
-	if (last_addr && vma) {
-		vma = vma->vm_next;
-		goto out;
-	}
 
 	/*
 	 * Check the vma index is within the range and do
@@ -249,8 +233,6 @@ out:
 	if (vma)
 		return vma;
 
-	/* End of vmas has been reached */
-	m->version = (tail_vma != NULL)? 0: -1UL;
 	if (tail_vma)
 		return tail_vma;
 
@@ -417,14 +399,7 @@ done:
 
 static int show_map(struct seq_file *m, void *v, int is_pid)
 {
-	struct vm_area_struct *vma = v;
-	struct proc_maps_private *priv = m->private;
-
-	show_map_vma(m, vma, is_pid);
-
-	if (m->count < m->size)  /* vma is copied successfully */
-		m->version = (vma != priv->tail_vma)
-			? vma->vm_start : 0;
+	show_map_vma(m, v, is_pid);
 	return 0;
 }
 
@@ -659,7 +634,6 @@ static void show_smap_vma_flags(struct seq_file *m, struct vm_area_struct *vma)
 
 static int show_smap(struct seq_file *m, void *v, int is_pid)
 {
-	struct proc_maps_private *priv = m->private;
 	struct vm_area_struct *vma = v;
 	struct mem_size_stats mss;
 	struct mm_walk smaps_walk = {
@@ -675,6 +649,12 @@ static int show_smap(struct seq_file *m, void *v, int is_pid)
 		walk_page_range(vma->vm_start, vma->vm_end, &smaps_walk);
 
 	show_map_vma(m, vma, is_pid);
+
+	if (vma_get_anon_name(vma)) {
+		seq_puts(m, "Name:           ");
+		seq_print_vma_name(m, vma);
+		seq_putc(m, '\n');
+	}
 
 	seq_printf(m,
 		   "Size:           %8lu kB\n"
@@ -714,16 +694,6 @@ static int show_smap(struct seq_file *m, void *v, int is_pid)
 				mss.nonlinear >> 10);
 
 	show_smap_vma_flags(m, vma);
-
-	if (vma_get_anon_name(vma)) {
-		seq_puts(m, "Name:           ");
-		seq_print_vma_name(m, vma);
-		seq_putc(m, '\n');
-	}
-
-	if (m->count < m->size)  /* vma is copied successfully */
-		m->version = (vma != priv->tail_vma)
-			? vma->vm_start : 0;
 	return 0;
 }
 
@@ -1503,9 +1473,6 @@ static int show_numa_map(struct seq_file *m, void *v, int is_pid)
 			seq_printf(m, " N%d=%lu", n, md->node[n]);
 out:
 	seq_putc(m, '\n');
-
-	if (m->count < m->size)
-		m->version = (vma != proc_priv->tail_vma) ? vma->vm_start : 0;
 	return 0;
 }
 
