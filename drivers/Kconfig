@@ -183,6 +183,8 @@ source "drivers/reset/Kconfig"
 
 source "drivers/sensorhub/stm/Kconfig"
 
+source "drivers/android/Kconfig"
+
 source "drivers/sensorhub/atmel/Kconfig"
 
 source "drivers/sensorhub/brcm/Kconfig"
