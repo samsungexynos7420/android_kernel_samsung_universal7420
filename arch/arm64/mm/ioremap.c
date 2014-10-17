@@ -113,7 +113,7 @@ EXPORT_SYMBOL_GPL(pci_ioremap_io);
 
 static pte_t bm_pte[PTRS_PER_PTE] __page_aligned_bss;
 #ifndef CONFIG_ARM64_64K_PAGES
-static pte_t bm_pmd[PTRS_PER_PMD] __page_aligned_bss;
+static pmd_t bm_pmd[PTRS_PER_PMD] __page_aligned_bss;
 #endif
 
 static inline pud_t * __init early_ioremap_pud(unsigned long addr)
