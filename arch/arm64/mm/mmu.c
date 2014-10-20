@@ -193,24 +193,13 @@ static void __init alloc_init_pte(pmd_t *pmd, unsigned long addr,
 
 static void __init alloc_init_pmd(struct mm_struct *mm, pud_t *pud,
 				  unsigned long addr, unsigned long end,
-				  phys_addr_t phys, int map_io)
+				  phys_addr_t phys, pgprot_t prot)
 {
 	pmd_t *pmd;
 	unsigned long next;
 #ifdef CONFIG_TIMA_RKP
 	int rkp_do = 0;
 #endif
-	pmdval_t prot_sect;
-	pgprot_t prot_pte;
-
-	if (map_io) {
-		prot_sect = PMD_TYPE_SECT | PMD_SECT_AF |
-			    PMD_ATTRINDX(MT_DEVICE_nGnRE);
-		prot_pte = __pgprot(PROT_DEVICE_nGnRE);
-	} else {
-		prot_sect = prot_sect_kernel;
-		prot_pte = PAGE_KERNEL_EXEC;
-	}
 
 	/*
 	 * Check for initial section mappings in the pgd/pud and remove them.
@@ -237,10 +226,8 @@ static void __init alloc_init_pmd(struct mm_struct *mm, pud_t *pud,
 		/* try section mapping first */
 		if (((addr | next | phys) & ~SECTION_MASK) == 0) {
 			pmd_t old_pmd =*pmd;
-			if (iotable_on == 1)
-				set_pmd(pmd, __pmd(phys | PROT_SECT_NORMAL_NC));
-			else
-				set_pmd(pmd, __pmd(phys | prot_sect));
+			set_pmd(pmd, __pmd(phys |
+					   pgprot_val(mk_sect_prot(prot))));
 			/*
 			 * Check for previous table entries created during
 			 * boot (__create_page_tables) and flush them.
@@ -255,7 +242,7 @@ static void __init alloc_init_pmd(struct mm_struct *mm, pud_t *pud,
 			}
 		} else {
 			alloc_init_pte(pmd, addr, next, __phys_to_pfn(phys),
-				       prot_pte);
+				       prot);
 		}
 		phys += next - addr;
 	} while (pmd++, addr = next, addr != end);
@@ -263,7 +250,7 @@ static void __init alloc_init_pmd(struct mm_struct *mm, pud_t *pud,
 
 static void __init alloc_init_pud(struct mm_struct *mm, pgd_t *pgd,
 				  unsigned long addr, unsigned long end,
-				  phys_addr_t phys, int map_io)
+				  phys_addr_t phys, pgprot_t prot)
 {
 	pud_t *pud;
 	unsigned long next;
@@ -284,7 +271,8 @@ static void __init alloc_init_pud(struct mm_struct *mm, pgd_t *pgd,
 		if ((PAGE_SHIFT == 12) &&
 		    ((addr | next | phys) & ~PUD_MASK) == 0) {
 			pud_t old_pud = *pud;
-			set_pud(pud, __pud(phys | PROT_SECT_NORMAL_EXEC));
+			set_pud(pud, __pud(phys |
+					   pgprot_val(mk_sect_prot(prot))));
 
 			/*
 			 * If we have an old value for a pud, it will
@@ -302,7 +290,7 @@ static void __init alloc_init_pud(struct mm_struct *mm, pgd_t *pgd,
 				}
 			}
 		} else {
-			alloc_init_pmd(mm, pud, addr, next, phys, map_io);
+			alloc_init_pmd(mm, pud, addr, next, phys, prot);
 		}
 		phys += next - addr;
 	} while (pud++, addr = next, addr != end);
@@ -314,7 +302,7 @@ static void __init alloc_init_pud(struct mm_struct *mm, pgd_t *pgd,
  */
 static void __init __create_mapping(struct mm_struct *mm, pgd_t *pgd,
 				    phys_addr_t phys, unsigned long virt,
-				    phys_addr_t size, int map_io)
+				    phys_addr_t size, pgprot_t prot)
 {
 	unsigned long addr, length, end, next;
 
@@ -324,7 +312,7 @@ static void __init __create_mapping(struct mm_struct *mm, pgd_t *pgd,
 	end = addr + length;
 	do {
 		next = pgd_addr_end(addr, end);
-		alloc_init_pud(mm, pgd, addr, next, phys, map_io);
+		alloc_init_pud(mm, pgd, addr, next, phys, prot);
 		phys += next - addr;
 	} while (pgd++, addr = next, addr != end);
 }
@@ -338,7 +326,7 @@ static void __init create_mapping(phys_addr_t phys, unsigned long virt,
 		return;
 	}
 	__create_mapping(&init_mm, pgd_offset_k(virt & PAGE_MASK), phys, virt,
-			 size, 0);
+			 size, PAGE_KERNEL_EXEC);
 }
 
 void __init create_id_mapping(phys_addr_t addr, phys_addr_t size, int map_io)
@@ -348,7 +336,16 @@ void __init create_id_mapping(phys_addr_t addr, phys_addr_t size, int map_io)
 		return;
 	}
 	__create_mapping(&init_mm, &idmap_pg_dir[pgd_index(addr)],
-			 addr, addr, size, map_io);
+			 addr, addr, size,
+			 map_io ? __pgprot(PROT_DEVICE_nGnRE)
+				: PAGE_KERNEL_EXEC);
+}
+
+void __init create_pgd_mapping(struct mm_struct *mm, phys_addr_t phys,
+			       unsigned long virt, phys_addr_t size,
+			       pgprot_t prot)
+{
+	__create_mapping(mm, pgd_offset(mm, virt), phys, virt, size, prot);
 }
 
 static void __init map_mem(void)
