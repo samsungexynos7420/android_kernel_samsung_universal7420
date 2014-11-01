@@ -1775,6 +1775,11 @@ static bool is_mnt_ns_file(struct dentry *dentry)
 	return true;
 }
 
+struct mnt_namespace *to_mnt_ns(struct ns_common *ns)
+{
+	return container_of(ns, struct mnt_namespace, ns);
+}
+
 static bool mnt_ns_loop(struct dentry *dentry)
 {
 	/* Could bind mounting the mount namespace inode cause a
@@ -1784,7 +1789,7 @@ static bool mnt_ns_loop(struct dentry *dentry)
 	if (!is_mnt_ns_file(dentry))
 		return false;
 
-	mnt_ns = get_proc_ns(dentry->d_inode)->ns;
+	mnt_ns = to_mnt_ns(get_proc_ns(dentry->d_inode)->ns);
 	return current->nsproxy->mnt_ns->seq >= mnt_ns->seq;
 }
 
@@ -3534,14 +3539,14 @@ found:
 
 static void *mntns_get(struct task_struct *task)
 {
-	struct mnt_namespace *ns = NULL;
+	struct ns_common *ns = NULL;
 	struct nsproxy *nsproxy;
 
 	task_lock(task);
 	nsproxy = task->nsproxy;
 	if (nsproxy) {
-		ns = nsproxy->mnt_ns;
-		get_mnt_ns(ns);
+		ns = &nsproxy->mnt_ns->ns;
+		get_mnt_ns(to_mnt_ns(ns));
 	}
 	task_unlock(task);
 
@@ -3550,13 +3555,13 @@ static void *mntns_get(struct task_struct *task)
 
 static void mntns_put(void *ns)
 {
-	put_mnt_ns(ns);
+	put_mnt_ns(to_mnt_ns(ns));
 }
 
 static int mntns_install(struct nsproxy *nsproxy, void *ns)
 {
 	struct fs_struct *fs = current->fs;
-	struct mnt_namespace *mnt_ns = ns;
+	struct mnt_namespace *mnt_ns = to_mnt_ns(ns);
 	struct path root;
 
 	if (!ns_capable(mnt_ns->user_ns, CAP_SYS_ADMIN) ||
@@ -3593,8 +3598,8 @@ static int mntns_install(struct nsproxy *nsproxy, void *ns)
 
 static unsigned int mntns_inum(void *ns)
 {
-	struct mnt_namespace *mnt_ns = ns;
-	return mnt_ns->ns.inum;
+	struct ns_common *p = ns;
+	return p->inum;
 }
 
 const struct proc_ns_operations mntns_operations = {
