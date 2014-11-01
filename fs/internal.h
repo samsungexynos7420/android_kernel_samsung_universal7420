@@ -138,3 +138,8 @@ extern ssize_t __kernel_write(struct file *, const char *, size_t, loff_t *);
  * pipe.c
  */
 extern const struct file_operations pipefifo_fops;
+
+/*
+ * fs/nsfs.c
+ */
+extern struct dentry_operations ns_dentry_operations;
