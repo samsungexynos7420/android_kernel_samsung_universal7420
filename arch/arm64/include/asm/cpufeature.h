@@ -22,8 +22,9 @@
 #define cpu_feature(x)		ilog2(HWCAP_ ## x)
 
 #define ARM64_WORKAROUND_CLEAN_CACHE		0
+#define ARM64_WORKAROUND_DEVICE_LOAD_ACQUIRE	1
 
-#define ARM64_NCAPS				1
+#define ARM64_NCAPS				2
 
 #ifndef __ASSEMBLY__
 
