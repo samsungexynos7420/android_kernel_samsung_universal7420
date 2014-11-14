@@ -38,6 +38,7 @@
 #include <asm/setup.h>
 #include <asm/sizes.h>
 #include <asm/tlb.h>
+#include <asm/alternative.h>
 
 #include "mm.h"
 
@@ -400,6 +401,7 @@ void free_initmem(void)
 #endif
 		rkp_call(RKP_DEF_INIT, 0, 0, 0, 0, 0);
 #endif
+	free_alternatives_memory();
 }
 
 #ifdef CONFIG_BLK_DEV_INITRD
