@@ -36,6 +36,8 @@ arm64-obj-$(CONFIG_CORE_TEST)		+= core_test.o
 arm64-obj-$(CONFIG_ARCH_EXYNOS)		+= exynos-smc.o
 arm64-obj-$(CONFIG_TIMA_RKP)		+= rkp_entry.o
 
+arm64-obj-$(CONFIG_ARMV8_DEPRECATED)	+= armv8_deprecated.o
+
 obj-$(CONFIG_PCI)			+= pcibios.o
 obj-y					+= $(arm64-obj-y) vdso/
 obj-m					+= $(arm64-obj-m)
