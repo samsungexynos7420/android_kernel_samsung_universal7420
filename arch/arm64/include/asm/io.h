@@ -169,7 +169,6 @@ static inline void __iomem *__typesafe_io(unsigned long addr)
 #endif
 extern void __iomem *ioport_map(unsigned long port, unsigned int nr);
 extern void ioport_unmap(void __iomem *addr);
-extern int pci_ioremap_io(unsigned int offset, phys_addr_t phys_addr);
 
 static inline u8 inb(unsigned long addr)
 {
