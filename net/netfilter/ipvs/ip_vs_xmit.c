@@ -274,7 +274,7 @@ __ip_vs_get_out_rt(struct sk_buff *skb, struct ip_vs_dest *dest,
 	skb_dst_drop(skb);
 	if (noref) {
 		if (!local)
-			skb_dst_set_noref_force(skb, &rt->dst);
+			skb_dst_set_noref(skb, &rt->dst);
 		else
 			skb_dst_set(skb, dst_clone(&rt->dst));
 	} else
@@ -453,7 +453,7 @@ __ip_vs_get_out_rt_v6(struct sk_buff *skb, struct ip_vs_dest *dest,
 	skb_dst_drop(skb);
 	if (noref) {
 		if (!local)
-			skb_dst_set_noref_force(skb, &rt->dst);
+			skb_dst_set_noref(skb, &rt->dst);
 		else
 			skb_dst_set(skb, dst_clone(&rt->dst));
 	} else
