@@ -2023,6 +2023,10 @@ void __weak module_arch_cleanup(struct module *mod)
 {
 }
 
+void __weak module_arch_freeing_init(struct module *mod)
+{
+}
+
 /* Free a module, remove from lists, etc. */
 static void free_module(struct module *mod)
 {
@@ -2055,6 +2059,7 @@ static void free_module(struct module *mod)
 
 	/* This may be NULL, but that's OK */
 	unset_module_init_ro_nx(mod);
+	module_arch_freeing_init(mod);
 	module_free(mod, mod->module_init);
 	kfree(mod->args);
 	percpu_modfree(mod);
@@ -3681,6 +3686,7 @@ static int alloc_module_percpu(struct module *mod, struct load_info *info)
 static void module_deallocate(struct module *mod, struct load_info *info)
 {
 	percpu_modfree(mod);
+	module_arch_freeing_init(mod);
 	module_free(mod, mod->module_init);
 	module_free(mod, mod->module_core);
 }
@@ -3993,6 +3999,7 @@ static int do_init_module(struct module *mod)
 	rcu_assign_pointer(mod->kallsyms, &mod->core_kallsyms);
 #endif
 	unset_module_init_ro_nx(mod);
+	module_arch_freeing_init(mod);
 	module_free(mod, mod->module_init);
 	mod->module_init = NULL;
 	mod->init_size = 0;
