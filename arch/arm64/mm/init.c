@@ -406,6 +406,7 @@ void __init mem_init(void)
 
 void free_initmem(void)
 {
+	fixup_init();
 	free_initmem_default(0);
 #ifdef CONFIG_TIMA_RKP
 #ifdef CONFIG_KNOX_KAP
