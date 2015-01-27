@@ -387,13 +387,6 @@ void __init paging_init(struct machine_desc *mdesc)
 	if(mdesc->map_io)
 		mdesc->map_io();
 
-	/*
-	 * Finally flush the caches and tlb to ensure that we're in a
-	 * consistent state.
-	 */
-	flush_cache_all();
-	flush_tlb_all();
-
 	/* allocate the zero page. */
 	/* change zero page address */
 
