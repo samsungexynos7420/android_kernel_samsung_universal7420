@@ -1068,6 +1068,7 @@ static int ext4_write_end(struct file *file,
 {
 	handle_t *handle = ext4_journal_current_handle();
 	struct inode *inode = mapping->host;
+	loff_t old_size = inode->i_size;
 	int ret = 0, ret2;
 	int i_size_changed = 0;
 	int inline_data = ext4_has_inline_data(inode);
@@ -1090,6 +1091,8 @@ static int ext4_write_end(struct file *file,
 	unlock_page(page);
 	page_cache_release(page);
 
+	if (old_size < pos)
+		pagecache_isize_extended(inode, old_size, pos);
 	/*
 	 * Don't mark the inode dirty under page lock. First, it unnecessarily
 	 * makes the holding time of page lock longer. Second, it forces lock
@@ -1163,6 +1166,7 @@ static int ext4_journalled_write_end(struct file *file,
 {
 	handle_t *handle = ext4_journal_current_handle();
 	struct inode *inode = mapping->host;
+	loff_t old_size = inode->i_size;
 	int ret = 0, ret2;
 	int partial = 0;
 	unsigned from, to;
@@ -1195,6 +1199,9 @@ static int ext4_journalled_write_end(struct file *file,
 	EXT4_I(inode)->i_datasync_tid = handle->h_transaction->t_tid;
 	unlock_page(page);
 	page_cache_release(page);
+
+	if (old_size < pos)
+		pagecache_isize_extended(inode, old_size, pos);
 
 	if (size_changed || inline_data) {
 		ret2 = ext4_mark_inode_dirty(handle, inode);
