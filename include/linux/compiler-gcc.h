@@ -97,9 +97,10 @@
 #define __inline__ inline
 #define __inline inline
 
-#define __deprecated			__attribute__((deprecated))
-#define __packed			__attribute__((packed))
-#define __weak				__attribute__((weak))
+#define __deprecated	__attribute__((deprecated))
+#define __packed	__attribute__((packed))
+#define __weak		__attribute__((weak))
+#define __alias(symbol)		__attribute__((alias(#symbol)))
 
 /*
  * it doesn't make sense on ARM (currently the only user of __naked) to trace
