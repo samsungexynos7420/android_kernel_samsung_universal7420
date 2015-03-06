@@ -148,9 +148,12 @@ errout:
 	return err;
 }
 
-static void cls_cgroup_destroy(struct tcf_proto *tp)
+static bool cls_cgroup_destroy(struct tcf_proto *tp, bool force)
 {
 	struct cls_cgroup_head *head = rtnl_dereference(tp->root);
+
+	if (!force)
+		return false;
 
 	if (head) {
 		tcf_exts_destroy(&head->exts);
@@ -158,6 +161,7 @@ static void cls_cgroup_destroy(struct tcf_proto *tp)
 		RCU_INIT_POINTER(tp->root, NULL);
 		kfree_rcu(head, rcu);
 	}
+	return true;
 }
 
 static int cls_cgroup_delete(struct tcf_proto *tp, unsigned long arg)
