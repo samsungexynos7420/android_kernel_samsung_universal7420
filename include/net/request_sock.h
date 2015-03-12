@@ -48,9 +48,7 @@ extern int inet_rtx_syn_ack(struct sock *parent, struct request_sock *req);
 /* struct request_sock - mini sock to represent a connection request
  */
 struct request_sock {
-#ifdef CONFIG_MPTCP
 	struct sock_common		__req_common;
-#endif
 	struct request_sock		*dl_next;
 	u16				mss;
 	u8				num_retrans; /* number of retransmits */
