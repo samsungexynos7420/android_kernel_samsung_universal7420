@@ -23,6 +23,7 @@
 
 #include <asm/assembler.h>
 #include <asm/asm-offsets.h>
+#include <asm/cpufeature.h>
 #include <asm/errno.h>
 #include <asm/esr.h>
 #include <asm/ptrace.h>
@@ -121,6 +122,25 @@
 	.if	\el == 0
 	ct_user_enter
 	ldr	x23, [sp, #S_SP]		// load return stack pointer
+	msr	sp_el0, x23
+
+#ifdef CONFIG_ARM64_ERRATUM_845719
+	alternative_insn						\
+	"nop",								\
+	"tbz x22, #4, 1f",						\
+	ARM64_WORKAROUND_845719
+#ifdef CONFIG_PID_IN_CONTEXTIDR
+	alternative_insn						\
+	"nop; nop",							\
+	"mrs x29, contextidr_el1; msr contextidr_el1, x29; 1:",		\
+	ARM64_WORKAROUND_845719
+#else
+	alternative_insn						\
+	"nop",								\
+	"msr contextidr_el1, xzr; 1:",					\
+	ARM64_WORKAROUND_845719
+#endif
+#endif
 	.endif
 	.if	\ret
 	ldr	x1, [sp, #S_X1]			// preserve x0 (syscall return)
