@@ -1302,6 +1302,12 @@ static u32 sk_filter_convert_ctx_access(int dst_reg, int src_reg, int ctx_off,
 
 		*insn++ = BPF_LDX_MEM(BPF_H, dst_reg, src_reg,
 				      offsetof(struct sk_buff, vlan_proto));
+
+	case offsetof(struct __sk_buff, priority):
+		BUILD_BUG_ON(FIELD_SIZEOF(struct sk_buff, priority) != 4);
+
+		*insn++ = BPF_LDX_MEM(BPF_W, dst_reg, src_reg,
+				      offsetof(struct sk_buff, priority));
 		break;
 
 	case offsetof(struct __sk_buff, mark):
