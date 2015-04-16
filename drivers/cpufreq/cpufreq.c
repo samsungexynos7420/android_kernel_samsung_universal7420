@@ -46,6 +46,8 @@ static DEFINE_MUTEX(cpufreq_governor_lock);
 
 #ifdef CONFIG_HOTPLUG_CPU
 /* This one keeps track of the previously set governor of a removed CPU */
+static int last_min = -1;
+static int last_max = -1;
 static DEFINE_PER_CPU(char[CPUFREQ_NAME_LEN], cpufreq_cpu_governor);
 #endif
 
@@ -409,8 +411,10 @@ static ssize_t show_##file_name				\
 show_one(cpuinfo_min_freq, cpuinfo.min_freq);
 show_one(cpuinfo_max_freq, cpuinfo.max_freq);
 show_one(cpuinfo_transition_latency, cpuinfo.transition_latency);
-show_one(scaling_min_freq, min);
-show_one(scaling_max_freq, max);
+show_one(policy_min_freq, min);
+show_one(policy_max_freq, max);
+show_one(scaling_min_freq, user_min);
+show_one(scaling_max_freq, user_max);
 show_one(scaling_cur_freq, cur);
 
 static int __cpufreq_set_policy(struct cpufreq_policy *data,
@@ -442,8 +446,56 @@ static ssize_t store_##file_name					\
 	return ret ? ret : count;					\
 }
 
-store_one(scaling_min_freq, min);
-store_one(scaling_max_freq, max);
+store_one(policy_min_freq, min);
+store_one(policy_max_freq, max);
+//store_one(scaling_min_freq, user_min);
+static ssize_t store_scaling_min_freq(struct cpufreq_policy *policy,
+					const char *buf, size_t count)
+{
+	unsigned int ret;
+	struct cpufreq_policy new_policy;
+
+	ret = cpufreq_get_policy(&new_policy, policy->cpu);
+	if (ret)
+		return -EINVAL;
+
+	ret = sscanf(buf, "%u", &new_policy.user_min);
+	if (ret != 1)
+		return -EINVAL;
+	ret = sscanf(buf, "%u", &new_policy.min);
+	if (ret != 1)
+		return -EINVAL;
+
+	ret = __cpufreq_set_policy(policy, &new_policy);
+	policy->user_policy.user_min = policy->user_min;
+	policy->user_policy.min = policy->min;
+
+	return ret ? ret : count;
+}
+//store_one(scaling_max_freq, user_max);
+static ssize_t store_scaling_max_freq(struct cpufreq_policy *policy,
+					const char *buf, size_t count)
+{
+	unsigned int ret;
+	struct cpufreq_policy new_policy;
+
+	ret = cpufreq_get_policy(&new_policy, policy->cpu);
+	if (ret)
+		return -EINVAL;
+
+	ret = sscanf(buf, "%u", &new_policy.user_max);
+	if (ret != 1)
+		return -EINVAL;
+	ret = sscanf(buf, "%u", &new_policy.max);
+	if (ret != 1)
+		return -EINVAL;
+
+	ret = __cpufreq_set_policy(policy, &new_policy);
+	policy->user_policy.user_max = policy->user_max;
+	policy->user_policy.max = policy->max;
+
+	return ret ? ret : count;
+}
 
 /**
  * show_cpuinfo_cur_freq - current CPU frequency as detected by hardware
@@ -628,6 +680,8 @@ cpufreq_freq_attr_ro(scaling_cur_freq);
 cpufreq_freq_attr_ro(bios_limit);
 cpufreq_freq_attr_ro(related_cpus);
 cpufreq_freq_attr_ro(affected_cpus);
+cpufreq_freq_attr_rw(policy_min_freq);
+cpufreq_freq_attr_rw(policy_max_freq);
 cpufreq_freq_attr_rw(scaling_min_freq);
 cpufreq_freq_attr_rw(scaling_max_freq);
 cpufreq_freq_attr_rw(scaling_governor);
@@ -637,6 +691,8 @@ static struct attribute *default_attrs[] = {
 	&cpuinfo_min_freq.attr,
 	&cpuinfo_max_freq.attr,
 	&cpuinfo_transition_latency.attr,
+	&policy_min_freq.attr,
+	&policy_max_freq.attr,
 	&scaling_min_freq.attr,
 	&scaling_max_freq.attr,
 	&affected_cpus.attr,
@@ -952,8 +1008,20 @@ static int cpufreq_add_dev(struct device *dev, struct subsys_interface *sif)
 	 */
 	cpumask_and(policy->cpus, policy->cpus, cpu_online_mask);
 
+	if (last_min > -1) {
+		policy->min = last_min;
+		policy->user_min = last_min;
+	}
+
+	if (last_max > -1) {
+		policy->max = last_max;
+		policy->user_max = last_max;
+	}
+
 	policy->user_policy.min = policy->min;
 	policy->user_policy.max = policy->max;
+	policy->user_policy.user_min = policy->user_min;
+	policy->user_policy.user_max = policy->user_max;
 
 	blocking_notifier_call_chain(&cpufreq_policy_notifier_list,
 				     CPUFREQ_START, policy);
@@ -1101,6 +1169,8 @@ static int __cpufreq_remove_dev(struct device *dev,
 			__cpufreq_governor(data, CPUFREQ_GOV_POLICY_EXIT);
 
 		lock_policy_rwsem_read(cpu);
+		last_min = data->user_min;
+		last_max = data->user_max;
 		kobj = &data->kobj;
 		cmp = &data->kobj_unregister;
 		unlock_policy_rwsem_read(cpu);
@@ -1747,6 +1817,8 @@ static int __cpufreq_set_policy(struct cpufreq_policy *data,
 
 	data->min = policy->min;
 	data->max = policy->max;
+	data->user_min = policy->user_min;
+	data->user_max = policy->user_max;
 	trace_cpu_frequency_limits(policy->max, policy->min, policy->cpu);
 
 	pr_debug("new min and max freqs are %u - %u kHz\n",
@@ -1843,6 +1915,8 @@ int cpufreq_update_policy(unsigned int cpu)
 	memcpy(&policy, data, sizeof(struct cpufreq_policy));
 	policy.min = data->user_policy.min;
 	policy.max = data->user_policy.max;
+	policy.user_min = data->user_policy.user_min;
+	policy.user_max = data->user_policy.user_max;
 	policy.policy = data->user_policy.policy;
 	policy.governor = data->user_policy.governor;
 
