@@ -18,6 +18,7 @@
 #undef OPTIMIZER_HIDE_VAR
 
 #define barrier() __memory_barrier()
+#define barrier_data(ptr) barrier()
 
 #define RELOC_HIDE(ptr, off)					\
   ({ unsigned long __ptr;					\
