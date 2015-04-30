@@ -1944,6 +1944,7 @@ static int run_one(const struct bpf_prog *fp, struct bpf_test *test)
 static __init int test_bpf(void)
 {
 	int i, err_cnt = 0, pass_cnt = 0;
+	int jit_cnt = 0, run_cnt = 0;
 
 	for (i = 0; i < ARRAY_SIZE(tests); i++) {
 		struct bpf_prog *fp;
@@ -1960,6 +1961,13 @@ static __init int test_bpf(void)
 
 			return err;
 		}
+
+		pr_cont("jited:%u ", fp->jited);
+
+		run_cnt++;
+		if (fp->jited)
+			jit_cnt++;
+
 		err = run_one(fp, &tests[i]);
 		release_filter(fp, i);
 
@@ -1972,7 +1980,9 @@ static __init int test_bpf(void)
 		}
 	}
 
-	pr_info("Summary: %d PASSED, %d FAILED\n", pass_cnt, err_cnt);
+	pr_info("Summary: %d PASSED, %d FAILED, [%d/%d JIT'ed]\n",
+		pass_cnt, err_cnt, jit_cnt, run_cnt);
+
 	return err_cnt ? -EINVAL : 0;
 }
 
