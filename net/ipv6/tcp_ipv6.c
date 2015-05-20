@@ -1879,10 +1879,10 @@ process:
 		meta_sk = sk;
 #endif
 		bh_lock_sock_nested(sk);
+		tcp_sk(sk)->segs_in += max_t(u16, 1, skb_shinfo(skb)->gso_segs);
 #ifdef CONFIG_MPTCP
 	}
 #endif
-
 	ret = 0;
 #ifdef CONFIG_MPTCP
 	if (!sock_owned_by_user(meta_sk)) {
