@@ -780,6 +780,30 @@ static int sleep_on_shadow_bh(void *word)
 	return 0;
 }
 
+/* Call t_frozen trigger and copy buffer data into jh->b_frozen_data. */
+static void jbd2_freeze_jh_data(struct journal_head *jh)
+{
+	struct page *page;
+	int offset;
+	char *source;
+	struct buffer_head *bh = jh2bh(jh);
+
+	J_EXPECT_JH(jh, buffer_uptodate(bh), "Possible IO failure.\n");
+	page = bh->b_page;
+	offset = offset_in_page(bh->b_data);
+	source = kmap_atomic(page);
+	/* Fire data frozen trigger just before we copy the data */
+	jbd2_buffer_frozen_trigger(jh, source + offset, jh->b_triggers);
+	memcpy(jh->b_frozen_data, source + offset, bh->b_size);
+	kunmap_atomic(source);
+
+	/*
+	 * Now that the frozen data is saved off, we need to store any matching
+	 * triggers.
+	 */
+	jh->b_frozen_triggers = jh->b_triggers;
+}
+
 /*
  * If the buffer is already part of the current transaction, then there
  * is nothing we need to do.  If it is already part of a prior
@@ -799,7 +823,6 @@ do_get_write_access(handle_t *handle, struct journal_head *jh,
 	journal_t *journal;
 	int error;
 	char *frozen_buffer = NULL;
-	int need_copy = 0;
 	unsigned long start_lock, time_lock;
 
 	if (is_handle_aborted(handle))
@@ -956,7 +979,7 @@ repeat:
 			}
 			jh->b_frozen_data = frozen_buffer;
 			frozen_buffer = NULL;
-			need_copy = 1;
+			jbd2_freeze_jh_data(jh);
 		}
 		jh->b_next_transaction = transaction;
 	}
@@ -977,28 +1000,6 @@ repeat:
 	}
 
 done:
-	if (need_copy) {
-		struct page *page;
-		int offset;
-		char *source;
-
-		J_EXPECT_JH(jh, buffer_uptodate(jh2bh(jh)),
-			    "Possible IO failure.\n");
-		page = jh2bh(jh)->b_page;
-		offset = offset_in_page(jh2bh(jh)->b_data);
-		source = kmap_atomic(page);
-		/* Fire data frozen trigger just before we copy the data */
-		jbd2_buffer_frozen_trigger(jh, source + offset,
-					   jh->b_triggers);
-		memcpy(jh->b_frozen_data, source+offset, jh2bh(jh)->b_size);
-		kunmap_atomic(source);
-
-		/*
-		 * Now that the frozen data is saved off, we need to store
-		 * any matching triggers.
-		 */
-		jh->b_frozen_triggers = jh->b_triggers;
-	}
 	jbd_unlock_bh_state(bh);
 
 	/*
