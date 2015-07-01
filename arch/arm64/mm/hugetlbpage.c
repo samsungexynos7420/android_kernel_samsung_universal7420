@@ -46,12 +46,12 @@ struct page *follow_huge_addr(struct mm_struct *mm, unsigned long address,
 
 int pmd_huge(pmd_t pmd)
 {
-	return !(pmd_val(pmd) & PMD_TABLE_BIT);
+	return pmd_val(pmd) && !(pmd_val(pmd) & PMD_TABLE_BIT);
 }
 
 int pud_huge(pud_t pud)
 {
-	return !(pud_val(pud) & PUD_TABLE_BIT);
+	return pud_val(pud) && !(pud_val(pud) & PUD_TABLE_BIT);
 }
 
 static __init int setup_hugepagesz(char *opt)
