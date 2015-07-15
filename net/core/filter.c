@@ -1426,7 +1426,7 @@ const struct bpf_func_proto bpf_clone_redirect_proto = {
 
 static u64 bpf_get_cgroup_classid(u64 r1, u64 r2, u64 r3, u64 r4, u64 r5)
 {
-	return 0;
+	return task_get_classid((struct sk_buff *) (unsigned long) r1);
 }
 
 static const struct bpf_func_proto bpf_get_cgroup_classid_proto = {
