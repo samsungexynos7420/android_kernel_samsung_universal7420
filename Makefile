@@ -639,6 +639,11 @@ KBUILD_CFLAGS += $(CLANG_FLAGS)
 export CLANG_FLAGS
 endif
 
+# The arch Makefile can set ARCH_{CPP,A,C}FLAGS to override the default
+# values of the respective KBUILD_* variables
+ARCH_CPPFLAGS :=
+ARCH_AFLAGS :=
+ARCH_CFLAGS :=
 include $(srctree)/arch/$(SRCARCH)/Makefile
 
 KBUILD_CFLAGS += $(call cc-option,-fno-delete-null-pointer-checks,)
