@@ -547,7 +547,7 @@ static int zram_bvec_read(struct zram *zram, struct bio_vec *bvec,
 		uncmem = user_mem;
 
 	if (!uncmem) {
-		pr_info("Unable to allocate temp memory\n");
+		pr_err("Unable to allocate temp memory\n");
 		ret = -ENOMEM;
 		goto out_cleanup;
 	}
@@ -659,7 +659,7 @@ static int zram_bvec_write(struct zram *zram, struct bio_vec *bvec, u32 index,
 
 	handle = zs_malloc(meta->mem_pool, clen);
 	if (!handle) {
-		pr_info("Error allocating memory for compressed page: %u, size=%zu\n",
+		pr_err("Error allocating memory for compressed page: %u, size=%zu\n",
 			index, clen);
 		ret = -ENOMEM;
 		goto out;
@@ -836,7 +836,7 @@ static ssize_t disksize_store(struct device *dev,
 
 	comp = zcomp_create(zram->compressor, zram->max_comp_streams);
 	if (IS_ERR(comp)) {
-		pr_info("Cannot initialise %s compressing backend\n",
+		pr_err("Cannot initialise %s compressing backend\n",
 				zram->compressor);
 		err = PTR_ERR(comp);
 		goto out_free_meta;
@@ -1138,7 +1138,7 @@ static int create_device(struct zram *zram, int device_id)
 	 /* gendisk structure */
 	zram->disk = alloc_disk(1);
 	if (!zram->disk) {
-		pr_warn("Error allocating disk structure for device %d\n",
+		pr_err("Error allocating disk structure for device %d\n",
 			device_id);
 		ret = -ENOMEM;
 		goto out_free_queue;
@@ -1222,14 +1222,14 @@ static int __init zram_init(void)
 	int ret, dev_id;
 
 	if (num_devices > max_num_devices) {
-		pr_warn("Invalid value for num_devices: %u\n",
+		pr_err("Invalid value for num_devices: %u\n",
 				num_devices);
 		return -EINVAL;
 	}
 
 	zram_major = register_blkdev(0, "zram");
 	if (zram_major <= 0) {
-		pr_warn("Unable to get major number\n");
+		pr_err("Unable to get major number\n");
 		return -EBUSY;
 	}
 
