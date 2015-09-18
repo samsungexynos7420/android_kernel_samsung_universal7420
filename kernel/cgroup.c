@@ -554,8 +554,8 @@ static void cgroup_update_populated(struct cgroup *cgrp, bool populated)
 		if (!trigger)
 			break;
 
-		if (cgrp->events_kn)
-			kernfs_notify(cgrp->events_kn);
+		cgroup_file_notify(&cgrp->events_file);
+
 		cgrp = cgroup_parent(cgrp);
 	} while (cgrp);
 }
@@ -1713,6 +1713,7 @@ static void init_cgroup_housekeeping(struct cgroup *cgrp)
 
 	INIT_LIST_HEAD(&cgrp->self.sibling);
 	INIT_LIST_HEAD(&cgrp->self.children);
+	INIT_LIST_HEAD(&cgrp->self.files);
 	INIT_LIST_HEAD(&cgrp->cset_links);
 	INIT_LIST_HEAD(&cgrp->pidlists);
 	mutex_init(&cgrp->pidlist_mutex);
@@ -2507,7 +2508,7 @@ static int cgroup_procs_write_permission(struct task_struct *task,
 			cgrp = cgroup_parent(cgrp);
 
 		ret = -ENOMEM;
-		inode = kernfs_get_inode(sb, cgrp->procs_kn);
+		inode = kernfs_get_inode(sb, cgrp->procs_file.kn);
 		if (inode) {
 			ret = inode_permission(inode, MAY_WRITE);
 			iput(inode);
@@ -3202,10 +3203,14 @@ static int cgroup_add_file(struct cgroup_subsys_state *css, struct cgroup *cgrp,
 		return ret;
 	}
 
-	if (cft->write == cgroup_procs_write)
-		cgrp->procs_kn = kn;
-	else if (cft->seq_show == cgroup_events_show)
-		cgrp->events_kn = kn;
+	if (cft->file_offset) {
+		struct cgroup_file *cfile = (void *)css + cft->file_offset;
+
+		kernfs_get(kn);
+		cfile->kn = kn;
+		list_add(&cfile->node, &css->files);
+	}
+
 	return 0;
 }
 
@@ -4362,6 +4367,7 @@ static int cgroup_clone_children_write(struct cgroup_subsys_state *css,
 static struct cftype cgroup_dfl_base_files[] = {
 	{
 		.name = "cgroup.procs",
+		.file_offset = offsetof(struct cgroup, procs_file),
 		.seq_start = cgroup_pidlist_start,
 		.seq_next = cgroup_pidlist_next,
 		.seq_stop = cgroup_pidlist_stop,
@@ -4387,6 +4393,7 @@ static struct cftype cgroup_dfl_base_files[] = {
 	{
 		.name = "cgroup.events",
 		.flags = CFTYPE_NOT_ON_ROOT,
+		.file_offset = offsetof(struct cgroup, events_file),
 		.seq_show = cgroup_events_show,
 	},
 	{ }	/* terminate */
@@ -4465,8 +4472,12 @@ static void css_free_work_fn(struct work_struct *work)
 		container_of(work, struct cgroup_subsys_state, destroy_work);
 	struct cgroup_subsys *ss = css->ss;
 	struct cgroup *cgrp = css->cgroup;
+	struct cgroup_file *cfile;
 
 	percpu_ref_exit(&css->refcnt);
+
+	list_for_each_entry(cfile, &css->files, node)
+		kernfs_put(cfile->kn);
 
 	if (ss) {
 		/* css free path */
@@ -4574,6 +4585,7 @@ static void init_and_link_css(struct cgroup_subsys_state *css,
 	css->id = -1;
 	INIT_LIST_HEAD(&css->sibling);
 	INIT_LIST_HEAD(&css->children);
+	INIT_LIST_HEAD(&css->files);
 	css->serial_nr = css_serial_nr_next++;
 
 	if (cgroup_parent(cgrp)) {
