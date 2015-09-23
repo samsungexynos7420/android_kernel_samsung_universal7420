@@ -497,6 +497,11 @@ static int cls_bpf_dump(struct net *net, struct tcf_proto *tp, unsigned long fh,
 	if (bpf_flags && nla_put_u32(skb, TCA_BPF_FLAGS, bpf_flags))
 		goto nla_put_failure;
 
+	if (prog->exts_integrated)
+		bpf_flags |= TCA_BPF_FLAG_ACT_DIRECT;
+	if (bpf_flags && nla_put_u32(skb, TCA_BPF_FLAGS, bpf_flags))
+		goto nla_put_failure;
+
 	nla_nest_end(skb, nest);
 
 	if (tcf_exts_dump_stats(skb, &prog->exts) < 0)
