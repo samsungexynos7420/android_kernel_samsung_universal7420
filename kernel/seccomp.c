@@ -367,7 +367,7 @@ static struct seccomp_filter *seccomp_prepare_filter(struct sock_fprog *fprog)
 	       return ERR_PTR(-ENOMEM);
 
 	ret = bpf_prog_create_from_user(&sfilter->prog, fprog,
-				       seccomp_check_filter);
+				       seccomp_check_filter, false);
 	if (ret < 0) {
 	       kfree(sfilter);
 	       return ERR_PTR(ret);
