@@ -157,7 +157,7 @@ static int __init prandom_init(void)
 	int i;
 
 	for_each_possible_cpu(i) {
-		struct rnd_state *state = &per_cpu(net_rand_state,i);
+		struct rnd_state *state = &per_cpu(net_rand_state, i);
 
 #define LCG(x)	((x) * 69069)	/* super-duper LCG */
 		state->s1 = __seed(LCG(i + jiffies), 2);
@@ -194,21 +194,9 @@ static DEFINE_TIMER(seed_timer, __prandom_timer, 0, 0);
 	add_timer(&seed_timer);
 }
 
-/*
- *	Generate better values after random number generator
- *	is fully initialized.
- */
-static void __prandom_reseed(bool late)
+void prandom_seed_full_state(struct rnd_state __percpu *pcpu_state)
 {
 	int i;
-	unsigned long flags;
-	static bool latch = false;
-	static DEFINE_SPINLOCK(lock);
- 	/* only allow initial seeding (late == false) once */
-	spin_lock_irqsave(&lock, flags);
-	if (latch && !late)
-		goto out;
-	latch = true;
 
 	for_each_possible_cpu(i) {
 		struct rnd_state *state = &per_cpu(net_rand_state,i);
@@ -222,6 +210,23 @@ static void __prandom_reseed(bool late)
 		/* mix it in */
 		prandom_u32_state(state);
 	}
+}
+
+/*
+ *	Generate better values after random number generator
+ *	is fully initialized.
+ */
+static void __prandom_reseed(bool late)
+{
+	unsigned long flags;
+	static bool latch = false;
+	static DEFINE_SPINLOCK(lock);
+ 	/* only allow initial seeding (late == false) once */
+	spin_lock_irqsave(&lock, flags);
+	if (latch && !late)
+		goto out;
+	latch = true;
+
 out:
 	spin_unlock_irqrestore(&lock, flags);
 }
