@@ -1213,7 +1213,7 @@ static unsigned int fanout_demux_bpf(struct packet_fanout *f,
 	rcu_read_lock();
 	prog = rcu_dereference(f->bpf_prog);
 	if (prog)
-		ret = BPF_PROG_RUN(prog, skb) % num;
+		ret = bpf_prog_run_clear_cb(prog, skb) % num;
 	rcu_read_unlock();
 
 	return ret;
