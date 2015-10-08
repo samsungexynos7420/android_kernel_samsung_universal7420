@@ -54,7 +54,7 @@ platdirs := $(patsubst %,arch/arm64/plat-%/,$(plat-y))
 KBUILD_CPPFLAGS += $(patsubst %, -I%include,$(machdirs) $(platdirs))
 
 ifeq ($(CONFIG_ARM64_ERRATUM_843419), y)
-CFLAGS_MODULE	+= -mcmodel=large
+KBUILD_CFLAGS_MODULE	+= -mcmodel=large
 endif
 
 # Default value
