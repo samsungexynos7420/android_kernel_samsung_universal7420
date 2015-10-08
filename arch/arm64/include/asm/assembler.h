@@ -287,4 +287,15 @@ lr	.req	x30		// link register
 9000:
 	.endm
 
+/*
+ * Annotate a function as position independent, i.e., safe to be called before
+ * the kernel virtual mapping is activated.
+ */
+#define ENDPIPROC(x)			\
+	.globl	__pi_##x;		\
+	.type 	__pi_##x, %function;	\
+	.set	__pi_##x, x;		\
+	.size	__pi_##x, . - x;	\
+	ENDPROC(x)
+
 #endif	/* __ASM_ASSEMBLER_H */
