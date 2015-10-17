@@ -391,7 +391,7 @@ static int __check_block_validity(struct inode *inode, const char *func,
 				 "lblock %lu mapped to illegal pblock %llu "
 				 "(length %d)", (unsigned long) map->m_lblk,
 				 map->m_pblk, map->m_len);
-		return -EIO;
+		return -EFSCORRUPTED;
 	}
 	return 0;
 }
@@ -498,7 +498,7 @@ int ext4_map_blocks(handle_t *handle, struct inode *inode,
 
 	/* We can handle the block number less than EXT_MAX_BLOCKS */
 	if (unlikely(map->m_lblk >= EXT_MAX_BLOCKS))
-		return -EIO;
+		return -EFSCORRUPTED;
 
 	/* Lookup extent status tree firstly */
 	if (ext4_es_lookup_extent(inode, map->m_lblk, &es)) {
@@ -3844,7 +3844,7 @@ static int __ext4_get_inode_loc(struct inode *inode,
 	iloc->bh = NULL;
 	if (inode->i_ino < EXT4_ROOT_INO ||
 	    inode->i_ino > le32_to_cpu(EXT4_SB(sb)->s_es->s_inodes_count))
-		return -EIO;
+		return -EFSCORRUPTED;
 
 	iloc->block_group = (inode->i_ino - 1) / EXT4_INODES_PER_GROUP(sb);
 	gdp = ext4_get_group_desc(sb, iloc->block_group, NULL);
@@ -4100,7 +4100,7 @@ struct inode *ext4_iget(struct super_block *sb, unsigned long ino)
 			EXT4_ERROR_INODE(inode, "bad extra_isize (%u != %u)",
 				EXT4_GOOD_OLD_INODE_SIZE + ei->i_extra_isize,
 				EXT4_INODE_SIZE(inode->i_sb));
-			ret = -EIO;
+			ret = -EFSCORRUPTED;
 			goto bad_inode;
 		}
 	} else
@@ -4121,7 +4121,7 @@ struct inode *ext4_iget(struct super_block *sb, unsigned long ino)
 	if (!ext4_inode_csum_verify(inode, raw_inode, ei)) {
 		print_iloc_info(sb,iloc);
 		EXT4_ERROR_INODE(inode, "checksum invalid");
-		ret = -EIO;
+		ret = -EFSBADCRC;
 		goto bad_inode;
 	}
 
@@ -4256,7 +4256,7 @@ struct inode *ext4_iget(struct super_block *sb, unsigned long ino)
 		print_iloc_info(sb,iloc);
 		EXT4_ERROR_INODE(inode, "bad extended attribute block %llu",
 				 ei->i_file_acl);
-		ret = -EIO;
+		ret = -EFSCORRUPTED;
 		goto bad_inode;
 	} else if (!ext4_has_inline_data(inode)) {
 		if (ext4_test_inode_flag(inode, EXT4_INODE_EXTENTS)) {
@@ -4305,7 +4305,7 @@ struct inode *ext4_iget(struct super_block *sb, unsigned long ino)
 	} else if (ino == EXT4_BOOT_LOADER_INO) {
 		make_bad_inode(inode);
 	} else {
-		ret = -EIO;
+		ret = -EFSCORRUPTED;
 		print_iloc_info(sb,iloc);
 		EXT4_ERROR_INODE(inode, "bogus i_mode (%o)", inode->i_mode);
 		goto bad_inode;
@@ -4324,7 +4324,7 @@ bad_inode:
 struct inode *ext4_iget_normal(struct super_block *sb, unsigned long ino)
 {
 	if (ino < EXT4_FIRST_INO(sb) && ino != EXT4_ROOT_INO)
-		return ERR_PTR(-EIO);
+		return ERR_PTR(-EFSCORRUPTED);
 	return ext4_iget(sb, ino);
 }
 
@@ -4987,7 +4987,7 @@ static int ext4_expand_extra_isize(struct inode *inode,
 		EXT4_ERROR_INODE(inode, "bad extra_isize %u (inode size %u)",
 				 ei->i_extra_isize,
 				 EXT4_INODE_SIZE(inode->i_sb));
-		return -EIO;
+		return -EFSCORRUPTED;
 	}
 	if ((new_extra_isize < ei->i_extra_isize) ||
 	    (new_extra_isize < 4) ||
