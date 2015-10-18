@@ -1025,6 +1025,7 @@ struct journal_s
                                         /* data tagging mode */
 #endif
 
+#define JBD2_REC_ERR	0x080	/* The errno in the sb has been recorded */
 
 /*
  * Function declarations for the journaling transaction and buffer

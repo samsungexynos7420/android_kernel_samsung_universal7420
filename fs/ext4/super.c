@@ -416,12 +416,13 @@ static void ext4_handle_error(struct super_block *sb, char* buf)
 		smp_wmb();
 		sb->s_flags |= MS_RDONLY;
 	}
-
-	if (ufs_debug_func)
-		ufs_debug_func(NULL);
-	if (test_opt(sb, ERRORS_PANIC))
-		panic("EXT4(%s:%s\n",
-			sb->s_id, buf?buf:"no message)");
+	if (test_opt(sb, ERRORS_PANIC)) {
+		if (EXT4_SB(sb)->s_journal &&
+		  !(EXT4_SB(sb)->s_journal->j_flags & JBD2_REC_ERR))
+			return;
+		panic("EXT4-fs (device %s): panic! %s\n",
+			sb->s_id, buf?buf:"no message");
+	}
 }
 
 #define ext4_error_ratelimit(sb)					\
@@ -652,10 +653,12 @@ void __ext4_abort(struct super_block *sb, const char *function,
 			jbd2_journal_abort(EXT4_SB(sb)->s_journal, -EIO);
 		save_error_info(sb, function, line);
 	}
-	if (ufs_debug_func)
-		ufs_debug_func(NULL);
-	if (test_opt(sb, ERRORS_PANIC) && !ignore_fs_panic)
+	if (test_opt(sb, ERRORS_PANIC) && !ignore_fs_panic) {
+		if (EXT4_SB(sb)->s_journal &&
+		  !(EXT4_SB(sb)->s_journal->j_flags & JBD2_REC_ERR))
+			return;
 		panic("EXT4-fs panic from previous error\n");
+	}
 }
 
 void __ext4_msg(struct super_block *sb,
