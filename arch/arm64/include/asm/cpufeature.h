@@ -10,6 +10,7 @@
 #define __ASM_CPUFEATURE_H
 
 #include <asm/hwcap.h>
+#include <asm/sysreg.h>
 
 /*
  * In the arm64 world (as in the ARM world), elf_hwcap is used both internally
@@ -86,6 +87,12 @@ cpuid_feature_extract_field(u64 features, int field)
 	return cpuid_feature_extract_field_width(features, field, 4);
 }
 
+
+static inline bool id_aa64mmfr0_mixed_endian_el0(u64 mmfr0)
+{
+	return cpuid_feature_extract_field(mmfr0, ID_AA64MMFR0_BIGENDEL_SHIFT) == 0x1 ||
+		cpuid_feature_extract_field(mmfr0, ID_AA64MMFR0_BIGENDEL0_SHIFT) == 0x1;
+}
 
 void __init setup_cpu_features(void);
 
