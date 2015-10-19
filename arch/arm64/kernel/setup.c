@@ -277,13 +277,6 @@ void __init setup_cpu_features(void)
 #endif
 }
 
-static void __init setup_processor(void)
-{
-	pr_info("Boot CPU: AArch64 Processor [%08x]\n", read_cpuid_id());
-	sprintf(init_utsname()->machine, ELF_PLATFORM);
-	cpuinfo_store_boot_cpu();
-}
-
 struct machine_desc *machine_desc __initdata;
 struct machine_desc * __init mdesc_init(void)
 {
@@ -399,13 +392,14 @@ void __init setup_arch(char **cmdline_p)
 	 */
 	local_async_enable();
 
-	setup_processor();
+	pr_info("Boot CPU: AArch64 Processor [%08x]\n", read_cpuid_id());
 
 	setup_machine_fdt(__fdt_pointer);
 
 	mdesc = mdesc_init();
 	machine_desc = mdesc;
 
+	sprintf(init_utsname()->machine, ELF_PLATFORM);
 	init_mm.start_code = (unsigned long) _text;
 	init_mm.end_code   = (unsigned long) _etext;
 	init_mm.end_data   = (unsigned long) _edata;
