@@ -33,6 +33,8 @@ static int (*bpf_get_current_comm)(void *buf, int buf_size) =
 	(void *) BPF_FUNC_get_current_comm;
 static int (*bpf_perf_event_read)(void *map, int index) =
 	(void *) BPF_FUNC_perf_event_read;
+static int (*bpf_perf_event_output)(void *ctx, void *map, int index, void *data, int size) =
+	(void *) BPF_FUNC_perf_event_output;
 
 /* llvm builtin functions that eBPF C program may use to
  * emit BPF_LD_ABS and BPF_LD_IND instructions
