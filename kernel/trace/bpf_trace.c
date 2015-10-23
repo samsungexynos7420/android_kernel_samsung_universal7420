@@ -199,7 +199,7 @@ static u64 bpf_perf_event_read(u64 r1, u64 index, u64 r3, u64 r4, u64 r5)
 	if (!event)
 		return -ENOENT;
 
-	/* make sure event is local */
+	/* make sure event is local - TODO: LOOK BACK AT WARN */
 	if (event->oncpu != smp_processor_id())
 		return -EINVAL;
 
