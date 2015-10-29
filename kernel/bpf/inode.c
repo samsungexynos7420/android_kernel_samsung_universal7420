@@ -216,7 +216,7 @@ static int bpf_obj_do_pin(const struct filename *pathname, void *raw,
 	if (ret)
 		goto out;
 
-	dir = path.dentry->d_inode;
+	dir = d_inode(path.dentry);
 	if (dir->i_op != &bpf_dir_iops) {
 		ret = -EPERM;
 		goto out;
@@ -267,7 +267,7 @@ static void *bpf_obj_do_get(const struct filename *pathname,
 	if (ret)
 		return ERR_PTR(ret);
 
-	inode = path.dentry->d_inode;
+	inode = d_backing_inode(path.dentry);
 	ret = inode_permission(inode, MAY_WRITE);
 	if (ret)
 		goto out;
@@ -321,7 +321,7 @@ static void bpf_evict_inode(struct inode *inode)
 {
 	enum bpf_type type;
 
-	truncate_inode_pages(&inode->i_data, 0);
+	truncate_inode_pages_final(&inode->i_data);
 	clear_inode(inode);
 
 	if (!bpf_inode_type(inode, &type))
@@ -373,15 +373,15 @@ MODULE_ALIAS_FS("bpf");
 static int __init bpf_init(void)
 {
 	int ret;
-	static struct kobject *bpf_kobj;
 
-	bpf_kobj = kobject_create_and_add("bpf", fs_kobj);
-	if (!bpf_kobj)
-		return -ENOMEM;
+	/* TODO: REVISIT : MAYBE NOT COMPATIBLE */
+	ret = sysfs_create_mount_point(fs_kobj, "bpf");
+	if (ret)
+		return ret;
 
 	ret = register_filesystem(&bpf_fs_type);
 	if (ret)
-		kobject_put(bpf_kobj);
+		sysfs_remove_mount_point(fs_kobj, "bpf");
 
 	return ret;
 }
