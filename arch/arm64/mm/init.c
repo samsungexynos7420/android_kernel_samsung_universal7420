@@ -401,7 +401,6 @@ void free_initmem(void)
 #endif
 		rkp_call(RKP_DEF_INIT, 0, 0, 0, 0, 0);
 #endif
-	free_alternatives_memory();
 }
 
 #ifdef CONFIG_BLK_DEV_INITRD
