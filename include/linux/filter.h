@@ -356,7 +356,7 @@ struct sk_filter {
 
 #define BPF_PROG_RUN(filter, ctx)  (*filter->bpf_func)(ctx, filter->insnsi)
 
-#define BPF_SKB_CB_LEN 20
+#define BPF_SKB_CB_LEN QDISC_CB_PRIV_LEN
 
 static inline u8 *bpf_skb_cb(struct sk_buff *skb)
 {
