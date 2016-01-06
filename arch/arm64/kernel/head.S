@@ -329,20 +329,13 @@ ENDPROC(__create_page_tables)
  */
 	.set	initial_sp, init_thread_union + THREAD_START_SP
 __mmap_switched:
-	adr_l	x6, __bss_start
-	adr_l	x7, __bss_stop
-#ifdef CONFIG_TIMA_RKP
-	ldr	x6, =rkp_map_bitmap
-	add	x7, x6, 0x20000
-3:	cmp	x6, x7
-	str	xzr, [x6], #8			// Clear BSS
-	b	3b
-#endif
-1:	cmp	x6, x7
-	b.hs	2f
-	str	xzr, [x6], #8			// Clear BSS
-	b	1b
-2:
+	// Clear BSS
+	adr_l	x0, __bss_start
+	mov	x1, xzr
+	adr_l	x2, __bss_stop
+	sub	x2, x2, x0
+	bl	__pi_memset
+
 	adr_l	sp, initial_sp, x4
 	mov	x4, sp
 	and	x4, x4, #~(THREAD_SIZE - 1)
