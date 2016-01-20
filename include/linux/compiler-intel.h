@@ -14,6 +14,7 @@
  * It uses intrinsics to do the equivalent things.
  */
 #undef barrier
+#undef barrier_data
 #undef RELOC_HIDE
 #undef OPTIMIZER_HIDE_VAR
 
