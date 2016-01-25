@@ -2270,8 +2270,7 @@ static void tcp_mark_head_lost(struct sock *sk, int packets, int mark_head)
 {
 	struct tcp_sock *tp = tcp_sk(sk);
 	struct sk_buff *skb;
-	int cnt, oldcnt;
-	int err;
+	int cnt, oldcnt, lost;
 	unsigned int mss;
 	/* Use SACK to deduce losses of new sequences sent during recovery */
 	const u32 loss_high = tcp_is_sack(tp) ?  tp->snd_nxt : tp->high_seq;
@@ -2311,13 +2310,14 @@ static void tcp_mark_head_lost(struct sock *sk, int packets, int mark_head)
 				break;
 
 			mss = skb_shinfo(skb)->gso_size;
-#ifdef CONFIG_MPTCP
-			err = tcp_fragment(sk, skb, (packets - oldcnt) * mss,
-					   mss, GFP_ATOMIC);
+			/* If needed, chop off the prefix to mark as lost. */
+			lost = (packets - oldcnt) * mss;
+			if (lost < skb->len &&
+#ifdef CONFIG_MPTCP			
+			    tcp_fragment(sk, skb, lost, mss, GFP_ATOMIC) < 0)
 #else
-			err = tcp_fragment(sk, skb, (packets - oldcnt) * mss, mss);
+				tcp_fragment(sk, skb, lost, mss) < 0)
 #endif
-			if (err < 0)
 				break;
 			cnt = packets;
 		}
