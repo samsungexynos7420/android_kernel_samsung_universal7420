@@ -59,7 +59,7 @@ u64 idmap_t0sz = TCR_T0SZ(VA_BITS);
  * Empty_zero_page is a special page that is used for zero-initialized data
  * and COW.
  */
-struct page *empty_zero_page;
+unsigned long empty_zero_page[PAGE_SIZE / sizeof(unsigned long)] __page_aligned_bss;
 EXPORT_SYMBOL(empty_zero_page);
 
 pgprot_t phys_mem_access_prot(struct file *file, unsigned long pfn,
@@ -426,34 +426,21 @@ static void __init map_mem(void)
  */
 void __init paging_init(struct machine_desc *mdesc)
 {
-	void *zero_page;
 #ifdef CONFIG_TIMA_RKP
 	int rkp_do =  0;
 #endif
+
 	map_mem();
 
 	if(mdesc->map_io)
 		mdesc->map_io();
 
-	/* allocate the zero page. */
-	/* change zero page address */
-
 #ifdef CONFIG_TIMA_RKP
-#ifdef CONFIG_KNOX_KAP
-	if (boot_mode_security)
-		rkp_do = 1;
-#endif
-	if (rkp_do)
-		zero_page = rkp_ro_alloc();
-	else
-		zero_page = early_alloc(PAGE_SIZE);
-#else	/* !CONFIG_TIMA_RKP */
-	zero_page = early_alloc(PAGE_SIZE);
+		empty_zero_page = rkp_ro_alloc();
+		BUG_ON(empty_zero_page == NULL);
 #endif
 
 	bootmem_init();
-
-	empty_zero_page = virt_to_page(zero_page);
 
 	/* Ensure the zero page is visible to the page table walker */
 	dsb(ishst);
