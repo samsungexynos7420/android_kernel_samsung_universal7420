@@ -594,7 +594,6 @@ int do_vfs_ioctl(struct file *filp, unsigned int fd, unsigned int cmd,
 	case FIGETBSZ:
 		return put_user(inode->i_sb->s_blocksize, argp);
 
-#ifdef CONFIG_SDCARD_FS_CI_SEARCH
 	case FS_IOC_CI_LOOKUP: {
 		struct ci_lookup_data *data;
 		struct path p;
@@ -623,7 +622,6 @@ err:
 		kfree(data);
 		return error;
 	}
-#endif
 
 	default:
 		if (S_ISREG(inode->i_mode))
