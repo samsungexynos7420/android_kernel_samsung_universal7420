@@ -170,9 +170,7 @@ struct ci_lookup_data {
 #define FS_IOC32_SETVERSION		_IOW('v', 2, int)
 
 #define FS_IOC_INVAL_MAPPING		_IO('f', 13)
-#ifdef CONFIG_SDCARD_FS_CI_SEARCH
 #define FS_IOC_CI_LOOKUP		_IOWR('f', 15, struct ci_lookup_data)
-#endif
 
 /*
  * File system encryption support
