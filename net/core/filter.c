@@ -1764,12 +1764,19 @@ static u64 bpf_skb_get_tunnel_key(u64 r1, u64 r2, u64 size, u64 flags, u64 r5)
 	struct bpf_tunnel_key *to = (struct bpf_tunnel_key *) (long) r2;
 	const struct ip_tunnel_info *info = skb_tunnel_info(skb);
 	u8 compat[sizeof(struct bpf_tunnel_key)];
+	void *to_orig = to;
+	int err;
 
-	if (unlikely(!info || (flags & ~(BPF_F_TUNINFO_IPV6))))
-		return -EINVAL;
-	if (ip_tunnel_info_af(info) != bpf_tunnel_key_af(flags))
-		return -EPROTO;
+	if (unlikely(!info || (flags & ~(BPF_F_TUNINFO_IPV6)))) {
+		err = -EINVAL;
+		goto err_clear;
+	}
+	if (ip_tunnel_info_af(info) != bpf_tunnel_key_af(flags)) {
+		err = -EPROTO;
+		goto err_clear;
+	}
 	if (unlikely(size != sizeof(struct bpf_tunnel_key))) {
+		err = -EINVAL;
 		switch (size) {
 		case offsetof(struct bpf_tunnel_key, tunnel_label):
 		case offsetof(struct bpf_tunnel_key, tunnel_ext):
@@ -1779,12 +1786,12 @@ static u64 bpf_skb_get_tunnel_key(u64 r1, u64 r2, u64 size, u64 flags, u64 r5)
 			 * a common path later on.
 			 */
 			if (ip_tunnel_info_af(info) != AF_INET)
-				return -EINVAL;
+				goto err_clear;
 set_compat:
 			to = (struct bpf_tunnel_key *)compat;
 			break;
 		default:
-			return -EINVAL;
+			goto err_clear;
 		}
 	}
 
@@ -1801,9 +1808,12 @@ set_compat:
 	}
 
 	if (unlikely(size != sizeof(struct bpf_tunnel_key)))
-		memcpy((void *)(long) r2, to, size);
+		memcpy(to_orig, to, size);
 
 	return 0;
+err_clear:
+	memset(to_orig, 0, size);
+	return err;
 }
 
 static const struct bpf_func_proto bpf_skb_get_tunnel_key_proto = {
@@ -1811,7 +1821,7 @@ static const struct bpf_func_proto bpf_skb_get_tunnel_key_proto = {
 	.gpl_only	= false,
 	.ret_type	= RET_INTEGER,
 	.arg1_type	= ARG_PTR_TO_CTX,
-	.arg2_type	= ARG_PTR_TO_STACK,
+	.arg2_type	= ARG_PTR_TO_RAW_STACK,
 	.arg3_type	= ARG_CONST_STACK_SIZE,
 	.arg4_type	= ARG_ANYTHING,
 };
@@ -1821,16 +1831,26 @@ static u64 bpf_skb_get_tunnel_opt(u64 r1, u64 r2, u64 size, u64 r4, u64 r5)
 	struct sk_buff *skb = (struct sk_buff *) (long) r1;
 	u8 *to = (u8 *) (long) r2;
 	const struct ip_tunnel_info *info = skb_tunnel_info(skb);
+	int err;
 
 	if (unlikely(!info ||
-		     !(info->key.tun_flags & TUNNEL_OPTIONS_PRESENT)))
-		return -ENOENT;
-	if (unlikely(size < info->options_len))
-		return -ENOMEM;
+		     !(info->key.tun_flags & TUNNEL_OPTIONS_PRESENT))) {
+		err = -ENOENT;
+		goto err_clear;
+	}
+	if (unlikely(size < info->options_len)) {
+		err = -ENOMEM;
+		goto err_clear;
+	}
 
 	ip_tunnel_info_opts_get(to, info);
+	if (size > info->options_len)
+		memset(to + info->options_len, 0, size - info->options_len);
 
 	return info->options_len;
+err_clear:
+	memset(to, 0, size);
+	return err;
 }
 
 static const struct bpf_func_proto bpf_skb_get_tunnel_opt_proto = {
@@ -1838,7 +1858,7 @@ static const struct bpf_func_proto bpf_skb_get_tunnel_opt_proto = {
 	.gpl_only	= false,
 	.ret_type	= RET_INTEGER,
 	.arg1_type	= ARG_PTR_TO_CTX,
-	.arg2_type	= ARG_PTR_TO_STACK,
+	.arg2_type	= ARG_PTR_TO_RAW_STACK,
 	.arg3_type	= ARG_CONST_STACK_SIZE,
 };
 
