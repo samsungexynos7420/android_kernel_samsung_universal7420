@@ -82,13 +82,6 @@ SECTIONS
 		*(.got)			/* Global offset table		*/
 	}
 
-	_etext = .;			/* End of text section */
-	
-	ALIGN_DEBUG_RO
-	RO_DATA(PAGE_SIZE)
-	EXCEPTION_TABLE(8)
-	NOTES
-	ALIGN_DEBUG_RO
 #ifdef CONFIG_TIMA_RKP
 	. = ALIGN(PAGE_SIZE);
 	.rkp.bitmap : {
@@ -109,6 +102,14 @@ SECTIONS
 	. = ALIGN(1 << 21);
 #endif /* CONFIG_RKP_KDP*/
 #endif
+	
+	ALIGN_DEBUG_RO
+	_etext = .;			/* End of text section */
+
+	RO_DATA(PAGE_SIZE)
+	EXCEPTION_TABLE(8)
+	NOTES
+	ALIGN_DEBUG_RO
 
 	ALIGN_DEBUG_RO_MIN(PAGE_SIZE)
 	__init_begin = .;
