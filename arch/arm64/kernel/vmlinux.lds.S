@@ -59,9 +59,12 @@ SECTIONS
 		*(.got)			/* Global offset table		*/
 	}
 
+	_etext = .;			/* End of text section */
+
 	RO_DATA(PAGE_SIZE)
 	EXCEPTION_TABLE(8)
 	NOTES
+
 #ifdef CONFIG_TIMA_RKP
 	. = ALIGN(PAGE_SIZE);
 	.rkp.bitmap : {
@@ -82,7 +85,6 @@ SECTIONS
 	. = ALIGN(1 << 21);
 #endif /* CONFIG_RKP_KDP*/
 #endif
-	_etext = .;			/* End of text and rodata section */
 
 	. = ALIGN(PAGE_SIZE);
 	__init_begin = .;
