@@ -1992,6 +1992,8 @@ bool bpf_helper_changes_skb_data(void *func)
 		return true;
 	if (func == bpf_skb_store_bytes)
 		return true;
+	if (func == bpf_skb_change_proto)
+		return true;
 	if (func == bpf_l3_csum_replace)
 		return true;
 	if (func == bpf_l4_csum_replace)
