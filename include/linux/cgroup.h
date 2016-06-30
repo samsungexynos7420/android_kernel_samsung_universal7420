@@ -879,6 +879,8 @@ unsigned short css_id(struct cgroup_subsys_state *css);
 unsigned short css_depth(struct cgroup_subsys_state *css);
 struct cgroup_subsys_state *cgroup_css_from_dir(struct file *f, int id);
 
+struct cgroup *cgroup_get_from_fd(int fd);
+
 void cgroup_sk_alloc(struct cgroup **skcg);
 void cgroup_sk_clone(struct cgroup *skcg);
 void cgroup_sk_free(struct cgroup *skcg);
