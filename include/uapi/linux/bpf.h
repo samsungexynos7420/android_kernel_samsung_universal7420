@@ -445,7 +445,7 @@ struct bpf_tunnel_key {
  * return codes are reserved for future use. Unknown return codes will result
  * in packet drop.
  */
- enum xdp_action {
+enum xdp_action {
 	XDP_ABORTED = 0,
 	XDP_DROP,
 	XDP_PASS,
