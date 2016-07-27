@@ -4249,7 +4249,9 @@ dhdpci_bus_read_frames(dhd_bus_t *bus)
 			if (bus->dhd->memdump_enabled) {
 				DHD_OS_WAKE_LOCK(bus->dhd);
 				bus->dhd->memdump_type = DUMP_TYPE_READ_SHM_FAIL;
+#ifdef DHD_DEBUG
 				dhd_bus_mem_dump(bus->dhd);
+#endif /* DHD_DEBUG */
 				DHD_OS_WAKE_UNLOCK(bus->dhd);
 			}
 			bus->dhd->hang_reason = HANG_REASON_PCIE_LINK_DOWN;
