@@ -1367,6 +1367,7 @@ static inline int bpf_try_make_writable(struct sk_buff *skb,
 
 static inline void bpf_push_mac_rcsum(struct sk_buff *skb)
 {
+	//TODO: skb_at_tc_ingress NOT BACKPORTED
 	if (G_TC_AT(skb->tc_verd) & AT_INGRESS)
 		skb_postpush_rcsum(skb, skb_mac_header(skb), skb->mac_len);
 }
