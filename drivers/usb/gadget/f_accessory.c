@@ -76,9 +76,13 @@ struct acc_dev {
 	struct usb_ep *ep_in;
 	struct usb_ep *ep_out;
 
-	/* set to 1 when we connect */
+	/* online indicates state of function_set_alt & function_unbind
+	 * set to 1 when we connect
+	 */
 	int online:1;
-	/* Set to 1 when we disconnect.
+
+	/* disconnected indicates state of open & release
+	 * Set to 1 when we disconnect.
 	 * Not cleared until our file is closed.
 	 */
 	int disconnected:1;
@@ -1160,7 +1164,7 @@ static void acc_function_disable(struct usb_function *f)
 	struct usb_composite_dev	*cdev = dev->cdev;
 
 	DBG(cdev, "acc_function_disable\n");
-	acc_set_disconnected(dev);
+	acc_set_disconnected(dev); /* this now only sets disconnected */
 	dev->online = 0; /* so now need to clear online flag here too */
 	usb_ep_disable(dev->ep_in);
 	usb_ep_disable(dev->ep_out);
