@@ -956,7 +956,7 @@ void tcp_v4_reqsk_send_ack(struct sock *sk, struct sk_buff *skb,
 #ifdef CONFIG_MPTCP
 			0,
 #endif
-			req->rcv_wnd,
+			req->rcv_wnd >> inet_rsk(req)->rcv_wscale,
 			tcp_time_stamp,
 			req->ts_recent,
 			0,
