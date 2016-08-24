@@ -2,6 +2,8 @@
 # Makefile for the linux kernel.
 #
 
+ccflags-y := -fno-function-sections -fno-data-sections
+
 obj-y                          := main.o version.o mounts.o
 
 ifeq ($(CONFIG_TIMA_RKP), y)
