@@ -371,16 +371,13 @@ static const struct bpf_func_proto bpf_get_current_task_proto = {
 	.ret_type	= RET_INTEGER,
 };
 
-static u64 bpf_current_task_under_cgroup(u64 r1, u64 r2, u64 r3, u64 r4, u64 r5)
+BPF_CALL_2(bpf_current_task_under_cgroup, struct bpf_map *, map, u32, idx)
 {
-	struct bpf_map *map = (struct bpf_map *)(long)r1;
 	struct bpf_array *array = container_of(map, struct bpf_array, map);
 	struct cgroup *cgrp;
-	u32 idx = (u32)r2;
 
 	if (unlikely(in_interrupt()))
 		return -EINVAL;
-
 	if (unlikely(idx >= array->map.max_entries))
 		return -E2BIG;
 
