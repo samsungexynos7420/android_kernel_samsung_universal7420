@@ -273,7 +273,7 @@ static int propagate_one(struct mount *m)
 		br_write_unlock(&vfsmount_lock);
 	}
 	list_add_tail(&child->mnt_hash, list);
-	return 0;
+	return count_mounts(m->mnt_ns, child);
 }
 
 /*
