@@ -462,6 +462,7 @@ int inode_permission(struct inode *inode, int mask)
 {
 	return inode_permission2(NULL, inode, mask);
 }
+EXPORT_SYMBOL(inode_permission);
 
 /**
  * path_get - get a reference to a path
@@ -2209,6 +2210,7 @@ struct dentry *lookup_one_len(const char *name, struct dentry *base, int len)
 {
 	return lookup_one_len2(name, NULL, base, len);
 }
+EXPORT_SYMBOL(lookup_one_len);
 
 int user_path_at_empty(int dfd, const char __user *name, unsigned flags,
 		 struct path *path, int *empty)
@@ -2416,6 +2418,7 @@ int vfs_create(struct inode *dir, struct dentry *dentry, umode_t mode,
 {
 	return vfs_create2(NULL, dir, dentry, mode, want_excl);
 }
+EXPORT_SYMBOL(vfs_create);
 
 static int may_open(struct path *path, int acc_mode, int flag)
 {
@@ -3239,6 +3242,7 @@ int vfs_mknod(struct inode *dir, struct dentry *dentry, umode_t mode, dev_t dev)
 {
 	return vfs_mknod2(NULL, dir, dentry, mode, dev);
 }
+EXPORT_SYMBOL(vfs_mknod);
 
 static int may_mknod(umode_t mode)
 {
@@ -3334,6 +3338,7 @@ int vfs_mkdir(struct inode *dir, struct dentry *dentry, umode_t mode)
 {
 	return vfs_mkdir2(NULL, dir, dentry, mode);
 }
+EXPORT_SYMBOL(vfs_mkdir);
 
 SYSCALL_DEFINE3(mkdirat, int, dfd, const char __user *, pathname, umode_t, mode)
 {
@@ -3425,12 +3430,13 @@ out:
 		d_delete(dentry);
 	return error;
 }
+EXPORT_SYMBOL(vfs_rmdir2);
 
 int vfs_rmdir(struct inode *dir, struct dentry *dentry)
 {
 	return vfs_rmdir2(NULL, dir, dentry);
 }
-EXPORT_SYMBOL(vfs_rmdir2);
+EXPORT_SYMBOL(vfs_rmdir);
 
 static long do_rmdir(int dfd, const char __user *pathname)
 {
@@ -3551,6 +3557,7 @@ int vfs_unlink(struct inode *dir, struct dentry *dentry)
 {
 	return vfs_unlink2(NULL, dir, dentry);
 }
+EXPORT_SYMBOL(vfs_unlink);
 
 /*
  * Make sure that the actual truncation of the file will occur outside its
@@ -3678,6 +3685,7 @@ int vfs_symlink(struct inode *dir, struct dentry *dentry, const char *oldname)
 {
 	return vfs_symlink2(NULL, dir, dentry, oldname);
 }
+EXPORT_SYMBOL(vfs_symlink);
 
 SYSCALL_DEFINE3(symlinkat, const char __user *, oldname,
 		int, newdfd, const char __user *, newname)
@@ -3764,6 +3772,7 @@ int vfs_link(struct dentry *old_dentry, struct inode *dir, struct dentry *new_de
 {
 	return vfs_link2(NULL, old_dentry, dir, new_dentry);
 }
+EXPORT_SYMBOL(vfs_link);
 
 /*
  * Hardlinks are often used in delicate situations.  We avoid
@@ -3952,7 +3961,7 @@ out:
 }
 
 int vfs_rename2(struct vfsmount *mnt,
-		   struct inode *old_dir, struct dentry *old_dentry,
+	       struct inode *old_dir, struct dentry *old_dentry,
 	       struct inode *new_dir, struct dentry *new_dentry)
 {
 	int error;
@@ -3992,11 +4001,11 @@ int vfs_rename2(struct vfsmount *mnt,
 EXPORT_SYMBOL(vfs_rename2);
 
 int vfs_rename(struct inode *old_dir, struct dentry *old_dentry,
-	       struct inode *new_dir, struct dentry *new_dentry
-	       )
+	       struct inode *new_dir, struct dentry *new_dentry)
 {
 	return vfs_rename2(NULL, old_dir, old_dentry, new_dir, new_dentry);
 }
+EXPORT_SYMBOL(vfs_rename);
 
 SYSCALL_DEFINE4(renameat, int, olddfd, const char __user *, oldname,
 		int, newdfd, const char __user *, newname)
@@ -4253,7 +4262,6 @@ EXPORT_SYMBOL(follow_down);
 EXPORT_SYMBOL(follow_up);
 EXPORT_SYMBOL(get_write_access); /* nfsd */
 EXPORT_SYMBOL(lock_rename);
-EXPORT_SYMBOL(lookup_one_len);
 EXPORT_SYMBOL(page_follow_link_light);
 EXPORT_SYMBOL(page_put_link);
 EXPORT_SYMBOL(page_readlink);
@@ -4262,18 +4270,9 @@ EXPORT_SYMBOL(page_symlink);
 EXPORT_SYMBOL(page_symlink_inode_operations);
 EXPORT_SYMBOL(kern_path);
 EXPORT_SYMBOL(vfs_path_lookup);
-EXPORT_SYMBOL(inode_permission);
 EXPORT_SYMBOL(unlock_rename);
-EXPORT_SYMBOL(vfs_create);
 EXPORT_SYMBOL(vfs_follow_link);
-EXPORT_SYMBOL(vfs_link);
-EXPORT_SYMBOL(vfs_mkdir);
-EXPORT_SYMBOL(vfs_mknod);
 EXPORT_SYMBOL(generic_permission);
 EXPORT_SYMBOL(vfs_readlink);
-EXPORT_SYMBOL(vfs_rename);
-EXPORT_SYMBOL(vfs_rmdir);
-EXPORT_SYMBOL(vfs_symlink);
-EXPORT_SYMBOL(vfs_unlink);
 EXPORT_SYMBOL(dentry_unhash);
 EXPORT_SYMBOL(generic_readlink);
