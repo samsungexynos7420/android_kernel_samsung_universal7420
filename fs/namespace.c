@@ -953,6 +953,13 @@ vfs_kern_mount(struct file_system_type *type, int flags, const char *name, void 
 	mnt = alloc_vfsmnt(name);
 	if (!mnt)
 		return ERR_PTR(-ENOMEM);
+
+#ifdef CONFIG_RKP_NS_PROT
+	rkp_call(RKP_CMDID(0x56), (u64)(mnt->mnt), (u64)NULL, 0, 0, 0);
+#else
+	mnt->mnt.data = NULL;
+#endif
+
 	if (type->alloc_mnt_data) {
 #ifdef CONFIG_RKP_NS_PROT
 		mnt->mnt->data = type->alloc_mnt_data();
@@ -963,6 +970,7 @@ vfs_kern_mount(struct file_system_type *type, int flags, const char *name, void 
 		if (!mnt->mnt.data)
 		{
 #endif
+			mnt_free_id(mnt);
 			free_vfsmnt(mnt);
 			return ERR_PTR(-ENOMEM);
 		}
@@ -978,6 +986,7 @@ vfs_kern_mount(struct file_system_type *type, int flags, const char *name, void 
 	root = mount_fs(type, flags, name, &mnt->mnt, data);
 #endif
 	if (IS_ERR(root)) {
+		kfree(mnt->mnt.data);
 		free_vfsmnt(mnt);
 		return ERR_CAST(root);
 	}
@@ -1124,6 +1133,7 @@ static struct mount *clone_mnt(struct mount *old, struct dentry *root,
 	return mnt;
 
  out_free:
+	kfree(mnt->mnt.data);
 	free_vfsmnt(mnt);
 	return ERR_PTR(err);
 }
