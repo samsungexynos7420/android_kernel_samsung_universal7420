@@ -104,25 +104,27 @@ int check_wakeup_reason(int irq)
 	int irq_no;
 	int ret = false;
 
-	spin_lock(&resume_reason_lock);
+	unsigned long flags;
+	spin_lock_irqsave(&resume_reason_lock, flags);
 	for (irq_no = 0; irq_no < irqcount; irq_no++)
 		if (irq_list[irq_no] == irq) {
 			ret = true;
 			break;
 	}
-	spin_unlock(&resume_reason_lock);
+	spin_unlock_irqrestore(&resume_reason_lock, flags);
 	return ret;
 }
 
 void log_suspend_abort_reason(const char *fmt, ...)
 {
 	va_list args;
+	unsigned long flags;
 
-	spin_lock(&resume_reason_lock);
+	spin_lock_irqsave(&resume_reason_lock, flags);
 
 	//Suspend abort reason has already been logged.
 	if (suspend_abort) {
-		spin_unlock(&resume_reason_lock);
+		spin_unlock_irqrestore(&resume_reason_lock, flags);
 		return;
 	}
 
@@ -130,19 +132,22 @@ void log_suspend_abort_reason(const char *fmt, ...)
 	va_start(args, fmt);
 	snprintf(abort_reason, MAX_SUSPEND_ABORT_LEN, fmt, args);
 	va_end(args);
-	spin_unlock(&resume_reason_lock);
+
+	spin_unlock_irqrestore(&resume_reason_lock, flags);
 }
 
 /* Detects a suspend and clears all the previous wake up reasons*/
 static int wakeup_reason_pm_event(struct notifier_block *notifier,
 		unsigned long pm_event, void *unused)
 {
+	unsigned long flags;
+
 	switch (pm_event) {
 	case PM_SUSPEND_PREPARE:
-		spin_lock(&resume_reason_lock);
+		spin_lock_irqsave(&resume_reason_lock, flags);
 		irqcount = 0;
 		suspend_abort = false;
-		spin_unlock(&resume_reason_lock);
+		spin_unlock_irqrestore(&resume_reason_lock, flags);
 		break;
 	default:
 		break;
