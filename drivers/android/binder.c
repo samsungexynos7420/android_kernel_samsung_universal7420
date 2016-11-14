@@ -80,8 +80,6 @@
 #include "binder_alloc.h"
 #include "binder_trace.h"
 
-static DEFINE_MUTEX(binder_main_lock);
-
 static HLIST_HEAD(binder_deferred_list);
 static DEFINE_MUTEX(binder_deferred_lock);
 
@@ -955,75 +953,6 @@ static long task_close_fd(struct binder_proc *proc, unsigned int fd)
 
 	return retval;
 }
-
-static inline void binder_lock(struct binder_context *context, const char *tag)
-{
-	trace_binder_lock(tag);
-	mutex_lock(&context->binder_main_lock);
-	preempt_disable();
-	trace_binder_locked(tag);
-}
-
-static inline void binder_unlock(struct binder_context *context,
-				 const char *tag)
-{
-	trace_binder_unlock(tag);
-	mutex_unlock(&context->binder_main_lock);
-	preempt_enable();
-}
-
-static inline void *kzalloc_preempt_disabled(size_t size)
-{
-	void *ptr;
-
-	ptr = kzalloc(size, GFP_NOWAIT);
-	if (ptr)
-		return ptr;
-
-	preempt_enable_no_resched();
-	ptr = kzalloc(size, GFP_KERNEL);
-	preempt_disable();
-
-	return ptr;
-}
-
-static inline long copy_to_user_preempt_disabled(void __user *to, const void *from, long n)
-{
-	long ret;
-
-	preempt_enable_no_resched();
-	ret = copy_to_user(to, from, n);
-	preempt_disable();
-	return ret;
-}
-
-static inline long copy_from_user_preempt_disabled(void *to, const void __user *from, long n)
-{
-	long ret;
-
-	preempt_enable_no_resched();
-	ret = copy_from_user(to, from, n);
-	preempt_disable();
-	return ret;
-}
-
-#define get_user_preempt_disabled(x, ptr)	\
-({						\
-	int __ret;				\
-	preempt_enable_no_resched();		\
-	__ret = get_user(x, ptr);		\
-	preempt_disable();			\
-	__ret;					\
-})
-
-#define put_user_preempt_disabled(x, ptr)	\
-({						\
-	int __ret;				\
-	preempt_enable_no_resched();		\
-	__ret = put_user(x, ptr);		\
-	preempt_disable();			\
-	__ret;					\
-})
 
 static void binder_set_nice(long nice)
 {
@@ -3650,8 +3579,6 @@ retry:
 
 	thread->looper |= BINDER_LOOPER_STATE_WAITING;
 
-	binder_unlock(proc->context, __func__);
-
 	trace_binder_wait_for_work(wait_for_proc_work,
 				   !!thread->transaction_stack,
 				   !binder_worklist_empty(proc, &thread->todo));
@@ -3676,8 +3603,6 @@ retry:
 		} else
 			ret = wait_event_freezable(thread->wait, binder_has_thread_work(thread));
 	}
-
-	binder_lock(proc->context, __func__);
 
 	binder_inner_proc_lock(proc);
 	if (wait_for_proc_work)
@@ -4194,16 +4119,12 @@ static unsigned int binder_poll(struct file *filp,
 	struct binder_thread *thread = NULL;
 	int wait_for_proc_work;
 
-	binder_lock(proc->context, __func__);
-
 	thread = binder_get_thread(proc);
 
 	binder_inner_proc_lock(thread->proc);
 	wait_for_proc_work = thread->transaction_stack == NULL &&
 		binder_worklist_empty_ilocked(&thread->todo);
 	binder_inner_proc_unlock(thread->proc);
-
-	binder_unlock(proc->context, __func__);
 
 	if (wait_for_proc_work) {
 		if (binder_has_proc_work(proc, thread))
@@ -4350,7 +4271,6 @@ static long binder_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	if (ret)
 		goto err_unlocked;
 
-	binder_lock(context, __func__);
 	thread = binder_get_thread(proc);
 	if (thread == NULL) {
 		ret = -ENOMEM;
@@ -4410,7 +4330,6 @@ static long binder_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 err:
 	if (thread)
 		thread->looper_need_return = false;
-	binder_unlock(__func__);
 	wait_event_interruptible(binder_user_error_wait, binder_stop_on_user_error < 2);
 	if (ret && ret != -ERESTARTSYS)
 		pr_info("%d:%d ioctl %x %lx returned %d\n", proc->pid, current->pid, cmd, arg, ret);
@@ -4515,14 +4434,10 @@ static int binder_open(struct inode *nodp, struct file *filp)
 	proc->context = &binder_dev->context;
 	binder_alloc_init(&proc->alloc);
 
-	binder_lock(proc->context, __func__);
-
 	binder_stats_created(BINDER_STAT_PROC);
 	proc->pid = current->group_leader->pid;
 	INIT_LIST_HEAD(&proc->delivered_death);
 	filp->private_data = proc;
-
-	binder_unlock(proc->context, __func__);
 
 	mutex_lock(&binder_procs_lock);
 	hlist_add_head(&proc->proc_node, &binder_procs);
@@ -4753,16 +4668,10 @@ static void binder_deferred_func(struct work_struct *work)
 	int defer;
 
 	do {
-		trace_binder_lock(__func__);
-		mutex_lock(&context->binder_main_lock);
-		trace_binder_locked(__func__);
-
-		mutex_lock(&context->binder_deferred_lock);
-		preempt_disable();
-		if (!hlist_empty(&context->binder_deferred_list)) {
-			proc = hlist_entry(context->binder_deferred_list.first,
-					   struct binder_proc,
-					   deferred_work_node);
+		mutex_lock(&binder_deferred_lock);
+		if (!hlist_empty(&binder_deferred_list)) {
+			proc = hlist_entry(binder_deferred_list.first,
+					struct binder_proc, deferred_work_node);
 			hlist_del_init(&proc->deferred_work_node);
 			defer = proc->deferred_work;
 			proc->deferred_work = 0;
@@ -4785,9 +4694,6 @@ static void binder_deferred_func(struct work_struct *work)
 		if (defer & BINDER_DEFERRED_RELEASE)
 			binder_deferred_release(proc); /* frees proc */
 
-		trace_binder_unlock(__func__);
-		mutex_unlock(&context->binder_main_lock);
-		preempt_enable_no_resched();
 		if (files)
 			put_files_struct(files);
 	} while (proc);
@@ -5219,8 +5125,6 @@ static int binder_state_show(struct seq_file *m, void *unused)
 	struct binder_node *node;
 	struct binder_node *last_node = NULL;
 
-	binder_lock(__func__);
-
 	seq_puts(m, "binder state:\n");
 
 	spin_lock(&binder_dead_nodes_lock);
@@ -5250,7 +5154,7 @@ static int binder_state_show(struct seq_file *m, void *unused)
 	hlist_for_each_entry(proc, &binder_procs, proc_node)
 		print_binder_proc(m, proc, 1);
 	mutex_unlock(&binder_procs_lock);
-	binder_unlock(__func__);
+
 	return 0;
 }
 
@@ -5259,8 +5163,6 @@ static int binder_stats_show(struct seq_file *m, void *unused)
 	struct binder_device *device;
 	struct binder_context *context;
 	struct binder_proc *proc;
-
-	binder_lock(__func__);
 
 	seq_puts(m, "binder stats:\n");
 	print_binder_stats(m, "", &total_binder_stats, &binder_obj_stats);
@@ -5274,7 +5176,7 @@ static int binder_stats_show(struct seq_file *m, void *unused)
 	hlist_for_each_entry(proc, &binder_procs, proc_node)
 		print_binder_proc_stats(m, proc);
 	mutex_unlock(&binder_procs_lock);
-	binder_unlock(__func__);
+
 	return 0;
 }
 
@@ -5284,14 +5186,12 @@ static int binder_transactions_show(struct seq_file *m, void *unused)
 	struct binder_context *context;
 	struct binder_proc *proc;
 
-	binder_lock(__func__);
-
 	seq_puts(m, "binder transactions:\n");
 	mutex_lock(&binder_procs_lock);
 	hlist_for_each_entry(proc, &binder_procs, proc_node)
 		print_binder_proc(m, proc, 0);
 	mutex_unlock(&binder_procs_lock);
-	binder_unlock(__func__);
+
 	return 0;
 }
 
@@ -5301,8 +5201,6 @@ static int binder_proc_show(struct seq_file *m, void *unused)
 	struct binder_context *context;
 	struct binder_proc *itr;
 	int pid = (unsigned long)m->private;
-
-	binder_lock(__func__);
 
 	mutex_lock(&binder_procs_lock);
 	hlist_for_each_entry(itr, &binder_procs, proc_node) {
@@ -5315,7 +5213,6 @@ static int binder_proc_show(struct seq_file *m, void *unused)
 	}
 	mutex_unlock(&binder_procs_lock);
 
-	binder_unlock(__func__);
 	return 0;
 }
 
