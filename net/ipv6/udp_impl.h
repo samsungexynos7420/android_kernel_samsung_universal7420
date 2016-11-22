@@ -28,7 +28,7 @@ extern int	udpv6_sendmsg(struct kiocb *iocb, struct sock *sk,
 extern int	udpv6_recvmsg(struct kiocb *iocb, struct sock *sk,
 			      struct msghdr *msg, size_t len,
 			      int noblock, int flags, int *addr_len);
-extern int	udpv6_queue_rcv_skb(struct sock * sk, struct sk_buff *skb);
+extern int	__udpv6_queue_rcv_skb(struct sock * sk, struct sk_buff *skb);
 extern void	udpv6_destroy_sock(struct sock *sk);
 
 extern void udp_v6_clear_sk(struct sock *sk, int size);
