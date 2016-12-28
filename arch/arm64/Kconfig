@@ -11,6 +11,8 @@ config ARM64
 	select ARCH_HAVE_CUSTOM_GPIO_H
 	select ARM_AMBA
 	select ARM_ARCH_TIMER
+	select HAVE_KERNEL_GZIP
+	select HAVE_KERNEL_LZ4
 	select ARM_GIC
 	select ARM_GIC_V3
 	select BUILDTIME_EXTABLE_SORT
