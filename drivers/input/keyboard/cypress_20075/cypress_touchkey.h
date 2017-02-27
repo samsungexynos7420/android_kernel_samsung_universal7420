@@ -28,6 +28,11 @@
 
 #include <linux/i2c/touchkey_i2c.h>
 
+#ifdef CONFIG_FB
+#include <linux/notifier.h>
+#include <linux/fb.h>
+#endif
+
 #ifdef SEC_DEBUG_TK_LOG
 #define tk_debug_dbg(mode, dev, fmt, ...)	\
 ({								\
@@ -254,6 +259,9 @@ struct touchkey_i2c {
 	struct mode_change_data mc_data;
 	int ic_mode;
 	int tsk_enable_glove_mode;
+#ifdef CONFIG_FB
+	struct notifier_block fb_notif;
+#endif
 };
 
 extern struct class *sec_class;

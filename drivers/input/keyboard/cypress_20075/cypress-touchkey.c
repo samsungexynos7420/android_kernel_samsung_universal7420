@@ -51,6 +51,11 @@
 
 #include "cypress_touchkey.h"
 
+#ifdef CONFIG_FB
+#include <linux/notifier.h>
+#include <linux/fb.h>
+#endif
+
 #ifdef  TK_HAS_FIRMWARE_UPDATE
 #if defined(CONFIG_KEYBOARD_CYPRESS_TOUCH_MBR31X5)
 #include "cy8cmbr_swd.h"
@@ -1289,6 +1294,35 @@ static void touchkey_input_close(struct input_dev *dev)
 }
 #endif
 
+#ifdef CONFIG_FB
+static int fb_notifier_callback(struct notifier_block *self,
+				unsigned long event, void *data)
+{
+	struct fb_event *evdata = data;
+	struct touchkey_i2c *tc_info = container_of(self, struct touchkey_i2c, fb_notif);
+
+	if (evdata && evdata->data && event == FB_EVENT_BLANK) {
+		int *blank = evdata->data;
+		switch (*blank) {
+		case FB_BLANK_UNBLANK:
+		case FB_BLANK_NORMAL:
+		case FB_BLANK_VSYNC_SUSPEND:
+		case FB_BLANK_HSYNC_SUSPEND:
+			touchkey_resume(&tc_info->client->dev);
+			break;
+		case FB_BLANK_POWERDOWN:
+			abov_tk_suspend(&tc_info->client->dev);
+			break;
+		default:
+			/* Don't handle what we don't understand */
+			break;
+		}
+	}
+
+	return 0;
+}
+#endif
+
 #ifdef CONFIG_PM
 #ifdef CONFIG_HAS_EARLYSUSPEND
 #define touchkey_suspend	NULL
@@ -2447,6 +2481,12 @@ static struct touchkey_platform_data *cypress_parse_dt(struct i2c_client *client
 	return pdata;
 }
 #endif
+
+#ifdef CONFIG_FB
+static int fb_notifier_callback(struct notifier_block *self,
+	unsigned long event, void *data);
+#endif
+
 static int i2c_touchkey_probe(struct i2c_client *client,
 	const struct i2c_device_id *id)
 {
@@ -2660,6 +2700,12 @@ static int i2c_touchkey_probe(struct i2c_client *client,
 	complete_all(&tkey_i2c->init_done);
 	touchkey_probe = true;
 
+#ifdef CONFIG_FB
+	tkey_i2c->fb_notif.notifier_call = fb_notifier_callback;
+	if (fb_register_client(&tkey_i2c->fb_notif))
+		pr_err("%s: could not create fb notifier\n", __func__);
+#endif
+
 	return 0;
 
 #if defined(TK_HAS_FIRMWARE_UPDATE)
@@ -2683,6 +2729,10 @@ err_register_device:
 	input_free_device(input_dev);
 err_allocate_input_device:
 	gpio_free(pdata->gpio_int);
+
+#ifdef CONFIG_FB
+	fb_unregister_client(&tkey_i2c->fb_notif);
+#endif	
 	kfree(tkey_i2c);
 	return ret;
 }
