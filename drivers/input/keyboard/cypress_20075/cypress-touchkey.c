@@ -35,6 +35,12 @@
 #ifdef CONFIG_HAS_EARLYSUSPEND
 #include <linux/earlysuspend.h>
 #endif
+
+#ifdef CONFIG_FB
+#include <linux/notifier.h>
+#include <linux/fb.h>
+#endif
+
 #include <linux/io.h>
 #include <linux/regulator/consumer.h>
 #include <linux/regulator/driver.h>
@@ -987,6 +993,11 @@ static void touchkey_i2c_update_work(struct work_struct *work)
 }
 #endif
 
+#ifdef CONFIG_FB
+static int fb_notifier_callback(struct notifier_block *self,
+	unsigned long event, void *data);
+#endif
+
 static int touchkey_i2c_update(struct touchkey_i2c *tkey_i2c)
 {
 	int ret;
@@ -1289,7 +1300,6 @@ static void touchkey_input_close(struct input_dev *dev)
 }
 #endif
 
-#ifdef CONFIG_PM
 #ifdef CONFIG_HAS_EARLYSUSPEND
 #define touchkey_suspend	NULL
 #define touchkey_resume	NULL
@@ -1361,7 +1371,6 @@ static int touchkey_resume(struct device *dev)
 }
 #endif
 static SIMPLE_DEV_PM_OPS(touchkey_pm_ops, touchkey_suspend, touchkey_resume);
-#endif
 
 static ssize_t touchkey_led_control(struct device *dev,
 				 struct device_attribute *attr, const char *buf,
@@ -2657,6 +2666,14 @@ static int i2c_touchkey_probe(struct i2c_client *client,
 	}
 
 /*	touchkey_stop(tkey_i2c); */
+
+	
+#ifdef CONFIG_FB
+	tkey_i2c->fb_notif.notifier_call = fb_notifier_callback;
+	if (fb_register_client(&tkey_i2c->fb_notif))
+		pr_err("%s: could not create fb notifier\n", __func__);
+#endif
+
 	complete_all(&tkey_i2c->init_done);
 	touchkey_probe = true;
 
@@ -2687,6 +2704,37 @@ err_allocate_input_device:
 	return ret;
 }
 
+#ifdef CONFIG_FB
+static int fb_notifier_callback(struct notifier_block *self,
+				unsigned long event, void *data)
+{
+	struct fb_event *evdata = data;
+	
+	struct touchkey_i2c *tkey_i2c =
+			container_of(self, struct touchkey_i2c, fb_notif);
+
+	if (evdata && evdata->data && event == FB_EVENT_BLANK) {
+		int *blank = evdata->data;
+		switch (*blank) {
+		case FB_BLANK_UNBLANK:
+		case FB_BLANK_NORMAL:
+		case FB_BLANK_VSYNC_SUSPEND:
+		case FB_BLANK_HSYNC_SUSPEND:
+			touchkey_resume(&tkey_i2c->client->dev);
+			break;
+		case FB_BLANK_POWERDOWN:
+			touchkey_suspend(&tkey_i2c->client->dev);
+			break;
+		default:
+			/* Don't handle what we don't understand */
+			break;
+		}
+	}
+
+	return 0;
+}
+#endif
+
 void touchkey_shutdown(struct i2c_client *client)
 {
 	struct touchkey_i2c *tkey_i2c = i2c_get_clientdata(client);
@@ -2699,6 +2747,9 @@ void touchkey_shutdown(struct i2c_client *client)
 
 	tkey_i2c->pdata->power_on(tkey_i2c, 0);
 	tkey_i2c->enabled = false;
+#ifdef CONFIG_FB
+	fb_unregister_client(&tkey_i2c->fb_notif);
+#endif
 
 	tk_debug_err(true, &tkey_i2c->client->dev, "%s\n", __func__);
 }
@@ -2713,9 +2764,7 @@ struct i2c_driver touchkey_i2c_driver = {
 	.driver = {
 		.name = "sec_touchkey_driver",
 		.owner = THIS_MODULE,
-#ifdef CONFIG_PM
 		.pm = &touchkey_pm_ops,
-#endif
 #ifdef CONFIG_OF
 		.of_match_table = of_match_ptr(cypress_touchkey_dt_ids),
 #endif
