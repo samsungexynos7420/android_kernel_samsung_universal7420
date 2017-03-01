@@ -4,7 +4,10 @@
  * combine them automatically.
  */
 SECTIONS {
-	/DISCARD/ : { *(.discard) }
+	/DISCARD/ : {
+		*(.discard)
+		*(.discard.*)
+	}
 
 	__ksymtab		: { *(SORT(___ksymtab+*)) }
 	__ksymtab_gpl		: { *(SORT(___ksymtab_gpl+*)) }
