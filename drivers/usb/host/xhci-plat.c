@@ -216,6 +216,7 @@ static int xhci_plat_remove(struct platform_device *dev)
 		pr_info("%s, main_hcd pm_runtime_forbid\n", __func__);
 		pm_runtime_forbid(&xhci->main_hcd->self.root_hub->dev);
 	}
+	xhci->xhc_state |= XHCI_STATE_REMOVING;
 
 	usb_remove_hcd(xhci->shared_hcd);
 	usb_phy_shutdown(hcd->phy);
