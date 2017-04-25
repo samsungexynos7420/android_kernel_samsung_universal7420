@@ -347,8 +347,7 @@ static int uid_cputime_show(struct seq_file *m, void *v)
 	read_lock(&tasklist_lock);
 	do_each_thread(temp, task) {
 		uid = from_kuid_munged(user_ns, task_uid(task));
-		if (!uid_entry || uid_entry->uid != uid)
-			uid_entry = find_or_register_uid(uid);
+		uid_entry = find_or_register_uid(uid);
 		if (!uid_entry) {
 			read_unlock(&tasklist_lock);
 			rt_mutex_unlock(&uid_lock);
