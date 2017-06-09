@@ -6482,3 +6482,15 @@ void dump_page(struct page *page)
 	dump_page_flags(page->flags);
 	mem_cgroup_print_bad_page(page);
 }
+
+void dump_page_r(struct page *page, const char *reason)
+{
+	printk(KERN_ALERT
+	       "page:%p count:%d mapcount:%d mapping:%p index:%#lx\n",
+		page, atomic_read(&page->_count), page_mapcount(page),
+		page->mapping, page->index);
+	dump_page_flags(page->flags);
+	if (reason)
+		pr_alert("page dumped because: %s\n", reason);
+	mem_cgroup_print_bad_page(page);
+}

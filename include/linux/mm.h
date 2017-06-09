@@ -1856,6 +1856,7 @@ extern atomic_long_t num_poisoned_pages;
 extern int soft_offline_page(struct page *page, int flags);
 
 extern void dump_page(struct page *page);
+extern void dump_page_r(struct page *page, const char *reason);
 
 #if defined(CONFIG_TRANSPARENT_HUGEPAGE) || defined(CONFIG_HUGETLBFS)
 extern void clear_huge_page(struct page *page,
