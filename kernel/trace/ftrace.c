@@ -4066,9 +4066,9 @@ static void ftrace_swap_ips(void *a, void *b, int size)
 	*ipb = t;
 }
 
-static int ftrace_process_locs(struct module *mod,
-			       unsigned long *start,
-			       unsigned long *end)
+static int __norecordmcount ftrace_process_locs(struct module *mod,
+					       unsigned long *start,
+					       unsigned long *end)
 {
 	struct ftrace_page *start_pg;
 	struct ftrace_page *pg;

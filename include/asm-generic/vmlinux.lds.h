@@ -462,6 +462,7 @@
 		*(.text .text.fixup)					\
 		*(.text.unlikely .text.unlikely .text.*)			\
 		*(.text.unknown .text.unknown.*)			\
+		*(.text..ftrace)					\
 		*(.ref.text)						\
 	DEV_KEEP(init.text)						\
 	DEV_KEEP(exit.text)						\
