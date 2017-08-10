@@ -30,7 +30,7 @@
  * Ensure alignment by software.
  */
 ENTRY(__clear_user)
-	uaccess_enable_not_uao x2, x3
+	uaccess_enable_not_uao x2, x3, x4
 	mov	x2, x1			// save the size for fixup return
 	neg	x3, x0
 	ands	x3, x3, #7		// bytes to reach 64bit alignment
