@@ -1484,6 +1484,7 @@ struct task_struct {
 	unsigned int	sequential_io;
 	unsigned int	sequential_io_avg;
 #endif
+	atomic64_t *concurrent_active_time;
 #ifdef CONFIG_SDP
 	unsigned int sensitive;
 #endif
