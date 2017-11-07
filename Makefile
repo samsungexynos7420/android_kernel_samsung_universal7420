@@ -596,6 +596,23 @@ all: vmlinux
 
 include $(srctree)/arch/$(SRCARCH)/Makefile
 
+ifeq ($(cc-name),clang)
+ifneq ($(CROSS_COMPILE),)
+CLANG_TARGET := --target=$(notdir $(CROSS_COMPILE:%-=%))
+GCC_TOOLCHAIN := $(realpath $(dir $(shell which $(LD)))/..)
+endif
+ifneq ($(GCC_TOOLCHAIN),)
+CLANG_GCC_TC := --gcc-toolchain=$(GCC_TOOLCHAIN)
+endif
+KBUILD_AFLAGS += $(CLANG_TARGET) $(CLANG_GCC_TC)
+KBUILD_CFLAGS += $(CLANG_TARGET) $(CLANG_GCC_TC)
+endif
+
+ifdef CONFIG_LD_DEAD_CODE_DATA_ELIMINATION
+KBUILD_CFLAGS += $(call cc-option, -fdata-sections,) \
+                 $(call cc-option, -ffunction-sections,)
+endif
+
 KBUILD_CFLAGS += $(call cc-option,-fno-delete-null-pointer-checks,)
 KBUILD_CFLAGS += $(call cc-disable-warning,frame-address,)
 KBUILD_CFLAGS += $(call cc-disable-warning, format-truncation)
@@ -637,17 +654,8 @@ KBUILD_CFLAGS += $(call cc-option, -fno-stack-protector)
 endif
 
 ifeq ($(cc-name),clang)
-ifneq ($(CROSS_COMPILE),)
-CLANG_TARGET := --target=$(notdir $(CROSS_COMPILE:%-=%))
-GCC_TOOLCHAIN := $(realpath $(dir $(shell which $(LD)))/..)
-endif
-ifneq ($(GCC_TOOLCHAIN),)
-CLANG_GCC_TC := --gcc-toolchain=$(GCC_TOOLCHAIN)
-endif
-KBUILD_AFLAGS += $(CLANG_TARGET) $(CLANG_GCC_TC) \
-                 $(call cc-option, -no-integrated-as)
-KBUILD_CFLAGS += $(CLANG_TARGET) $(CLANG_GCC_TC) \
-                 $(call cc-disable-warning, address-of-packed-member) \
+KBUILD_AFLAGS += $(call cc-option, -no-integrated-as)
+KBUILD_CFLAGS += $(call cc-disable-warning, address-of-packed-member) \
                  $(call cc-disable-warning, format-invalid-specifier) \
                  $(call cc-disable-warning, gnu) \
                  $(call cc-disable-warning, unused-variable) \
