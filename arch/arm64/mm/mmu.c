@@ -630,7 +630,7 @@ static int __init map_entry_trampoline(void)
 
 		__set_fixmap(FIX_ENTRY_TRAMP_DATA,
 			     __pa_symbol(__entry_tramp_data_start),
-			     PAGE_KERNEL);
+			     PAGE_KERNEL_RO);
 	}
 
 	return 0;
