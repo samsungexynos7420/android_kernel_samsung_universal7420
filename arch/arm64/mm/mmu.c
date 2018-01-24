@@ -488,7 +488,7 @@ void __init paging_init(struct machine_desc *mdesc)
 	empty_zero_page = virt_to_page(zero_page);
 
 	/* Ensure the zero page is visible to the page table walker */
-	dsb();
+	dsb(ishst);
 
 	/*
 	 * TTBR0 is only used for the identity mapping at this stage. Make it
