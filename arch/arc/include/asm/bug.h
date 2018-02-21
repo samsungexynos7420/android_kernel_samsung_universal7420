@@ -22,10 +22,10 @@ void show_kernel_fault_diag(const char *str, struct pt_regs *regs,
 void die(const char *str, struct pt_regs *regs, unsigned long address,
 	 unsigned long cause_reg);
 
-#define BUG()	do {				\
-	dump_stack();					\
-	pr_warn("Kernel BUG in %s: %s: %d!\n",	\
-		__FILE__, __func__,  __LINE__);	\
+#define BUG()	do {								\
+	pr_warn("BUG: failure at %s:%d/%s()!\n", __FILE__, __LINE__, __func__); \
+	barrier_before_unreachable();						\
+	__builtin_trap();							\
 } while (0)
 
 #define HAVE_ARCH_BUG
