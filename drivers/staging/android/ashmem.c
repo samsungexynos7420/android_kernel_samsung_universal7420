@@ -612,11 +612,11 @@ static int ashmem_pin_unpin(struct ashmem_area *asma, unsigned long cmd,
 	size_t pgstart, pgend;
 	int ret = -EINVAL;
 
-	if (unlikely(!asma->file))
-		return -EINVAL;
-
 	if (unlikely(copy_from_user(&pin, p, sizeof(pin))))
 		return -EFAULT;
+
+	if (unlikely(!asma->file))
+		return -EINVAL;
 
 	/* per custom, you can pass zero for len to mean "everything onward" */
 	if (!pin.len)
