@@ -1364,7 +1364,7 @@ struct sctp_chunk *sctp_make_chunk(const struct sctp_association *asoc,
 	struct sock *sk;
 	int chunklen;
 
-	chunklen = sizeof(*chunk_hdr) + paylen;
+	chunklen = WORD_ROUND(sizeof(*chunk_hdr) + paylen);
 	if (chunklen > SCTP_MAX_CHUNK_LEN)
 		goto nodata;
 
