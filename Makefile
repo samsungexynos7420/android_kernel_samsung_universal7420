@@ -609,6 +609,8 @@ CLANG_GCC_TC := --gcc-toolchain=$(GCC_TOOLCHAIN)
 endif
 KBUILD_AFLAGS += $(CLANG_TARGET) $(CLANG_GCC_TC) 
 KBUILD_CFLAGS += $(CLANG_TARGET) $(CLANG_GCC_TC)
+KBUILD_CFLAGS += $(call cc-option, -no-integrated-as)
+KBUILD_AFLAGS += $(call cc-option, -no-integrated-as)
 endif
 KBUILD_CFLAGS += $(call cc-disable-warning, unused-const-variable)
 
@@ -684,8 +686,6 @@ KBUILD_CFLAGS += $(call cc-disable-warning, tautological-compare)
 # source of a reference will be _MergedGlobals and not on of the whitelisted names.
 # See modpost pattern 2
 KBUILD_CFLAGS += $(call cc-option, -mno-global-merge,)
-KBUILD_CFLAGS += $(call cc-option, -no-integrated-as)
-KBUILD_AFLAGS += $(call cc-option, -no-integrated-as)
 else
 # These warnings generated too much noise in a regular build.
 # Use make W=1 to enable them (see scripts/Makefile.build)
