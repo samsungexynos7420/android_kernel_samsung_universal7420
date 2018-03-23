@@ -1435,8 +1435,8 @@ static struct v4l2_queryctrl controls[] = {
 		.id = V4L2_CID_MPEG_MFC_GET_EXTRA_BUFFER_SIZE,
 		.type = V4L2_CTRL_TYPE_INTEGER,
 		.name = "Get extra buffer size",
-		.minimum = 0,
-		.maximum = (2 << 31) - 1,
+		.minimum = INT_MIN,
+		.maximum = INT_MAX,
 		.step = 1,
 		.default_value = 0,
 	},
@@ -2600,7 +2600,7 @@ static int enc_get_buf_update_val(struct s5p_mfc_ctx *ctx,
 	struct s5p_mfc_buf_ctrl *buf_ctrl;
 
 	list_for_each_entry(buf_ctrl, head, list) {
-		if ((buf_ctrl->id == id)) {
+		if (buf_ctrl->id == id) {
 			buf_ctrl->val = value;
 			mfc_debug(5, "++id: 0x%08x val: %d\n",
 					buf_ctrl->id, buf_ctrl->val);

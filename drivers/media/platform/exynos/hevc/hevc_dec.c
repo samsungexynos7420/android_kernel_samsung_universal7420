@@ -904,7 +904,7 @@ static int dec_get_buf_update_val(struct hevc_ctx *ctx,
 	struct hevc_buf_ctrl *buf_ctrl;
 
 	list_for_each_entry(buf_ctrl, head, list) {
-		if ((buf_ctrl->id == id)) {
+		if (buf_ctrl->id == id) {
 			buf_ctrl->val = value;
 			hevc_debug(5, "++id: 0x%08x val: %d\n",
 					buf_ctrl->id, buf_ctrl->val);
