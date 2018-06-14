@@ -63,8 +63,8 @@ static void decon_oneshot_underrun_log(struct decon_device *decon)
 				decon->underrun_stat.used_windows,
 				decon->underrun_stat.aclk / MHZ,
 				decon->underrun_stat.lh_disp0 / MHZ);
-		decon_reg_set_int_fifo(decon->id, 0);
-		decon->int_fifo_status = false;
+				decon_reg_set_int_fifo(decon->id, 0);
+				decon->int_fifo_status = false;
 	}
 	decon->underrun_stat.underrun_cnt = 0;
 
