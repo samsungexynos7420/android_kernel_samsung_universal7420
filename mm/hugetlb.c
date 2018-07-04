@@ -1318,6 +1318,7 @@ static void __init gather_bootmem_prealloc(void)
 		 */
 		if (h->order > (MAX_ORDER - 1))
 			totalram_pages += 1 << h->order;
+		cond_resched();
 	}
 }
 
