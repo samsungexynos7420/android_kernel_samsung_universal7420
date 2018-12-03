@@ -288,14 +288,15 @@ const struct cred *get_task_cred(struct task_struct *task)
 			inc_test = rocred_uc_inc_not_zero(cred);
 		}
 		else
-			inc_test = atomic_inc_not_zero(&((struct cred *)cred)->usage);
+			inc_test = get_cred_rcu(cred);
 	} while (!inc_test);
 #else
 	do {
 		cred = __task_cred((task));
 		BUG_ON(!cred);
-	} while (!atomic_inc_not_zero(&((struct cred *)cred)->usage));
+	} while (!get_cred_rcu(cred));
 #endif /*CONFIG_RKP_KDP*/
+
 	rcu_read_unlock();
 	return cred;
 }
