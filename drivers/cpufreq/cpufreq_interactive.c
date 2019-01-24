@@ -282,11 +282,9 @@ static void cpufreq_interactive_timer_resched(unsigned long cpu)
 	unsigned long flags;
 
 #ifdef CONFIG_PMU_COREMEM_RATIO
-	if (!tunables->speedchange_task || !tunables->regionchange_task)
-#else
-	if (!tunables->speedchange_task)
-#endif
+	if (!tunables->regionchange_task)
 		return;
+#endif
 
 	spin_lock_irqsave(&pcpu->load_lock, flags);
 	pcpu->time_in_idle =
@@ -324,11 +322,9 @@ static void cpufreq_interactive_timer_start(
 	unsigned long flags;
 
 #ifdef CONFIG_PMU_COREMEM_RATIO
-	if (!tunables->speedchange_task || !tunables->regionchange_task)
-#else
-	if (!tunables->speedchange_task)
-#endif
+	if (!tunables->regionchange_task)
 		return;
+#endif
 
 	spin_lock_irqsave(&pcpu->load_lock, flags);
 	pcpu->cpu_timer.expires = expires;
