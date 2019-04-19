@@ -634,6 +634,7 @@ asmlinkage void __init start_kernel(void)
 		variant_aif_required = HAS_AIF;
 	}
 #endif
+	jump_label_init();
 	parse_early_param();
 	parse_args("Booting kernel", static_command_line, __start___param,
 		   __stop___param - __start___param,
@@ -646,7 +647,6 @@ asmlinkage void __init start_kernel(void)
 		vmm_disable();
 #endif //CONFIG_KNOX_KAP
 #endif //CONFIG_TIMA_RKP
-	jump_label_init();
 
 	/*
 	 * These use large bootmem allocations and must precede
