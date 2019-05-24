@@ -793,3 +793,18 @@ __SYSCALL(__NR_seccomp, sys_seccomp)
 __SYSCALL(__NR_getrandom, sys_getrandom)
 #define __NR_memfd_create 385
 __SYSCALL(__NR_memfd_create, sys_memfd_create)
+#define __NR_bpf 386
+__SYSCALL(__NR_bpf, sys_bpf)
+//#define __NR_execveat 387
+__SYSCALL(387, sys_ni_syscall)
+//#define __NR_userfaultfd 388
+__SYSCALL(388, sys_ni_syscall)
+//#define __NR_membarrier 389
+__SYSCALL(389, sys_ni_syscall)
+#define __NR_pidfd_open 434
+__SYSCALL(__NR_pidfd_open, sys_pidfd_open)
+
+/*
+ * Please add new compat syscalls above this comment and update
+ * __NR_compat_syscalls in asm/unistd.h.
+ */
