@@ -68,6 +68,7 @@ struct netns_ipv4 {
 
 	int sysctl_fwmark_reflect;
 	int sysctl_tcp_fwmark_accept;
+	int sysctl_tcp_min_snd_mss;
 
 	kgid_t sysctl_ping_group_range[2];
 	long sysctl_tcp_mem[3];
