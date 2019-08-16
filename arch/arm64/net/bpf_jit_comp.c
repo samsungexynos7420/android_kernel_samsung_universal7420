@@ -30,8 +30,6 @@
 
 #include "bpf_jit.h"
 
-int bpf_jit_enable __read_mostly;
-
 #define TMP_REG_1 (MAX_BPF_JIT_REG + 0)
 #define TMP_REG_2 (MAX_BPF_JIT_REG + 1)
 #define TCALL_CNT (MAX_BPF_JIT_REG + 2)
@@ -79,7 +77,7 @@ static inline void emit(const u32 insn, struct jit_ctx *ctx)
 }
 
 static inline void emit_a64_mov_i64(const int reg, const u64 val,
-				    struct jit_ctx *ctx)
+					struct jit_ctx *ctx)
 {
 	u64 tmp = val;
 	int shift = 0;
@@ -96,7 +94,7 @@ static inline void emit_a64_mov_i64(const int reg, const u64 val,
 }
 
 static inline void emit_a64_mov_i(const int is64, const int reg,
-				  const s32 val, struct jit_ctx *ctx)
+				const s32 val, struct jit_ctx *ctx)
 {
 	u16 hi = val >> 16;
 	u16 lo = val & 0xffff;
@@ -116,7 +114,7 @@ static inline void emit_a64_mov_i(const int is64, const int reg,
 }
 
 static inline int bpf2a64_offset(int bpf_to, int bpf_from,
-				 const struct jit_ctx *ctx)
+				const struct jit_ctx *ctx)
 {
 	int to = ctx->offset[bpf_to];
 	/* -1 to account for the Branch instruction */
@@ -146,7 +144,7 @@ static inline int epilogue_offset(const struct jit_ctx *ctx)
 
 #define _STACK_SIZE \
 	(MAX_BPF_STACK \
-	 + 4 /* extra for skb_copy_bits buffer */)
+	+ 4 /* extra for skb_copy_bits buffer */)
 
 #define STACK_SIZE STACK_ALIGN(_STACK_SIZE)
 
@@ -164,27 +162,27 @@ static int build_prologue(struct jit_ctx *ctx)
 	int cur_offset;
 
 	/*
-	 * BPF prog stack layout
-	 *
-	 *                         high
-	 * original A64_SP =>   0:+-----+ BPF prologue
-	 *                        |FP/LR|
-	 * current A64_FP =>  -16:+-----+
-	 *                        | ... | callee saved registers
-	 * BPF fp register => -64:+-----+ <= (BPF_FP)
-	 *                        |     |
-	 *                        | ... | BPF prog stack
-	 *                        |     |
-	 *                        +-----+ <= (BPF_FP - MAX_BPF_STACK)
-	 *                        |RSVD | JIT scratchpad
-	 * current A64_SP =>      +-----+ <= (BPF_FP - STACK_SIZE)
-	 *                        |     |
-	 *                        | ... | Function call stack
-	 *                        |     |
-	 *                        +-----+
-	 *                          low
-	 *
-	 */
+	* BPF prog stack layout
+	*
+	*                         high
+	* original A64_SP =>   0:+-----+ BPF prologue
+	*                        |FP/LR|
+	* current A64_FP =>  -16:+-----+
+	*                        | ... | callee saved registers
+	* BPF fp register => -64:+-----+ <= (BPF_FP)
+	*                        |     |
+	*                        | ... | BPF prog stack
+	*                        |     |
+	*                        +-----+ <= (BPF_FP - MAX_BPF_STACK)
+	*                        |RSVD | JIT scratchpad
+	* current A64_SP =>      +-----+ <= (BPF_FP - STACK_SIZE)
+	*                        |     |
+	*                        | ... | Function call stack
+	*                        |     |
+	*                        +-----+
+	*                          low
+	*
+	*/
 
 	/* Save FP and LR registers to stay align with ARM64 AAPCS */
 	emit(A64_PUSH(A64_FP, A64_LR, A64_SP), ctx);
@@ -207,7 +205,7 @@ static int build_prologue(struct jit_ctx *ctx)
 	cur_offset = ctx->idx - idx0;
 	if (cur_offset != PROLOGUE_OFFSET) {
 		pr_err_once("PROLOGUE_OFFSET = %d, expected %d!\n",
-			    cur_offset, PROLOGUE_OFFSET);
+				cur_offset, PROLOGUE_OFFSET);
 		return -1;
 	}
 	return 0;
@@ -229,8 +227,8 @@ static int emit_bpf_tail_call(struct jit_ctx *ctx)
 	size_t off;
 
 	/* if (index >= array->map.max_entries)
-	 *     goto out;
-	 */
+	*     goto out;
+	*/
 	off = offsetof(struct bpf_array, map.max_entries);
 	emit_a64_mov_i64(tmp, off, ctx);
 	emit(A64_LDR32(tmp, r2, tmp), ctx);
@@ -238,18 +236,18 @@ static int emit_bpf_tail_call(struct jit_ctx *ctx)
 	emit(A64_B_(A64_COND_GE, jmp_offset), ctx);
 
 	/* if (tail_call_cnt > MAX_TAIL_CALL_CNT)
-	 *     goto out;
-	 * tail_call_cnt++;
-	 */
+	*     goto out;
+	* tail_call_cnt++;
+	*/
 	emit_a64_mov_i64(tmp, MAX_TAIL_CALL_CNT, ctx);
 	emit(A64_CMP(1, tcc, tmp), ctx);
 	emit(A64_B_(A64_COND_GT, jmp_offset), ctx);
 	emit(A64_ADD_I(1, tcc, tcc, 1), ctx);
 
 	/* prog = array->ptrs[index];
-	 * if (prog == NULL)
-	 *     goto out;
-	 */
+	* if (prog == NULL)
+	*     goto out;
+	*/
 	off = offsetof(struct bpf_array, ptrs);
 	emit_a64_mov_i64(tmp, off, ctx);
 	emit(A64_LDR64(tmp, r2, tmp), ctx);
@@ -268,7 +266,7 @@ static int emit_bpf_tail_call(struct jit_ctx *ctx)
 		out_offset = cur_offset;
 	if (cur_offset != out_offset) {
 		pr_err_once("tail_call out_offset = %d, expected %d!\n",
-			    cur_offset, out_offset);
+				cur_offset, out_offset);
 		return -1;
 	}
 	return 0;
@@ -305,11 +303,11 @@ static void build_epilogue(struct jit_ctx *ctx)
 }
 
 /* JITs an eBPF instruction.
- * Returns:
- * 0  - successfully JITed an 8-byte eBPF instruction.
- * >0 - successfully JITed a 16-byte eBPF instruction.
- * <0 - failed to JIT.
- */
+* Returns:
+* 0  - successfully JITed an 8-byte eBPF instruction.
+* >0 - successfully JITed a 16-byte eBPF instruction.
+* <0 - failed to JIT.
+*/
 static int build_insn(const struct bpf_insn *insn, struct jit_ctx *ctx)
 {
 	const u8 code = insn->code;
@@ -326,7 +324,7 @@ static int build_insn(const struct bpf_insn *insn, struct jit_ctx *ctx)
 
 #define check_imm(bits, imm) do {				\
 	if ((((imm) > 0) && ((imm) >> (bits))) ||		\
-	    (((imm) < 0) && (~(imm) >> (bits)))) {		\
+		(((imm) < 0) && (~(imm) >> (bits)))) {		\
 		pr_info("[%2d] imm=%d(0x%x) out of range\n",	\
 			i, imm, imm);				\
 		return -EINVAL;					\
@@ -593,7 +591,7 @@ emit_cond_jmp:
 	/* function return */
 	case BPF_JMP | BPF_EXIT:
 		/* Optimization: when last instruction is EXIT,
-		   simply fallthrough to epilogue. */
+		simply fallthrough to epilogue. */
 		if (i == ctx->prog->len - 1)
 			break;
 		jmp_offset = epilogue_offset(ctx);
@@ -608,10 +606,10 @@ emit_cond_jmp:
 		u64 imm64;
 
 		if (insn1.code != 0 || insn1.src_reg != 0 ||
-		    insn1.dst_reg != 0 || insn1.off != 0) {
+			insn1.dst_reg != 0 || insn1.off != 0) {
 			/* Note: verifier in BPF core must catch invalid
-			 * instructions.
-			 */
+			* instructions.
+			*/
 			pr_err_once("Invalid BPF_LD_IMM64 instruction\n");
 			return -EINVAL;
 		}
@@ -838,8 +836,8 @@ struct bpf_prog *bpf_int_jit_compile(struct bpf_prog *prog)
 
 	tmp = bpf_jit_blind_constants(prog);
 	/* If blinding was requested and we failed during blinding,
-	 * we must fall back to the interpreter.
-	 */
+	* we must fall back to the interpreter.
+	*/
 	if (IS_ERR(tmp))
 		return orig_prog;
 	if (tmp != prog) {
@@ -878,7 +876,7 @@ struct bpf_prog *bpf_int_jit_compile(struct bpf_prog *prog)
 	/* Now we know the actual image size. */
 	image_size = sizeof(u32) * ctx.idx;
 	header = bpf_jit_binary_alloc(image_size, &image_ptr,
-				      sizeof(u32), jit_fill_hole);
+					sizeof(u32), jit_fill_hole);
 	if (header == NULL) {
 		prog = orig_prog;
 		goto out_off;
@@ -921,7 +919,7 @@ out_off:
 out:
 	if (tmp_blinded)
 		bpf_jit_prog_release_other(prog, prog == orig_prog ?
-					   tmp : orig_prog);
+					tmp : orig_prog);
 	return prog;
 }
 
