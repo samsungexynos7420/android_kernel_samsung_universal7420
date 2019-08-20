@@ -35,11 +35,6 @@ cflags-$(CONFIG_ARC_HAS_SWAPE)		+= -mswape
 cflags-$(CONFIG_ARC_HAS_RTSC)		+= -mrtsc
 cflags-$(CONFIG_ARC_DW2_UNWIND)		+= -fasynchronous-unwind-tables
 
-ifndef CONFIG_CC_OPTIMIZE_FOR_SIZE
-# Generic build system uses -O2, we want -O3
-cflags-y  += -O3
-endif
-
 # small data is default for elf32 tool-chain. If not usable, disable it
 # This also allows repurposing GP as scratch reg to gcc reg allocator
 disable_small_data := y
