@@ -417,6 +417,8 @@
  * This may need to be greater than __NR_last_syscall+1 in order to
  * account for the padding in the syscall table
  */
+#define __NR_getrandom			(__NR_SYSCALL_BASE+384)
+#define __NR_memfd_create		(__NR_SYSCALL_BASE+385)
 
 /*
  * The following SWIs are ARM private.

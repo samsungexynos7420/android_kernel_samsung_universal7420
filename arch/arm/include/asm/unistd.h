@@ -15,7 +15,12 @@
 
 #include <uapi/asm/unistd.h>
 
-#define __NR_syscalls  (384)
+/*
+ * This may need to be greater than __NR_last_syscall+1 in order to
+ * account for the padding in the syscall table
+ */
+#define __NR_syscalls  (388)
+
 #define __ARM_NR_cmpxchg		(__ARM_NR_BASE+0x00fff0)
 
 #define __ARCH_WANT_STAT64
