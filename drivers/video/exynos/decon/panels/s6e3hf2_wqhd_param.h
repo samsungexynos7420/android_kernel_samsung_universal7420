@@ -282,6 +282,20 @@ static const unsigned char SEQ_WQXGA_PARTIAL_UPDATE[] = {
 #define ACL_OPR_LEN		ARRAY_SIZE(S6E3HF2_SEQ_ACL_ON_OPR_12)
 #define ACL_CMD_LEN		ARRAY_SIZE(S6E3HF2_SEQ_ACL_ON)
 
+#ifdef CONFIG_LCD_DOZE_MODE
+#define	ALPM_OFF			0
+#define ALPM_ON_LOW			1
+#define HLPM_ON_LOW			2
+#define ALPM_ON_HIGH			3
+#define HLPM_ON_HIGH			4
+#endif
+
+#if defined(CONFIG_LCD_ALPM) || defined(CONFIG_LCD_DOZE_MODE)
+#define UNSUPPORT_ALPM					0
+#define SUPPORT_30HZALPM				1
+#define SUPPORT_LOWHZALPM				2
+#endif
+
 enum {
 	HBM_STATUS_OFF,
 	HBM_STATUS_ON,
@@ -358,6 +372,33 @@ static const unsigned char SEQ_HMT_ON3[] = {		/* PASET Setting  */
 	0x00, 0x00, 0x09, 0xFF
 };
 
+#ifdef CONFIG_LCD_DOZE_MODE
+
+static const unsigned char HF2_A2_IRC_off[2] = {0xB8, 0x00};
+
+static const unsigned char SEQ_SELECT_ALPM[] = {
+	0xBB,
+	0xC4
+};
+
+static const unsigned char SEQ_SELECT_HLPM[] = {
+	0xBB,
+	0x54
+};
+
+static const unsigned char SEQ_2NIT_MODE_ON[] = {
+	0x53, 0x03
+};
+
+static const unsigned char SEQ_40NIT_MODE_ON[] = {
+	0x53, 0x02
+};
+
+static const unsigned char SEQ_NORMAL_MODE_ON[] = {
+	0x53, 0x00
+};
+
+#endif
 
 static const unsigned char SEQ_HMT_OFF1[] = {	/* aid */
 	0xB2,
