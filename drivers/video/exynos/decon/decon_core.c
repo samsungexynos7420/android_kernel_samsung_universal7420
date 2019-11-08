@@ -1093,7 +1093,7 @@ static int decon_get_overlap_cnt(struct decon_device *decon,
 }
 #endif
 
-static void vpp_dump(struct decon_device *decon)
+void vpp_dump(struct decon_device *decon)
 {
 	int i;
 
