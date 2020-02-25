@@ -581,8 +581,8 @@ static ssize_t cuse_class_abort_store(struct device *dev,
 }
 
 static struct device_attribute cuse_class_dev_attrs[] = {
-	__ATTR(waiting, S_IFREG | 0400, cuse_class_waiting_show, NULL),
-	__ATTR(abort, S_IFREG | 0200, NULL, cuse_class_abort_store),
+	__ATTR(waiting, 0400, cuse_class_waiting_show, NULL),
+	__ATTR(abort, 0200, NULL, cuse_class_abort_store),
 	{ }
 };
 
