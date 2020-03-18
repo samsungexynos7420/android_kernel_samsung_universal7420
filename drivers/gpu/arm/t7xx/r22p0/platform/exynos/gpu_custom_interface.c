@@ -1798,6 +1798,11 @@ static ssize_t set_kernel_sysfs_governor(struct kobject *kobj, struct kobj_attri
 	return count;
 }
 
+static ssize_t show_kernel_sysfs_gpu_driver_version(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
+{
+	return scnprintf(buf, PAGE_SIZE, "%s\n", MALI_RELEASE_NAME);
+}
+
 static ssize_t show_kernel_sysfs_gpu_model(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
 {
 	/* COPY from mali_kbase_core_linux.c : 2594 line, last updated: 20161017, r2p0-03rel0 */
@@ -1922,6 +1927,9 @@ static struct kobj_attribute gpu_clock_attribute =
 static struct kobj_attribute gpu_freq_table_attribute =
 	__ATTR(gpu_freq_table, S_IRUGO, show_kernel_sysfs_freq_table, NULL);
 
+static struct kobj_attribute gpu_driver_version_attribute =
+	__ATTR(gpu_driver_version, S_IRUGO, show_kernel_sysfs_gpu_driver_version, NULL);
+
 static struct kobj_attribute gpu_governor_attribute =
 	__ATTR(gpu_governor, S_IRUGO|S_IWUSR, show_kernel_sysfs_governor, set_kernel_sysfs_governor);
 
@@ -1942,6 +1950,7 @@ static struct attribute * attrs [] =
 	&gpu_busy_attribute.attr,
 	&gpu_clock_attribute.attr,
 	&gpu_freq_table_attribute.attr,
+	&gpu_driver_version_attribute.attr,
 	&gpu_governor_attribute.attr,
 	&gpu_available_governor_attribute.attr,
 	&gpu_model_attribute.attr,
