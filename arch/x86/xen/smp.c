@@ -97,6 +97,7 @@ static void __cpuinit cpu_bringup_and_idle(void)
 {
 	cpu_bringup();
 	cpu_startup_entry(CPUHP_ONLINE);
+	prevent_tail_call_optimization();
 }
 
 static int xen_smp_intr_init(unsigned int cpu)
