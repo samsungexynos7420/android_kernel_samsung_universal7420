@@ -218,7 +218,11 @@ static void flip_cover_work(struct work_struct *work)
 			input_report_switch(ddata->input, SW_FLIP, flip_cover);
 		}
 #else
+#ifdef CONFIG_HALL_EVENT_REVERSE
+		input_report_switch(ddata->input, SW_LID, !flip_cover);
+#else
 		input_report_switch(ddata->input, SW_FLIP, flip_cover);
+#endif
 #endif
 
 		input_sync(ddata->input);
@@ -246,7 +250,7 @@ static void flip_cover_work(struct work_struct *work)
 		comp_val[i] = gpio_get_value(ddata->gpio_flip_cover);
 		if(comp_val[i]!=comp_val[0]){
 			pr_err("%s : Value is not same!\n", __func__);
-			goto out; 
+			goto out;
 		}
 	}
 
@@ -272,7 +276,11 @@ static void flip_cover_work(struct work_struct *work)
 		input_report_switch(ddata->input, SW_FLIP, flip_cover);
 	}
 #else
+#ifdef CONFIG_HALL_EVENT_REVERSE
+	input_report_switch(ddata->input, SW_LID, !flip_cover);
+#else
 	input_report_switch(ddata->input, SW_FLIP, flip_cover);
+#endif
 #endif
 	input_sync(ddata->input);
 out:
@@ -308,8 +316,13 @@ static void flip_cover_work(struct work_struct *work)
 #endif
 
 	flip_cover = first;
+#ifdef CONFIG_HALL_EVENT_REVERSE
+	input_report_switch(ddata->input,
+			SW_LID, !flip_cover);
+#else
 	input_report_switch(ddata->input,
 			SW_FLIP, flip_cover);
+#endif
 	input_sync(ddata->input);
 }
 #endif
@@ -487,7 +500,11 @@ static int hall_probe(struct platform_device *pdev)
 	else
 		input_set_capability(input, EV_SW, SW_FLIP);
 #else
+#ifdef CONFIG_HALL_EVENT_REVERSE
+	input_set_capability(input, EV_SW, SW_LID);
+#else
 	input_set_capability(input, EV_SW, SW_FLIP);
+#endif
 #endif
 
 	input->open = hall_open;
@@ -615,7 +632,11 @@ static int hall_resume(struct device *dev)
 	bool status;
 
 	printk("%s start\n", __func__);
+#ifdef CONFIG_HALL_EVENT_REVERSE
+	status = !gpio_get_value(ddata->gpio_flip_cover);
+#else
 	status = gpio_get_value(ddata->gpio_flip_cover);
+#endif
 	printk("[keys] %s flip_status : %d (%s)\n", __func__, status, status?"open":"close");
 	input_sync(input);
 /* WorkAround for Hall IRQ Noise problem in connect to GGSM band */
