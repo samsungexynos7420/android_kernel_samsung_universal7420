@@ -491,6 +491,10 @@ u32 ip_idents_reserve(u32 hash, int segs)
 		delta = (u32)(x >> 32);
 	}
 
+	/* If UBSAN reports an error there, please make sure your compiler
+	 * supports -fno-strict-overflow before reporting it that was a bug
+	 * in UBSAN, and it has been fixed in GCC-8.
+	 */
 	return atomic_add_return(segs + delta, &bucket->id) - segs;
 }
 EXPORT_SYMBOL(ip_idents_reserve);
