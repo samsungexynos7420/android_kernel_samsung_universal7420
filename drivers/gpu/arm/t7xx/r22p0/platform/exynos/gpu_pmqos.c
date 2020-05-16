@@ -88,7 +88,7 @@ int gpu_pm_qos_command(struct exynos_context *platform, gpu_pmqos_state state)
 		if (!platform->pmqos_int_disable)
 			pm_qos_update_request(&exynos5_g3d_int_qos, platform->table[platform->step].int_freq);
 		pm_qos_update_request(&exynos5_g3d_cpu_cluster0_min_qos, platform->table[platform->step].cpu_freq);
-		if (!platform->boost_is_enabled)
+		if (!platform->boost_is_enabled && platform->env_data.utilization > 65)
 			pm_qos_update_request(&exynos5_g3d_cpu_cluster1_max_qos, platform->table[platform->step].cpu_max_freq);
 		break;
 	case GPU_CONTROL_PM_QOS_RESET:
