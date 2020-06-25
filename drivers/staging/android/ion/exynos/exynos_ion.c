@@ -25,20 +25,6 @@ static DEFINE_SPINLOCK(smc_lock);
 /* starting from index=1 regarding default index=0 for system heap */
 static int nr_heaps = 1;
 
-struct exynos_ion_platform_heap {
-	struct ion_platform_heap heap_data;
-	struct reserved_mem *rmem;
-	unsigned int id;
-	unsigned int compat_ids;
-	bool secure;
-	bool reusable;
-	bool protected;
-	struct kref secure_ref;
-	struct device dev;
-	struct ion_heap *heap;
-	struct mutex cma_lock;
-};
-
 static struct ion_platform_heap ion_noncontig_heap = {
 	.name = "ion_noncontig_heap",
 	.type = ION_HEAP_TYPE_SYSTEM,

@@ -170,9 +170,9 @@ static inline void ION_EVENT_ALLOC(struct ion_buffer *buffer, ktime_t begin)
 	log->begin = begin;
 	log->done = ktime_get();
 	data->id = buffer;
-	data->heap = buffer->heap;
 	data->size = buffer->size;
 	data->flags = buffer->flags;
+	strlcpy(data->heapname, buffer->heap->name, sizeof(data->heapname));
 }
 
 static inline void ION_EVENT_FREE(struct ion_buffer *buffer, ktime_t begin)
@@ -186,9 +186,9 @@ static inline void ION_EVENT_FREE(struct ion_buffer *buffer, ktime_t begin)
 	log->begin = begin;
 	log->done = ktime_get();
 	data->id = buffer;
-	data->heap = buffer->heap;
 	data->size = buffer->size;
 	data->shrinker = (buffer->private_flags & ION_PRIV_FLAG_SHRINKER_FREE);
+	strlcpy(data->heapname, buffer->heap->name, sizeof(data->heapname));
 }
 
 static inline void ION_EVENT_MMAP(struct ion_buffer *buffer, ktime_t begin)
@@ -202,8 +202,8 @@ static inline void ION_EVENT_MMAP(struct ion_buffer *buffer, ktime_t begin)
 	log->begin = begin;
 	log->done = ktime_get();
 	data->id = buffer;
-	data->heap = buffer->heap;
 	data->size = buffer->size;
+	strlcpy(data->heapname, buffer->heap->name, sizeof(data->heapname));
 }
 
 void ION_EVENT_SHRINK(struct ion_device *dev, size_t size)
@@ -228,9 +228,9 @@ void ION_EVENT_CLEAR(struct ion_buffer *buffer, ktime_t begin)
 	log->begin = begin;
 	log->done = ktime_get();
 	data->id = buffer;
-	data->heap = buffer->heap;
 	data->size = buffer->size;
 	data->flags = buffer->flags;
+	strlcpy(data->heapname, buffer->heap->name, sizeof(data->heapname));
 }
 
 static struct ion_task *ion_buffer_task_lookup(struct ion_buffer *buffer,
@@ -547,8 +547,8 @@ static void ion_buffer_remove_from_handle(struct ion_buffer *buffer)
 		task = current->group_leader;
 		get_task_comm(buffer->task_comm, task);
 		buffer->pid = task_pid_nr(task);
-		atomic_long_sub(buffer->size, &buffer->heap->total_handles);
 	}
+	atomic_long_sub(buffer->size, &buffer->heap->total_handles);
 	mutex_unlock(&buffer->lock);
 }
 
@@ -628,21 +628,21 @@ static int ion_handle_put_nolock(struct ion_handle *handle)
 	return ret;
 }
 
-int ion_handle_put(struct ion_client *client, struct ion_handle *handle)
+int ion_handle_put(struct ion_handle *handle)
 {
 	bool valid_handle;
 	int ret;
 
-	mutex_lock(&client->lock);
-	valid_handle = ion_handle_validate(client, handle);
+	mutex_lock(&handle->client->lock);
+	valid_handle = ion_handle_validate(handle->client, handle);
 
 	if (!valid_handle) {
 		WARN(1, "%s: invalid handle passed to free.\n", __func__);
-		mutex_unlock(&client->lock);
+		mutex_unlock(&handle->client->lock);
 		return -EINVAL;
 	}
 	ret = ion_handle_put_nolock(handle);
-	mutex_unlock(&client->lock);
+	mutex_unlock(&handle->client->lock);
 
 	return ret;
 }
@@ -839,7 +839,7 @@ static struct ion_handle *__ion_alloc(struct ion_client *client, size_t len,
 	ret = ion_handle_add(client, handle);
 	mutex_unlock(&client->lock);
 	if (ret) {
-		ion_handle_put(client, handle);
+		ion_handle_put(handle);
 		handle = ERR_PTR(ret);
 		trace_ion_alloc_fail(client->name, (unsigned long ) buffer,
 					len, align, heap_id_mask, flags);
@@ -1620,7 +1620,7 @@ struct ion_handle *ion_import_dma_buf(struct ion_client *client, int fd)
 	ret = ion_handle_add(client, handle);
 	mutex_unlock(&client->lock);
 	if (ret) {
-		ion_handle_put(client, handle);
+		ion_handle_put(handle);
 		handle = ERR_PTR(ret);
 	}
 
@@ -1876,7 +1876,7 @@ static long ion_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		if (IS_ERR(handle))
 			return PTR_ERR(handle);
 		data.fd.fd = ion_share_dma_buf_fd(client, handle);
-		ion_handle_put(client, handle);
+		ion_handle_put(handle);
 		if (data.fd.fd < 0)
 			ret = data.fd.fd;
 		break;
@@ -1956,7 +1956,7 @@ static long ion_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		}
 	}
 	if (cleanup_handle)
-		ion_handle_put(client,cleanup_handle);
+		ion_handle_put(cleanup_handle);
 	return ret;
 }
 
@@ -2464,21 +2464,21 @@ static void ion_debug_event_show_one(struct seq_file *s,
 		{
 		struct ion_event_alloc *data = &log->data.alloc;
 		seq_printf(s, "%8s  %pK  %18s  %11zd  ", "alloc",
-				data->id, data->heap->name, data->size);
+				data->id, data->heapname, data->size);
 		break;
 		}
 	case ION_EVENT_TYPE_FREE:
 		{
 		struct ion_event_free *data = &log->data.free;
 		seq_printf(s, "%8s  %pK  %18s  %11zd  ", "free",
-				data->id, data->heap->name, data->size);
+				data->id, data->heapname, data->size);
 		break;
 		}
 	case ION_EVENT_TYPE_MMAP:
 		{
 		struct ion_event_mmap *data = &log->data.mmap;
 		seq_printf(s, "%8s  %pK  %18s  %11zd  ", "mmap",
-				data->id, data->heap->name, data->size);
+				data->id, data->heapname, data->size);
 		break;
 		}
 	case ION_EVENT_TYPE_SHRINK:
@@ -2493,7 +2493,7 @@ static void ion_debug_event_show_one(struct seq_file *s,
 		{
 		struct ion_event_clear *data = &log->data.clear;
 		seq_printf(s, "%8s  %pK  %18s  %11zd  ", "clear",
-				data->id, data->heap->name, data->size);
+				data->id, data->heapname, data->size);
 		break;
 		}
 	}
