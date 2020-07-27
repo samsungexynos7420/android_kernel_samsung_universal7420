@@ -42,6 +42,7 @@
 #include <asm/unistd.h>
 
 #include "timeconst.h"
+#include "time/timekeeping.h"
 
 /*
  * The timezone where the local system is located.  Used as a default by some
@@ -486,6 +487,7 @@ struct timespec64 ns_to_timespec64(const s64 nsec)
 }
 EXPORT_SYMBOL(ns_to_timespec64);
 #endif
+
 /*
  * When we convert to jiffies then we interpret incoming values
  * the following way:

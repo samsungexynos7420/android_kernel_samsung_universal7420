@@ -4,6 +4,8 @@
 #include <linux/hrtimer.h>
 #include <linux/tick.h>
 
+#include "timekeeping.h"
+
 extern seqlock_t jiffies_lock;
 
 #ifdef CONFIG_GENERIC_CLOCKEVENTS_BUILD
