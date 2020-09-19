@@ -38,3 +38,9 @@ obj-$(CONFIG_DMA_SA11X0) += sa11x0-dma.o
 obj-$(CONFIG_MMP_TDMA) += mmp_tdma.o
 obj-$(CONFIG_DMA_OMAP) += omap-dma.o
 obj-$(CONFIG_MMP_PDMA) += mmp_pdma.o
+
+# The -fno-store-merging flag is needed for the pl330
+# driver because there are alignment faults when it's
+# compiled with the -fstore-merging flag causing kernel
+# panics.
+CFLAGS_pl330.o += $(call cc-option,-fno-store-merging)
