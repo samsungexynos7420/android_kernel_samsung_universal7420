@@ -76,9 +76,11 @@
 #endif
 
 
-
+#if 0
 int dhd_msg_level = DHD_ERROR_VAL;
-
+#else
+int dhd_msg_level = 0;
+#endif
 
 #if defined(WL_WIRELESS_EXT)
 #include <wl_iw.h>
