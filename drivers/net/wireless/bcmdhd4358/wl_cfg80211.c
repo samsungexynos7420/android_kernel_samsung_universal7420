@@ -121,10 +121,14 @@
 static struct device *cfg80211_parent_dev = NULL;
 /* g_bcm_cfg should be static. Do not change */
 static struct bcm_cfg80211 *g_bcm_cfg = NULL;
+#if 0
 #ifdef CUSTOMER_HW4
 u32 wl_dbg_level = WL_DBG_ERR | WL_DBG_P2P_ACTION;
 #else
 u32 wl_dbg_level = WL_DBG_ERR;
+#endif
+#else
+u32 wl_dbg_level = 0;
 #endif
 
 #define MAX_WAIT_TIME 1500

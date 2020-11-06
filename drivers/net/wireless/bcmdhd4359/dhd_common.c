@@ -85,13 +85,15 @@
 #endif /* DHD_PSTA */
 
 
-
+#if 0
 #ifdef DHD_LOG_DUMP
 int dhd_msg_level = DHD_ERROR_VAL | DHD_MSGTRACE_VAL | DHD_FWLOG_VAL | DHD_EVENT_VAL;
 #else
 int dhd_msg_level = DHD_ERROR_VAL | DHD_MSGTRACE_VAL | DHD_FWLOG_VAL;
 #endif /* DHD_LOG_DUMP */
-
+#else
+int dhd_msg_level = 0;
+#endif
 
 
 #if defined(WL_WIRELESS_EXT)
