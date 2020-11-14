@@ -904,7 +904,7 @@ void kbase_jm_wait_for_zero_jobs(struct kbase_context *kctx)
 	/* MALI_SEC_INTEGRATION */
 	wait_event_timeout(kctx->jctx.zero_jobs_wait,
 			kctx->jctx.job_nr == 0, (unsigned int) msecs_to_jiffies(300));
-	wait_event(kctx->jctx.sched_info.ctx.is_scheduled_wait,
+	wait_event_interruptible(kctx->jctx.sched_info.ctx.is_scheduled_wait,
 		   !kbase_ctx_flag(kctx, KCTX_SCHEDULED));
 
 	spin_lock_irqsave(&reset_data.lock, flags);
@@ -920,7 +920,7 @@ void kbase_jm_wait_for_zero_jobs(struct kbase_context *kctx)
 		/* The reset has already started.
 		 * Wait for the reset to complete
 		 */
-		wait_event(kbdev->hwaccess.backend.reset_wait,
+		wait_event_interruptible(kbdev->hwaccess.backend.reset_wait,
 				atomic_read(&kbdev->hwaccess.backend.reset_gpu)
 						== KBASE_RESET_GPU_NOT_PENDING);
 	}
