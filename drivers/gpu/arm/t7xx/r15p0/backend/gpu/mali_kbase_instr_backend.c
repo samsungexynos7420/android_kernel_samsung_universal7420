@@ -243,7 +243,7 @@ int kbase_instr_hwcnt_disable_internal(struct kbase_context *kctx)
 		}
 		else
 #endif
-		wait_event(kbdev->hwcnt.backend.wait,
+		wait_event_interruptible(kbdev->hwcnt.backend.wait,
 					kbdev->hwcnt.backend.triggered != 0);
 	}
 
@@ -486,7 +486,7 @@ int kbase_instr_hwcnt_wait_for_dump(struct kbase_context *kctx)
 		}
 	} else
 #endif
-	wait_event(kbdev->hwcnt.backend.wait,
+	wait_event_interruptible(kbdev->hwcnt.backend.wait,
 					kbdev->hwcnt.backend.triggered != 0);
 
 	spin_lock_irqsave(&kbdev->hwcnt.lock, flags);
