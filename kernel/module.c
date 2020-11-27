@@ -1793,7 +1793,6 @@ static int mod_sysfs_init(struct module *mod)
 	if (err)
 		kobject_put(&mod->mkobj.kobj);
 
-	/* delay uevent until full sysfs population */
 out:
 	return err;
 }
@@ -1827,7 +1826,6 @@ static int mod_sysfs_setup(struct module *mod,
 	add_sect_attrs(mod, info);
 	add_notes_attrs(mod, info);
 
-	kobject_uevent(&mod->mkobj.kobj, KOBJ_ADD);
 	return 0;
 
 out_unreg_param:
@@ -3938,7 +3936,10 @@ static int do_init_module(struct module *mod)
 	tima_mod_page_change_access(mod);
 #endif
 
-	 /*
+	/* Delay uevent until module has finished its init routine */
+	kobject_uevent(&mod->mkobj.kobj, KOBJ_ADD);
+
+	/*
 	 * We need to finish all async code before the module init sequence
 	 * is done.  This has potential to deadlock.  For example, a newly
 	 * detected block device can trigger request_module() of the
