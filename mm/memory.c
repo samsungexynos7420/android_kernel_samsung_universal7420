@@ -1680,6 +1680,10 @@ split_fallthrough:
 			update_mmu_cache(vma, address, ptep);
 			pte = *ptep;
 			set_pte_at_notify(mm, address, ptep, pte);
+			if (!pte_present(pte)) {
+				pte_unmap_unlock(ptep, ptl);
+				goto split_fallthrough;
+			}
 			page = vm_normal_page(vma, address, pte);
 			BUG_ON(!page);
 
