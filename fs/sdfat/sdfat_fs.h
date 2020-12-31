@@ -33,7 +33,10 @@
 #define EXFAT_SUPER_MAGIC       (0x2011BAB0UL)
 #endif /* EXFAT_SUPER_MAGIC */
 
+#ifndef SDFAT_SUPER_MAGIC
 #define SDFAT_SUPER_MAGIC       (0x5EC5DFA4UL)
+#endif /* SDFAT_SUPER_MAGIC */
+
 #define SDFAT_ROOT_INO          1
 
 /* FAT types */
@@ -67,6 +70,8 @@
 #define MAX_CHARSET_SIZE        6       // max size of multi-byte character
 #define MAX_NAME_LENGTH         255     // max len of file name excluding NULL
 #define DOS_NAME_LENGTH         11      // DOS file name length excluding NULL
+
+#define SECTOR_SIZE_BITS	9	/* VFS sector size is 512 bytes */
 
 #define DENTRY_SIZE		32	/* directory entry size */
 #define DENTRY_SIZE_BITS	5
@@ -361,8 +366,10 @@ typedef struct {
 	__le16	access_date;		// aligned
 	__u8	create_time_ms;
 	__u8	modify_time_ms;
-	__u8	access_time_ms;
-	__u8	reserved2[9];
+	__u8	create_tz;
+	__u8	modify_tz;
+	__u8	access_tz;
+	__u8	reserved2[7];
 } FILE_DENTRY_T;
 
 /* EXFAT stream extension directory entry (32 bytes) */
