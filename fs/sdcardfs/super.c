@@ -182,7 +182,7 @@ static void sdcardfs_evict_inode(struct inode *inode)
 {
 	struct inode *lower_inode;
 
-	truncate_inode_pages_final(&inode->i_data);
+	truncate_inode_pages(&inode->i_data, 0);
 	set_top(SDCARDFS_I(inode), NULL);
 	clear_inode(inode);
 	/*
