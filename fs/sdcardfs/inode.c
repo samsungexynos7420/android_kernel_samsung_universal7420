@@ -41,8 +41,8 @@ const struct cred *override_fsids(struct sdcardfs_sb_info *sbi,
 	} else {
 		uid = sbi->options.fs_low_uid;
 	}
-	cred->fsuid = uid;
-	cred->fsgid = sbi->options.fs_low_gid;
+	cred->fsuid = make_kuid(&init_user_ns, uid);
+	cred->fsgid = make_kgid(&init_user_ns, sbi->options.fs_low_gid);
 
 	old_cred = override_creds(cred);
 
@@ -258,6 +258,7 @@ static int sdcardfs_mkdir(struct inode *dir, struct dentry *dentry, umode_t mode
 	task_lock(current);
 	current->fs = copied_fs;
 	task_unlock(current);
+
 	err = vfs_mkdir2(lower_mnt, lower_parent_dentry->d_inode, lower_dentry, mode);
 
 	if (err) {
