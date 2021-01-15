@@ -166,7 +166,7 @@ static void __compat_iptunnel_xmit(struct rtable *rt, struct sk_buff *skb,
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3, 10, 53)
 	__ip_select_ident(iph, &rt->dst, (skb_shinfo(skb)->gso_segs ?: 1) - 1);
 #else
-	__ip_select_ident(iph, skb_shinfo(skb)->gso_segs ?: 1);
+	__ip_select_ident(dev_net(rt->dst.dev), iph, skb_shinfo(skb)->gso_segs ?: 1);
 #endif
 
 	iptunnel_xmit(skb, skb->dev);
