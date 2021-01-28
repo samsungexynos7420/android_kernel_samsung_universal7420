@@ -668,7 +668,7 @@ struct inode {
 	atomic_t		i_readcount; /* struct files open RO */
 #endif
 
-#ifdef CONFIG_FS_ENCRYPTION
+#if IS_ENABLED(CONFIG_FS_ENCRYPTION)
 	struct fscrypt_info	*i_crypt_info;
 #endif
 
