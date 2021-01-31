@@ -227,23 +227,11 @@ static void sdfat_writepage_end_io(struct bio *bio, int err)
 }
 #endif
 
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 16, 0)
 static inline int sdfat_remount_syncfs(struct super_block *sb)
 {
 	sync_filesystem(sb);
 	return 0;
 }
-#else /* LINUX_VERSION_CODE < KERNEL_VERSION(3, 16, 0) */
-static inline int sdfat_remount_syncfs(struct super_block *sb)
-{
-	/*
-	 * We don`t need to call sync_filesystem(sb),
-	 * Because VFS calls it.
-	 */
-	return 0;
-}
-#endif
 
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 14, 0)
