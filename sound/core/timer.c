@@ -320,19 +320,8 @@ int snd_timer_open(struct snd_timer_instance **ti,
 		get_device(timer->card->card_dev);
 	timeri->slave_class = tid->dev_sclass;
 	timeri->slave_id = slave_id;
-
-	if (list_empty(&timer->open_list_head) && timer->hw.open) {
-		int err = timer->hw.open(timer);
-		if (err) {
-			kfree(timeri->owner);
-			kfree(timeri);
-
-			module_put(timer->module);
-			mutex_unlock(&register_mutex);
-			return err;
-		}
-	}
-
+	if (list_empty(&timer->open_list_head) && timer->hw.open)
+		timer->hw.open(timer);
 	list_add_tail(&timeri->open_list, &timer->open_list_head);
 	timer->num_instances++;
 	err = snd_timer_check_master(timeri);
