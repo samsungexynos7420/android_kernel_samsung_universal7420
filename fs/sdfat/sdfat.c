@@ -291,6 +291,16 @@ static inline int sdfat_remount_syncfs(struct super_block *sb)
 	return 0;
 }
 
+static int sdfat_d_hash(const struct dentry *dentry, struct qstr *qstr)
+{
+	return __sdfat_d_hash(dentry, qstr);
+}
+
+static int sdfat_d_hashi(const struct dentry *dentry, struct qstr *qstr)
+{
+	return __sdfat_d_hashi(dentry, qstr);
+}
+
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 14, 0)
 static inline sector_t __sdfat_bio_sector(struct bio *bio)
 {
@@ -312,16 +322,6 @@ static void __sdfat_truncate_pagecache(struct inode *inode,
 					loff_t to, loff_t newsize)
 {
 	truncate_pagecache(inode, newsize);
-}
-
-static int sdfat_d_hash(const struct dentry *dentry, struct qstr *qstr)
-{
-	return __sdfat_d_hash(dentry, qstr);
-}
-
-static int sdfat_d_hashi(const struct dentry *dentry, struct qstr *qstr)
-{
-	return __sdfat_d_hashi(dentry, qstr);
 }
 
 //instead of sdfat_readdir
@@ -445,18 +445,6 @@ static void __sdfat_truncate_pagecache(struct inode *inode,
 					loff_t to, loff_t newsize)
 {
 	truncate_pagecache(inode, newsize);
-}
-
-static int sdfat_d_hash(const struct dentry *dentry,
-		const struct inode *inode, struct qstr *qstr)
-{
-	return __sdfat_d_hash(dentry, qstr);
-}
-
-static int sdfat_d_hashi(const struct dentry *dentry,
-		const struct inode *inode, struct qstr *qstr)
-{
-	return __sdfat_d_hashi(dentry, qstr);
 }
 
 static int sdfat_readdir(struct file *filp, void *dirent, filldir_t filldir)
@@ -937,7 +925,7 @@ static int sdfat_cmpi(const struct dentry *dentry,
 {
 	return __sdfat_cmpi(dentry, len, str, name);
 }
-#elif LINUX_VERSION_CODE >= KERNEL_VERSION(3, 14, 0)
+#else
 static int sdfat_cmp(const struct dentry *parent, const struct dentry *dentry,
 		unsigned int len, const char *str, const struct qstr *name)
 {
@@ -945,20 +933,6 @@ static int sdfat_cmp(const struct dentry *parent, const struct dentry *dentry,
 }
 
 static int sdfat_cmpi(const struct dentry *parent, const struct dentry *dentry,
-		unsigned int len, const char *str, const struct qstr *name)
-{
-	return __sdfat_cmpi(dentry, len, str, name);
-}
-#else
-static int sdfat_cmp(const struct dentry *parent, const struct inode *pinode,
-		const struct dentry *dentry, const struct inode *inode,
-		unsigned int len, const char *str, const struct qstr *name)
-{
-	return __sdfat_cmp(dentry, len, str, name);
-}
-
-static int sdfat_cmpi(const struct dentry *parent, const struct inode *pinode,
-		const struct dentry *dentry, const struct inode *inode,
 		unsigned int len, const char *str, const struct qstr *name)
 {
 	return __sdfat_cmpi(dentry, len, str, name);
