@@ -16,7 +16,6 @@
 
 #include <linux/kernel.h>
 #include <linux/errno.h>
-#include <linux/init.h>
 #include <linux/slab.h>
 #include <linux/tty.h>
 #include <linux/tty_driver.h>
@@ -51,7 +50,7 @@ static int palm_os_3_probe(struct usb_serial *serial,
 static int palm_os_4_probe(struct usb_serial *serial,
 					const struct usb_device_id *id);
 
-static struct usb_device_id id_table [] = {
+static const struct usb_device_id id_table[] = {
 	{ USB_DEVICE(HANDSPRING_VENDOR_ID, HANDSPRING_VISOR_ID),
 		.driver_info = (kernel_ulong_t)&palm_os_3_probe },
 	{ USB_DEVICE(HANDSPRING_VENDOR_ID, HANDSPRING_TREO_ID),
@@ -113,18 +112,18 @@ static struct usb_device_id id_table [] = {
 	{ }					/* Terminating entry */
 };
 
-static struct usb_device_id clie_id_5_table [] = {
+static const struct usb_device_id clie_id_5_table[] = {
 	{ USB_DEVICE(SONY_VENDOR_ID, SONY_CLIE_UX50_ID),
 		.driver_info = (kernel_ulong_t)&palm_os_4_probe },
 	{ }					/* Terminating entry */
 };
 
-static struct usb_device_id clie_id_3_5_table [] = {
+static const struct usb_device_id clie_id_3_5_table[] = {
 	{ USB_DEVICE(SONY_VENDOR_ID, SONY_CLIE_3_5_ID) },
 	{ }					/* Terminating entry */
 };
 
-static struct usb_device_id id_table_combined [] = {
+static const struct usb_device_id id_table_combined[] = {
 	{ USB_DEVICE(HANDSPRING_VENDOR_ID, HANDSPRING_VISOR_ID) },
 	{ USB_DEVICE(HANDSPRING_VENDOR_ID, HANDSPRING_TREO_ID) },
 	{ USB_DEVICE(HANDSPRING_VENDOR_ID, HANDSPRING_TREO600_ID) },
@@ -324,11 +323,8 @@ static int palm_os_3_probe(struct usb_serial *serial,
 	int num_ports = 0;
 
 	transfer_buffer = kmalloc(sizeof(*connection_info), GFP_KERNEL);
-	if (!transfer_buffer) {
-		dev_err(dev, "%s - kmalloc(%Zd) failed.\n", __func__,
-			sizeof(*connection_info));
+	if (!transfer_buffer)
 		return -ENOMEM;
-	}
 
 	/* send a get connection info request */
 	retval = usb_control_msg(serial->dev,
@@ -342,47 +338,48 @@ static int palm_os_3_probe(struct usb_serial *serial,
 		goto exit;
 	}
 
-	if (retval == sizeof(*connection_info)) {
-			connection_info = (struct visor_connection_info *)
-							transfer_buffer;
-
-		num_ports = le16_to_cpu(connection_info->num_ports);
-		for (i = 0; i < num_ports; ++i) {
-			switch (
-			   connection_info->connections[i].port_function_id) {
-			case VISOR_FUNCTION_GENERIC:
-				string = "Generic";
-				break;
-			case VISOR_FUNCTION_DEBUGGER:
-				string = "Debugger";
-				break;
-			case VISOR_FUNCTION_HOTSYNC:
-				string = "HotSync";
-				break;
-			case VISOR_FUNCTION_CONSOLE:
-				string = "Console";
-				break;
-			case VISOR_FUNCTION_REMOTE_FILE_SYS:
-				string = "Remote File System";
-				break;
-			default:
-				string = "unknown";
-				break;
-			}
-			dev_info(dev, "%s: port %d, is for %s use\n",
-				serial->type->description,
-				connection_info->connections[i].port, string);
-		}
+	if (retval != sizeof(*connection_info)) {
+		dev_err(dev, "Invalid connection information received from device\n");
+		retval = -ENODEV;
+		goto exit;
 	}
-	/*
-	* Handle devices that report invalid stuff here.
-	*/
+
+	connection_info = (struct visor_connection_info *)transfer_buffer;
+
+	num_ports = le16_to_cpu(connection_info->num_ports);
+
+	/* Handle devices that report invalid stuff here. */
 	if (num_ports == 0 || num_ports > 2) {
 		dev_warn(dev, "%s: No valid connect info available\n",
 			serial->type->description);
 		num_ports = 2;
 	}
 
+	for (i = 0; i < num_ports; ++i) {
+		switch (connection_info->connections[i].port_function_id) {
+		case VISOR_FUNCTION_GENERIC:
+			string = "Generic";
+			break;
+		case VISOR_FUNCTION_DEBUGGER:
+			string = "Debugger";
+			break;
+		case VISOR_FUNCTION_HOTSYNC:
+			string = "HotSync";
+			break;
+		case VISOR_FUNCTION_CONSOLE:
+			string = "Console";
+			break;
+		case VISOR_FUNCTION_REMOTE_FILE_SYS:
+			string = "Remote File System";
+			break;
+		default:
+			string = "unknown";
+			break;
+		}
+		dev_info(dev, "%s: port %d, is for %s use\n",
+			serial->type->description,
+			connection_info->connections[i].port, string);
+	}
 	dev_info(dev, "%s: Number of ports: %d\n", serial->type->description,
 		num_ports);
 
@@ -419,11 +416,8 @@ static int palm_os_4_probe(struct usb_serial *serial,
 	int retval;
 
 	transfer_buffer =  kmalloc(sizeof(*connection_info), GFP_KERNEL);
-	if (!transfer_buffer) {
-		dev_err(dev, "%s - kmalloc(%Zd) failed.\n", __func__,
-			sizeof(*connection_info));
+	if (!transfer_buffer)
 		return -ENOMEM;
-	}
 
 	retval = usb_control_msg(serial->dev,
 				  usb_rcvctrlpipe(serial->dev, 0),

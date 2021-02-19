@@ -11,7 +11,6 @@
  */
 
 #include <linux/kernel.h>
-#include <linux/init.h>
 #include <linux/tty.h>
 #include <linux/slab.h>
 #include <linux/tty_driver.h>
@@ -61,23 +60,19 @@ static void symbol_int_callback(struct urb *urb)
 
 	usb_serial_debug_data(&port->dev, __func__, urb->actual_length, data);
 
+	/*
+	 * Data from the device comes with a 1 byte header:
+	 *
+	 * <size of data> <data>...
+	 */
 	if (urb->actual_length > 1) {
-		data_length = urb->actual_length - 1;
-
-		/*
-		 * Data from the device comes with a 1 byte header:
-		 *
-		 * <size of data>data...
-		 * 	This is real data to be sent to the tty layer
-		 * we pretty much just ignore the size and send everything
-		 * else to the tty layer.
-		 */
+		data_length = data[0];
+		if (data_length > (urb->actual_length - 1))
+			data_length = urb->actual_length - 1;
 		tty_insert_flip_string(&port->port, &data[1], data_length);
 		tty_flip_buffer_push(&port->port);
 	} else {
-		dev_dbg(&port->dev,
-			"Improper amount of data received from the device, "
-			"%d bytes", urb->actual_length);
+		dev_dbg(&port->dev, "%s - short packet\n", __func__);
 	}
 
 exit:
