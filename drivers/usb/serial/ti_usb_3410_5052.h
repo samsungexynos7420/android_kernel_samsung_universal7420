@@ -56,6 +56,10 @@
 #define ABBOTT_PRODUCT_ID		ABBOTT_STEREO_PLUG_ID
 #define ABBOTT_STRIP_PORT_ID		0x3420
 
+/* Honeywell vendor and product IDs */
+#define HONEYWELL_VENDOR_ID		0x10ac
+#define HONEYWELL_HGI80_PRODUCT_ID	0x0102  /* Honeywell HGI80 */
+
 /* Commands */
 #define TI_GET_VERSION			0x01
 #define TI_GET_PORT_STATUS		0x02
@@ -223,7 +227,7 @@ struct ti_interrupt {
 } __attribute__((packed));
 
 /* Interrupt codes */
-#define TI_GET_PORT_FROM_CODE(c)	(((c) >> 4) - 3)
+#define TI_GET_PORT_FROM_CODE(c)	(((c) >> 6) & 0x01)
 #define TI_GET_FUNC_FROM_CODE(c)	((c) & 0x0f)
 #define TI_CODE_HARDWARE_ERROR		0xFF
 #define TI_CODE_DATA_ERROR		0x03
