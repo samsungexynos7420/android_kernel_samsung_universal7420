@@ -1177,6 +1177,7 @@ static int iwl_pcie_enqueue_hcmd(struct iwl_trans *trans,
 	u32 cmd_pos;
 	const u8 *cmddata[IWL_MAX_CMD_TBS_PER_TFD];
 	u16 cmdlen[IWL_MAX_CMD_TBS_PER_TFD];
+	unsigned long flags2;
 
 	copy_size = sizeof(out_cmd->hdr);
 	cmd_size = sizeof(out_cmd->hdr);
@@ -1249,10 +1250,10 @@ static int iwl_pcie_enqueue_hcmd(struct iwl_trans *trans,
 		goto free_dup_buf;
 	}
 
-	spin_lock_bh(&txq->lock);
+	spin_lock_irqsave(&txq->lock, flags2);
 
 	if (iwl_queue_space(q) < ((cmd->flags & CMD_ASYNC) ? 2 : 1)) {
-		spin_unlock_bh(&txq->lock);
+		spin_unlock_irqrestore(&txq->lock, flags2);
 
 		IWL_ERR(trans, "No space in command queue\n");
 		iwl_op_mode_cmd_queue_full(trans->op_mode);
@@ -1376,7 +1377,7 @@ static int iwl_pcie_enqueue_hcmd(struct iwl_trans *trans,
 	iwl_pcie_txq_inc_wr_ptr(trans, txq);
 
  out:
-	spin_unlock_bh(&txq->lock);
+	spin_unlock_irqrestore(&txq->lock, flags2);
  free_dup_buf:
 	if (idx < 0)
 		kfree(dup_buf);
