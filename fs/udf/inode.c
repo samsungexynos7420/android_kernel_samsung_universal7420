@@ -1525,16 +1525,6 @@ reread:
 	}
 	inode->i_generation = iinfo->i_unique;
 
-	/*
-	 * Sanity check length of allocation descriptors and extended attrs to
-	 * avoid integer overflows
-	 */
-	if (iinfo->i_lenEAttr > inode->i_sb->s_blocksize || iinfo->i_lenAlloc > inode->i_sb->s_blocksize)
-		return;
-	/* Now do exact checks */
-	if (udf_file_entry_alloc_offset(inode) + iinfo->i_lenAlloc > inode->i_sb->s_blocksize)
-		return;
-
 	switch (fe->icbTag.fileType) {
 	case ICBTAG_FILE_TYPE_DIRECTORY:
 		inode->i_op = &udf_dir_inode_operations;
