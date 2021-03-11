@@ -1328,7 +1328,9 @@ get_old_root(struct btrfs_root *root, u64 time_seq)
 				logical);
 			WARN_ON(1);
 		} else {
+			btrfs_tree_read_lock(old);
 			eb = btrfs_clone_extent_buffer(old);
+			btrfs_tree_read_unlock(old);
 			free_extent_buffer(old);
 		}
 	} else if (old_root) {
