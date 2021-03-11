@@ -1201,8 +1201,8 @@ static int st_open(struct inode *inode, struct file *filp)
 	spin_lock(&st_use_lock);
 	if (STp->in_use) {
 		spin_unlock(&st_use_lock);
-		scsi_tape_put(STp);
 		DEB( printk(ST_DEB_MSG "%s: Device already in use.\n", name); )
+		scsi_tape_put(STp);
 		return (-EBUSY);
 	}
 
