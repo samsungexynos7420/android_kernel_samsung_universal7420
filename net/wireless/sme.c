@@ -833,7 +833,7 @@ int __cfg80211_connect(struct cfg80211_registered_device *rdev,
 		if (!rdev->ops->auth || !rdev->ops->assoc)
 			return -EOPNOTSUPP;
 
-		if (WARN_ON(wdev->conn))
+		if (wdev->conn)
 			return -EINPROGRESS;
 
 		wdev->conn = kzalloc(sizeof(*wdev->conn), GFP_KERNEL);
