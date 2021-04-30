@@ -120,7 +120,7 @@ if [[ ! -f offsets_sizes.txt ]]; then
 fi
 
 rm -f fips_fmp_utils
-$HOSTCC -o fips_fmp_utils $srctree/scripts/fips_fmp_utils.c
+$HOSTCC $HOSTCFLAGS -o fips_fmp_utils $srctree/scripts/fips_fmp_utils.c
 retval=$?
 if [ $retval -ne 0 ]; then
 	echo "$0 : $HOSTCC returned error"
