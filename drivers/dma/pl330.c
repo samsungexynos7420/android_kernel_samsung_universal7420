@@ -3018,13 +3018,15 @@ static struct dma_async_tx_descriptor *pl330_prep_dma_cyclic(
 	for (i = 0; i < len / period_len; i++) {
 		desc = pl330_get_desc(pch);
 		if (!desc) {
+			unsigned long iflags;
+
 			dev_err(pch->dmac->pif.dev, "%s:%d Unable to fetch desc\n",
 				__func__, __LINE__);
 
 			if (!first)
 				return NULL;
 
-			spin_lock_irqsave(&pdmac->pool_lock, flags);
+			spin_lock_irqsave(&pdmac->pool_lock, iflags);
 
 			while (!list_empty(&first->node)) {
 				desc = list_entry(first->node.next,
@@ -3034,7 +3036,7 @@ static struct dma_async_tx_descriptor *pl330_prep_dma_cyclic(
 
 			list_move_tail(&first->node, &pdmac->desc_pool);
 
-			spin_unlock_irqrestore(&pdmac->pool_lock, flags);
+			spin_unlock_irqrestore(&pdmac->pool_lock, iflags);
 
 			return NULL;
 		}
