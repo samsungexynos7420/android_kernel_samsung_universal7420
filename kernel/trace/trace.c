@@ -1248,9 +1248,6 @@ static unsigned saved_tgids[SAVED_CMDLINES];
 static int cmdline_idx;
 static arch_spinlock_t trace_cmdline_lock = __ARCH_SPIN_LOCK_UNLOCKED;
 
-/* temporary disable recording */
-static atomic_t trace_record_cmdline_disabled __read_mostly;
-
 static void trace_init_cmdlines(void)
 {
 	memset(&map_pid_to_cmdline, NO_CMDLINE_MAP, sizeof(map_pid_to_cmdline));
@@ -2364,9 +2361,6 @@ static void *s_start(struct seq_file *m, loff_t *pos)
 		return ERR_PTR(-EBUSY);
 #endif
 
-	if (!iter->snapshot)
-		atomic_inc(&trace_record_cmdline_disabled);
-
 	if (*pos != iter->pos) {
 		iter->ent = NULL;
 		iter->cpu = 0;
@@ -2408,9 +2402,6 @@ static void s_stop(struct seq_file *m, void *p)
 	if (iter->snapshot && iter->trace->use_max_tr)
 		return;
 #endif
-
-	if (!iter->snapshot)
-		atomic_dec(&trace_record_cmdline_disabled);
 
 	trace_access_unlock(iter->cpu_file);
 	trace_event_read_unlock();
