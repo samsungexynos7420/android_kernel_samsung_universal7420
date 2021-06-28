@@ -891,16 +891,14 @@ cfg80211_bss_update(struct cfg80211_registered_device *dev,
 			 * be grouped with this beacon for updates ...
 			 */
 			if (!cfg80211_combine_bsses(dev, new)) {
-				kfree(new);
+				bss_ref_put(dev, new);
 				goto drop;
 			}
 		}
 
 		if (dev->bss_entries >= bss_entries_limit &&
 		    !cfg80211_bss_expire_oldest(dev)) {
-			if (!list_empty(&new->hidden_list))
-				list_del(&new->hidden_list);
-			kfree(new);
+			bss_ref_put(dev, new);
 			goto drop;
 		}
 
