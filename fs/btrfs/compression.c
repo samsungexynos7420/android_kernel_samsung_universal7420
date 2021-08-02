@@ -290,7 +290,7 @@ static void end_compressed_bio_write(struct bio *bio, int err)
 	tree->ops->writepage_end_io_hook(cb->compressed_pages[0],
 					 cb->start,
 					 cb->start + cb->len - 1,
-					 NULL, 1);
+					 NULL, !cb->errors);
 	cb->compressed_pages[0]->mapping = NULL;
 
 	end_compressed_writeback(inode, cb->start, cb->len);
