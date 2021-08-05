@@ -309,12 +309,12 @@
 		coresight-nr-inports = <0>;
 	};
 
-	gic:interrupt-controller@10C00000 {
+	gic: interrupt-controller@10C00000 {
 		compatible = "arm,cortex-a15-gic";
 		#interrupt-cells = <3>;
 		interrupt-controller;
 		reg =	<0x0 0x10C01000 0x0 0x1000>,
-			<0x0 0x10C02000 0x0 0x1000>,
+			<0x0 0x10C02000 0x0 0x2000>,
 			<0x0 0x10C04000 0x0 0x2000>,
 			<0x0 0x10C06000 0x0 0x2000>;
 		interrupts = <1 9 0xf04>;
