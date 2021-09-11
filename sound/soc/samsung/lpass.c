@@ -644,7 +644,7 @@ static void lpass_enable(void)
 	lpass_release_pad();
 
 	/* Clear memory */
-	memset(lpass.mem, 0, lpass.mem_size);
+	//memset(lpass.mem, 0, lpass.mem_size);
 
 	lpass.enabled = true;
 }
