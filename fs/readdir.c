@@ -106,7 +106,7 @@ struct old_linux_dirent {
 };
 
 struct readdir_callback {
-	struct dir_context ctx
+	struct dir_context ctx;
 	struct old_linux_dirent __user * dirent;
 	int result;
 };
