@@ -39,6 +39,7 @@
 
 #include <asm/atomic.h>
 #include <asm/cacheflush.h>
+#include <asm/cpu.h>
 #include <asm/cputype.h>
 #include <asm/cpu_ops.h>
 #include <asm/mmu_context.h>
@@ -145,7 +146,6 @@ asmlinkage void __cpuinit secondary_start_kernel(void)
 	cpumask_set_cpu(cpu, mm_cpumask(mm));
 
 	set_my_cpu_offset(per_cpu_offset(smp_processor_id()));
-	printk("CPU%u: Booted secondary processor\n", cpu);
 
 	/*
 	 * TTBR0 is only used for the identity mapping at this stage. Make it
@@ -161,6 +161,11 @@ asmlinkage void __cpuinit secondary_start_kernel(void)
 		cpu_ops[cpu]->cpu_postboot();
 
 	/*
+	 * Log the CPU info before it is marked online and might get read.
+	 */
+	cpuinfo_store_cpu();
+
+	/*
 	 * Enable GIC and timers.
 	 */
 	notify_cpu_starting(cpu);
@@ -172,10 +177,11 @@ asmlinkage void __cpuinit secondary_start_kernel(void)
 	 * the CPU migration code to notice that the CPU is online
 	 * before we continue.
 	 */
+	pr_info("CPU%u: Booted secondary processor [%08x]\n",
+					 cpu, read_cpuid_id());
 	set_cpu_online(cpu, true);
 	complete(&cpu_running);
 
-	local_dbg_enable();
 	/*
 	 * Setup the percpu timer for this CPU.
 	 */
@@ -293,15 +299,13 @@ void cpu_die(void)
 
 void __init smp_cpus_done(unsigned int max_cpus)
 {
-	unsigned long bogosum = loops_per_jiffy * num_online_cpus();
-
-	pr_info("SMP: Total of %d processors activated (%lu.%02lu BogoMIPS).\n",
-		num_online_cpus(), bogosum / (500000/HZ),
-		(bogosum / (5000/HZ)) % 100);
+	pr_info("SMP: Total of %d processors activated.\n", num_online_cpus());
+	setup_cpu_features();
 }
 
 void __init smp_prepare_boot_cpu(void)
 {
+	cpuinfo_store_boot_cpu();
 	set_my_cpu_offset(per_cpu_offset(smp_processor_id()));
 }
 

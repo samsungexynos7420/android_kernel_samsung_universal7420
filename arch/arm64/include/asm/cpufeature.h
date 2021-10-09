@@ -21,9 +21,47 @@
 #define MAX_CPU_FEATURES	(8 * sizeof(elf_hwcap))
 #define cpu_feature(x)		ilog2(HWCAP_ ## x)
 
+#define ARM64_NCAPS				0
+
+extern DECLARE_BITMAP(cpu_hwcaps, ARM64_NCAPS);
+
 static inline bool cpu_have_feature(unsigned int num)
 {
 	return elf_hwcap & (1UL << num);
 }
+
+static inline bool cpus_have_cap(unsigned int num)
+{
+	if (num >= ARM64_NCAPS)
+		return false;
+	return test_bit(num, cpu_hwcaps);
+}
+
+static inline void cpus_set_cap(unsigned int num)
+{
+	if (num >= ARM64_NCAPS)
+		pr_warn("Attempt to set an illegal CPU capability (%d >= %d)\n",
+			num, ARM64_NCAPS);
+	else
+		__set_bit(num, cpu_hwcaps);
+}
+
+static inline int __attribute_const__
+cpuid_feature_extract_field_width(u64 features, int field, int width)
+{
+	return (s64)(features << (64 - width - field)) >> (64 - width);
+}
+
+static inline int __attribute_const__
+cpuid_feature_extract_field(u64 features, int field)
+{
+	return cpuid_feature_extract_field_width(features, field, 4);
+}
+
+
+void __init setup_cpu_features(void);
+
+bool cpu_supports_mixed_endian_el0(void);
+bool system_supports_mixed_endian_el0(void);
 
 #endif

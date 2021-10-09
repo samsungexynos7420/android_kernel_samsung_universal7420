@@ -19,7 +19,6 @@
  */
 
 #include <linux/cpu.h>
-#include <linux/cpu_pm.h>
 #include <linux/debugfs.h>
 #include <linux/hardirq.h>
 #include <linux/init.h>
@@ -31,15 +30,6 @@
 #include <asm/local.h>
 #include <asm/cputype.h>
 #include <asm/system_misc.h>
-
-/* Low-level stepping controls. */
-#define DBG_MDSCR_SS		(1 << 0)
-#define DBG_SPSR_SS		(1 << 21)
-
-/* MDSCR_EL1 enabling bits */
-#define DBG_MDSCR_KDE		(1 << 13)
-#define DBG_MDSCR_MDE		(1 << 15)
-#define DBG_MDSCR_MASK		~(DBG_MDSCR_KDE | DBG_MDSCR_MDE)
 
 /* Determine debug architecture. */
 u8 debug_monitors_arch(void)
@@ -154,52 +144,18 @@ static struct notifier_block __cpuinitdata os_lock_nb = {
 	.notifier_call = os_lock_notify,
 };
 
-#ifdef CONFIG_CPU_PM
-static DEFINE_PER_CPU(u32, mdscr);
-
-static int dm_cpu_pm_notify(struct notifier_block *self, unsigned long action,
-			    void *v)
-{
-	switch (action) {
-	case CPU_PM_ENTER:
-		__get_cpu_var(mdscr) = mdscr_read();
-		break;
-	case CPU_PM_EXIT:
-		clear_os_lock(NULL);
-		mdscr_write(__get_cpu_var(mdscr));
-		break;
-	case CPU_PM_ENTER_FAILED:
-	default:
-		return NOTIFY_DONE;
-	}
-
-	return NOTIFY_OK;
-}
-
-static struct notifier_block dm_cpu_pm_nb = {
-	.notifier_call = dm_cpu_pm_notify,
-};
-
-static void __init debug_monitors_pm_init(void)
-{
-	cpu_pm_register_notifier(&dm_cpu_pm_nb);
-}
-#else
-static inline void debug_monitors_pm_init(void)
-{
-}
-#endif
-
 static int __cpuinit debug_monitors_init(void)
 {
+	cpu_notifier_register_begin();
+
 	/* Clear the OS lock. */
 	on_each_cpu(clear_os_lock, NULL, 1);
 	isb();
-	local_dbg_enable();
 
 	/* Register hotplug handler. */
-	register_cpu_notifier(&os_lock_nb);
-	debug_monitors_pm_init();
+	__register_cpu_notifier(&os_lock_nb);
+
+	cpu_notifier_register_done();
 	return 0;
 }
 postcore_initcall(debug_monitors_init);
@@ -228,20 +184,21 @@ static void clear_regs_spsr_ss(struct pt_regs *regs)
 
 /* EL1 Single Step Handler hooks */
 static LIST_HEAD(step_hook);
-static DEFINE_RWLOCK(step_hook_lock);
+static DEFINE_SPINLOCK(step_hook_lock);
 
 void register_step_hook(struct step_hook *hook)
 {
-	write_lock(&step_hook_lock);
-	list_add(&hook->node, &step_hook);
-	write_unlock(&step_hook_lock);
+	spin_lock(&step_hook_lock);
+	list_add_rcu(&hook->node, &step_hook);
+	spin_unlock(&step_hook_lock);
 }
 
 void unregister_step_hook(struct step_hook *hook)
 {
-	write_lock(&step_hook_lock);
-	list_del(&hook->node);
-	write_unlock(&step_hook_lock);
+	spin_lock(&step_hook_lock);
+	list_del_rcu(&hook->node);
+	spin_unlock(&step_hook_lock);
+	synchronize_rcu();
 }
 
 /*
@@ -255,15 +212,15 @@ static int call_step_hook(struct pt_regs *regs, unsigned int esr)
 	struct step_hook *hook;
 	int retval = DBG_HOOK_ERROR;
 
-	read_lock(&step_hook_lock);
+	rcu_read_lock();
 
-	list_for_each_entry(hook, &step_hook, node)	{
+	list_for_each_entry_rcu(hook, &step_hook, node)	{
 		retval = hook->fn(regs, esr);
 		if (retval == DBG_HOOK_HANDLED)
 			break;
 	}
 
-	read_unlock(&step_hook_lock);
+	rcu_read_unlock();
 
 	return retval;
 }
@@ -315,20 +272,21 @@ static int single_step_handler(unsigned long addr, unsigned int esr,
  * Use reader/writer locks instead of plain spinlock.
  */
 static LIST_HEAD(break_hook);
-static DEFINE_RWLOCK(break_hook_lock);
+static DEFINE_SPINLOCK(break_hook_lock);
 
 void register_break_hook(struct break_hook *hook)
 {
-	write_lock(&break_hook_lock);
-	list_add(&hook->node, &break_hook);
-	write_unlock(&break_hook_lock);
+	spin_lock(&break_hook_lock);
+	list_add_rcu(&hook->node, &break_hook);
+	spin_unlock(&break_hook_lock);
 }
 
 void unregister_break_hook(struct break_hook *hook)
 {
-	write_lock(&break_hook_lock);
-	list_del(&hook->node);
-	write_unlock(&break_hook_lock);
+	spin_lock(&break_hook_lock);
+	list_del_rcu(&hook->node);
+	spin_unlock(&break_hook_lock);
+	synchronize_rcu();
 }
 
 static int call_break_hook(struct pt_regs *regs, unsigned int esr)
@@ -336,11 +294,11 @@ static int call_break_hook(struct pt_regs *regs, unsigned int esr)
 	struct break_hook *hook;
 	int (*fn)(struct pt_regs *regs, unsigned int esr) = NULL;
 
-	read_lock(&break_hook_lock);
-	list_for_each_entry(hook, &break_hook, node)
+	rcu_read_lock();
+	list_for_each_entry_rcu(hook, &break_hook, node)
 		if ((esr & hook->esr_mask) == hook->esr_val)
 			fn = hook->fn;
-	read_unlock(&break_hook_lock);
+	rcu_read_unlock();
 
 	return fn ? fn(regs, esr) : DBG_HOOK_ERROR;
 }
@@ -350,27 +308,28 @@ static int brk_handler(unsigned long addr, unsigned int esr,
 {
 	siginfo_t info;
 
-	if (call_break_hook(regs, esr) == DBG_HOOK_HANDLED)
-		return 0;
+	if (user_mode(regs)) {
+		info = (siginfo_t) {
+			.si_signo = SIGTRAP,
+			.si_errno = 0,
+			.si_code  = TRAP_BRKPT,
+			.si_addr  = (void __user *)instruction_pointer(regs),
+		};
 
-	if (!user_mode(regs))
+		force_sig_info(SIGTRAP, &info, current);
+	} else if (call_break_hook(regs, esr) != DBG_HOOK_HANDLED) {
+		pr_warning("Unexpected kernel BRK exception at EL1\n");
 		return -EFAULT;
+	}
 
-	info = (siginfo_t) {
-		.si_signo = SIGTRAP,
-		.si_errno = 0,
-		.si_code  = TRAP_BRKPT,
-		.si_addr  = (void __user *)instruction_pointer(regs),
-	};
-
-	force_sig_info(SIGTRAP, &info, current);
 	return 0;
 }
 
 int aarch32_break_handler(struct pt_regs *regs)
 {
 	siginfo_t info;
-	unsigned int instr;
+	u32 arm_instr;
+	u16 thumb_instr;
 	bool bp = false;
 	void __user *pc = (void __user *)instruction_pointer(regs);
 
@@ -379,18 +338,21 @@ int aarch32_break_handler(struct pt_regs *regs)
 
 	if (compat_thumb_mode(regs)) {
 		/* get 16-bit Thumb instruction */
-		get_user(instr, (u16 __user *)pc);
-		if (instr == AARCH32_BREAK_THUMB2_LO) {
+		get_user(thumb_instr, (u16 __user *)pc);
+		thumb_instr = le16_to_cpu(thumb_instr);
+		if (thumb_instr == AARCH32_BREAK_THUMB2_LO) {
 			/* get second half of 32-bit Thumb-2 instruction */
-			get_user(instr, (u16 __user *)(pc + 2));
-			bp = instr == AARCH32_BREAK_THUMB2_HI;
+			get_user(thumb_instr, (u16 __user *)(pc + 2));
+			thumb_instr = le16_to_cpu(thumb_instr);
+			bp = thumb_instr == AARCH32_BREAK_THUMB2_HI;
 		} else {
-			bp = instr == AARCH32_BREAK_THUMB;
+			bp = thumb_instr == AARCH32_BREAK_THUMB;
 		}
 	} else {
 		/* 32-bit ARM instruction */
-		get_user(instr, (u32 __user *)pc);
-		bp = (instr & ~0xf0000000) == AARCH32_BREAK_ARM;
+		get_user(arm_instr, (u32 __user *)pc);
+		arm_instr = le32_to_cpu(arm_instr);
+		bp = (arm_instr & ~0xf0000000) == AARCH32_BREAK_ARM;
 	}
 
 	if (!bp)
@@ -424,13 +386,13 @@ void user_rewind_single_step(struct task_struct *task)
 	 * If single step is active for this thread, then set SPSR.SS
 	 * to 1 to avoid returning to the active-pending state.
 	 */
-	if (test_ti_thread_flag(task_thread_info(task), TIF_SINGLESTEP))
+	if (test_tsk_thread_flag(task, TIF_SINGLESTEP))
 		set_regs_spsr_ss(task_pt_regs(task));
 }
 
 void user_fastforward_single_step(struct task_struct *task)
 {
-	if (test_ti_thread_flag(task_thread_info(task), TIF_SINGLESTEP))
+	if (test_tsk_thread_flag(task, TIF_SINGLESTEP))
 		clear_regs_spsr_ss(task_pt_regs(task));
 }
 

@@ -250,13 +250,9 @@ static int __init parse_dt_topology(void)
 	 * Check that all cores are in the topology; the SMP code will
 	 * only mark cores described in the DT as possible.
 	 */
-	for_each_possible_cpu(cpu) {
-		if (cpu_topology[cpu].cluster_id == -1) {
-			pr_err("CPU%d: No topology information specified\n",
-			       cpu);
+	for_each_possible_cpu(cpu)
+		if (cpu_topology[cpu].cluster_id == -1)
 			ret = -EINVAL;
-		}
-	}
 
 out_map:
 	of_node_put(map);
@@ -365,14 +361,6 @@ static void update_siblings_masks(unsigned int cpuid)
 {
 	struct cpu_topology *cpu_topo, *cpuid_topo = &cpu_topology[cpuid];
 	int cpu;
-
-	if (cpuid_topo->cluster_id == -1) {
-		/*
-		 * DT does not contain topology information for this cpu.
-		 */
-		pr_debug("CPU%u: No topology information configured\n", cpuid);
-		return;
-	}
 
 	/* update core and thread sibling masks */
 	for_each_possible_cpu(cpu) {

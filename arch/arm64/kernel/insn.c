@@ -156,9 +156,10 @@ static int __kprobes aarch64_insn_patch_text_cb(void *arg)
 		 * which ends with "dsb; isb" pair guaranteeing global
 		 * visibility.
 		 */
-		atomic_set(&pp->cpu_count, -1);
+		/* Notify other processors with an additional increment. */
+		atomic_inc(&pp->cpu_count);
 	} else {
-		while (atomic_read(&pp->cpu_count) != -1)
+		while (atomic_read(&pp->cpu_count) <= num_online_cpus())
 			cpu_relax();
 		isb();
 	}
@@ -301,4 +302,30 @@ u32 __kprobes aarch64_insn_gen_hint(enum aarch64_insn_hint_op op)
 u32 __kprobes aarch64_insn_gen_nop(void)
 {
 	return aarch64_insn_gen_hint(AARCH64_INSN_HINT_NOP);
+}
+
+bool aarch32_insn_is_wide(u32 insn)
+{
+	return insn >= 0xe800;
+}
+
+/*
+ * Macros/defines for extracting register numbers from instruction.
+ */
+u32 aarch32_insn_extract_reg_num(u32 insn, int offset)
+{
+	return (insn & (0xf << offset)) >> offset;
+}
+
+#define OPC2_MASK	0x7
+#define OPC2_OFFSET	5
+u32 aarch32_insn_mcr_extract_opc2(u32 insn)
+{
+	return (insn & (OPC2_MASK << OPC2_OFFSET)) >> OPC2_OFFSET;
+}
+
+#define CRM_MASK	0xf
+u32 aarch32_insn_mcr_extract_crm(u32 insn)
+{
+	return insn & CRM_MASK;
 }
