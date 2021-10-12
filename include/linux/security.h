@@ -1485,10 +1485,14 @@ static inline void security_free_mnt_opts(struct security_mnt_opts *opts)
 struct security_operations {
 	char name[SECURITY_NAME_MAX + 1];
 
-	int (*binder_set_context_mgr) (struct task_struct *mgr);
-	int (*binder_transaction) (struct task_struct *from, struct task_struct *to);
-	int (*binder_transfer_binder) (struct task_struct *from, struct task_struct *to);
-	int (*binder_transfer_file) (struct task_struct *from, struct task_struct *to, struct file *file);
+	int (*binder_set_context_mgr) (const struct cred *mgr);
+	int (*binder_transaction) (const struct cred *from,
+					const struct cred *to);
+	int (*binder_transfer_binder) (const struct cred *from,
+					const struct cred *to);
+	int (*binder_transfer_file) (const struct cred *from,
+					const struct cred *to,
+					struct file *file);
 
 	int (*ptrace_access_check) (struct task_struct *child, unsigned int mode);
 	int (*ptrace_traceme) (struct task_struct *parent);
@@ -1801,10 +1805,13 @@ extern int security_bpf_prog_alloc(struct bpf_prog_aux *aux);
 extern void security_bpf_prog_free(struct bpf_prog_aux *aux);
 #endif /* CONFIG_BPF_SYSCALL */
 
-int security_binder_set_context_mgr(struct task_struct *mgr);
-int security_binder_transaction(struct task_struct *from, struct task_struct *to);
-int security_binder_transfer_binder(struct task_struct *from, struct task_struct *to);
-int security_binder_transfer_file(struct task_struct *from, struct task_struct *to, struct file *file);
+int security_binder_set_context_mgr(const struct cred *mgr);
+int security_binder_transaction(const struct cred *from,
+				const struct cred *to);
+int security_binder_transfer_binder(const struct cred *from,
+				    const struct cred *to);
+int security_binder_transfer_file(const struct cred *from,
+				  const struct cred *to, struct file *file);
 int security_ptrace_access_check(struct task_struct *child, unsigned int mode);
 int security_ptrace_traceme(struct task_struct *parent);
 int security_capget(struct task_struct *target,
@@ -2019,22 +2026,26 @@ static inline int security_init(void)
 	return 0;
 }
 
-static inline int security_binder_set_context_mgr(struct task_struct *mgr)
+static inline int security_binder_set_context_mgr(const struct cred *mgr)
 {
 	return 0;
 }
 
-static inline int security_binder_transaction(struct task_struct *from, struct task_struct *to)
+static inline int security_binder_transaction(const struct cred *from,
+					      const struct cred *to)
 {
 	return 0;
 }
 
-static inline int security_binder_transfer_binder(struct task_struct *from, struct task_struct *to)
+static inline int security_binder_transfer_binder(const struct cred *from,
+						  const struct cred *to)
 {
 	return 0;
 }
 
-static inline int security_binder_transfer_file(struct task_struct *from, struct task_struct *to, struct file *file)
+static inline int security_binder_transfer_file(const struct cred *from,
+						const struct cred *to,
+						struct file *file)
 {
 	return 0;
 }
