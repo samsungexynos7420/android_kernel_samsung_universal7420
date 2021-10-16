@@ -22,17 +22,16 @@ arm64-obj-$(CONFIG_COMPAT)		+= sys32.o kuser32.o signal32.o 	\
 					   ../../arm/kernel/opcodes.o
 arm64-obj-$(CONFIG_FUNCTION_TRACER)	+= ftrace.o entry-ftrace.o
 arm64-obj-$(CONFIG_MODULES)		+= arm64ksyms.o module.o
-arm64-obj-$(CONFIG_SMP)			+= smp.o smp_spin_table.o
-arm64-obj-$(CONFIG_SMP)			+= topology.o
+arm64-obj-$(CONFIG_SMP)			+= smp.o smp_spin_table.o topology.o
 arm64-obj-$(CONFIG_PERF_EVENTS)		+= perf_regs.o
 arm64-obj-$(CONFIG_HW_PERF_EVENTS)	+= perf_event.o
 arm64-obj-$(CONFIG_HAVE_HW_BREAKPOINT)	+= hw_breakpoint.o
 arm64-obj-$(CONFIG_EARLY_PRINTK)	+= early_printk.o
-arm64-obj-$(CONFIG_ARM_CPU_TOPOLOGY)	+= topology.o
 arm64-obj-$(CONFIG_ARM64_CPU_SUSPEND)	+= sleep.o suspend.o
 arm64-obj-$(CONFIG_JUMP_LABEL)		+= jump_label.o
 arm64-obj-$(CONFIG_KGDB)		+= kgdb.o
 arm64-obj-$(CONFIG_ARMV8_DEPRECATED)	+= armv8_deprecated.o
+
 arm64-obj-$(CONFIG_CORE_TEST)		+= core_test.o
 arm64-obj-$(CONFIG_ARCH_EXYNOS)		+= exynos-smc.o
 arm64-obj-$(CONFIG_TIMA_RKP)		+= rkp_entry.o
