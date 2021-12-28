@@ -501,6 +501,8 @@ static int preallocate_idma_buffer(struct snd_pcm *pcm, int stream)
 	buf->addr = idma.lp_tx_addr;
 	buf->bytes = idma_hardware.buffer_bytes_max;
 	buf->area = (unsigned char *)ioremap(buf->addr, buf->bytes);
+	if (!buf->area)
+		return -ENOMEM;
 #ifdef CONFIG_SND_SAMSUNG_USE_IDMA_DRAM
 	/* info sram_buf */
 	memcpy(&idma.sram_buf, buf, sizeof(struct snd_dma_buffer));
