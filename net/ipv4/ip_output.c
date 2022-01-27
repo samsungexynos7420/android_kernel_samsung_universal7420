@@ -143,7 +143,8 @@ int ip_build_and_send_pkt(struct sk_buff *skb, struct sock *sk,
 	iph->version  = 4;
 	iph->ihl      = 5;
 	iph->tos      = inet->tos;
-	if (ip_dont_fragment(sk, &rt->dst))
+	/* Do not bother generating IPID for small packets (eg SYNACK) */
+	if (skb->len <= IPV4_MIN_MTU || ip_dont_fragment(sk, &rt->dst))
 		iph->frag_off = htons(IP_DF);
 	else
 		iph->frag_off = 0;
@@ -151,7 +152,13 @@ int ip_build_and_send_pkt(struct sk_buff *skb, struct sock *sk,
 	iph->daddr    = (opt && opt->opt.srr ? opt->opt.faddr : daddr);
 	iph->saddr    = saddr;
 	iph->protocol = sk->sk_protocol;
-	ip_select_ident(sock_net(sk), skb, sk);
+	/* TCP packets here are SYNACK with fat IPv4/TCP options.
+	 * Avoid using the hashed IP ident generator.
+	 */
+	if (sk->sk_protocol == IPPROTO_TCP)
+		iph->id = (__force __be16)prandom_u32();
+	else
+		ip_select_ident(sock_net(sk), skb, sk);
 
 	if (opt && opt->opt.optlen) {
 		iph->ihl += opt->opt.optlen>>2;
