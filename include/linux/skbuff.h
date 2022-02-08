@@ -1,3 +1,4 @@
+/* Copyright (c) 2015 Samsung Electronics Co., Ltd. */
 /*
  *	Definitions for the 'struct sk_buff' memory handlers.
  *
@@ -9,6 +10,14 @@
  *	modify it under the terms of the GNU General Public License
  *	as published by the Free Software Foundation; either version
  *	2 of the License, or (at your option) any later version.
+ */
+/*
+ *  Changes:
+ *  KwnagHyun Kim <kh0304.kim@samsung.com> 2015/07/08
+ *  Baesung Park  <baesung.park@samsung.com> 2015/07/08
+ *  Vignesh Saravanaperumal <vignesh1.s@samsung.com> 2015/07/08
+ *    Add codes to share UID/PID information
+ *
  */
 
 #ifndef _LINUX_SKBUFF_H
@@ -276,6 +285,13 @@ struct skb_shared_info {
 	/* Intermediate layers must ensure that destructor_arg
 	 * remains valid until skb destructor */
 	void *		destructor_arg;
+    
+ // ------------- START of KNOX_VPN ------------------//
+	uid_t uid;
+	pid_t pid;
+	u_int32_t knox_mark;
+ // ------------- END of KNOX_VPN -------------------//
+
 
 	/* must be last field, see pskb_expand_head() */
 	skb_frag_t	frags[MAX_SKB_FRAGS];
@@ -331,11 +347,6 @@ typedef unsigned int sk_buff_data_t;
 typedef unsigned char *sk_buff_data_t;
 #endif
 
-#if defined(CONFIG_NF_DEFRAG_IPV4) || defined(CONFIG_NF_DEFRAG_IPV4_MODULE) || \
-    defined(CONFIG_NF_DEFRAG_IPV6) || defined(CONFIG_NF_DEFRAG_IPV6_MODULE)
-#define NET_SKBUFF_NF_DEFRAG_NEEDED 1
-#endif
-
 /** 
  *	struct sk_buff - socket buffer
  *	@next: Next buffer in list
@@ -368,7 +379,6 @@ typedef unsigned char *sk_buff_data_t;
  *	@protocol: Packet protocol from driver
  *	@destructor: Destruct function
  *	@nfct: Associated connection, if any
- *	@nfct_reasm: netfilter conntrack re-assembly pointer
  *	@nf_bridge: Saved data about a bridged frame - see br_netfilter.c
  *	@skb_iif: ifindex of device we arrived on
  *	@tc_index: Traffic control index
@@ -455,9 +465,6 @@ struct sk_buff {
 #if defined(CONFIG_NF_CONNTRACK) || defined(CONFIG_NF_CONNTRACK_MODULE)
 	struct nf_conntrack	*nfct;
 #endif
-#ifdef NET_SKBUFF_NF_DEFRAG_NEEDED
-	struct sk_buff		*nfct_reasm;
-#endif
 #ifdef CONFIG_BRIDGE_NETFILTER
 	struct nf_bridge_info	*nf_bridge;
 #endif
@@ -522,6 +529,7 @@ struct sk_buff {
 				*data;
 	unsigned int		truesize;
 	atomic_t		users;
+
 };
 
 #ifdef __KERNEL__
@@ -664,8 +672,18 @@ extern struct sk_buff *skb_clone(struct sk_buff *skb,
 				 gfp_t priority);
 extern struct sk_buff *skb_copy(const struct sk_buff *skb,
 				gfp_t priority);
+#ifdef CONFIG_MPTCP
+struct sk_buff *__pskb_copy_fclone(struct sk_buff *skb, int headroom,
+				   gfp_t gfp_mask, bool fclone);
+static inline struct sk_buff *__pskb_copy(struct sk_buff *skb, int headroom,
+					  gfp_t gfp_mask)
+{
+	return __pskb_copy_fclone(skb, headroom, gfp_mask, false);
+}
+#else
 extern struct sk_buff *__pskb_copy(struct sk_buff *skb,
 				 int headroom, gfp_t gfp_mask);
+#endif
 
 extern int	       pskb_expand_head(struct sk_buff *skb,
 					int nhead, int ntail,
@@ -1750,6 +1768,11 @@ static inline void skb_set_mac_header(struct sk_buff *skb, const int offset)
 }
 #endif /* NET_SKBUFF_DATA_USES_OFFSET */
 
+static inline void skb_pop_mac_header(struct sk_buff *skb)
+{
+	skb->mac_header = skb->network_header;
+}
+
 static inline void skb_probe_transport_header(struct sk_buff *skb,
 					      const int offset_hint)
 {
@@ -2197,6 +2220,14 @@ static inline struct sk_buff *pskb_copy(struct sk_buff *skb,
 	return __pskb_copy(skb, skb_headroom(skb), gfp_mask);
 }
 
+#ifdef CONFIG_MPTCP
+static inline struct sk_buff *pskb_copy_for_clone(struct sk_buff *skb,
+						  gfp_t gfp_mask)
+{
+	return __pskb_copy_fclone(skb, skb_headroom(skb), gfp_mask, true);
+}
+#endif
+
 /**
  *	skb_clone_writable - is the header of a clone writable
  *	@skb: buffer to check
@@ -2367,6 +2398,9 @@ static inline void skb_postpull_rcsum(struct sk_buff *skb,
 {
 	if (skb->ip_summed == CHECKSUM_COMPLETE)
 		skb->csum = csum_sub(skb->csum, csum_partial(start, len, 0));
+	else if (skb->ip_summed == CHECKSUM_PARTIAL &&
+		 skb_checksum_start_offset(skb) < 0)
+		skb->ip_summed = CHECKSUM_NONE;
 }
 
 unsigned char *skb_pull_rcsum(struct sk_buff *skb, unsigned int len);
@@ -2453,7 +2487,7 @@ extern int	       skb_copy_datagram_iovec(const struct sk_buff *from,
 					       int size);
 extern int	       skb_copy_and_csum_datagram_iovec(struct sk_buff *skb,
 							int hlen,
-							struct iovec *iov);
+							struct iovec *iov, int len);
 extern int	       skb_copy_datagram_from_iovec(struct sk_buff *skb,
 						    int offset,
 						    const struct iovec *from,
@@ -2491,6 +2525,8 @@ extern int	       skb_shift(struct sk_buff *tgt, struct sk_buff *skb,
 
 extern struct sk_buff *skb_segment(struct sk_buff *skb,
 				   netdev_features_t features);
+
+unsigned int skb_gso_transport_seglen(const struct sk_buff *skb);
 
 static inline void *skb_header_pointer(const struct sk_buff *skb, int offset,
 				       int len, void *buffer)
@@ -2687,6 +2723,101 @@ static inline __sum16 skb_checksum_complete(struct sk_buff *skb)
 	       0 : __skb_checksum_complete(skb);
 }
 
+#ifdef CONFIG_MPTCP
+/* Check if we need to perform checksum complete validation.
+ *
+ * Returns true if checksum complete is needed, false otherwise
+ * (either checksum is unnecessary or zero checksum is allowed).
+ */
+static inline bool __skb_checksum_validate_needed(struct sk_buff *skb,
+						  bool zero_okay,
+						  __sum16 check)
+{
+	if (skb_csum_unnecessary(skb)) {
+		return false;
+	} else if (zero_okay && !check) {
+		skb->ip_summed = CHECKSUM_UNNECESSARY;
+		return false;
+	}
+
+	return true;
+}
+
+/* For small packets <= CHECKSUM_BREAK peform checksum complete directly
+ * in checksum_init.
+ */
+#define CHECKSUM_BREAK 76
+
+/* Validate (init) checksum based on checksum complete.
+ *
+ * Return values:
+ *   0: checksum is validated or try to in skb_checksum_complete. In the latter
+ *	case the ip_summed will not be CHECKSUM_UNNECESSARY and the pseudo
+ *	checksum is stored in skb->csum for use in __skb_checksum_complete
+ *   non-zero: value of invalid checksum
+ *
+ */
+static inline __sum16 __skb_checksum_validate_complete(struct sk_buff *skb,
+						       bool complete,
+						       __wsum psum)
+{
+	if (skb->ip_summed == CHECKSUM_COMPLETE) {
+		if (!csum_fold(csum_add(psum, skb->csum))) {
+			skb->ip_summed = CHECKSUM_UNNECESSARY;
+			return 0;
+		}
+	}
+
+	skb->csum = psum;
+
+	if (complete || skb->len <= CHECKSUM_BREAK)
+		return __skb_checksum_complete(skb);
+
+	return 0;
+}
+
+static inline __wsum null_compute_pseudo(struct sk_buff *skb, int proto)
+{
+	return 0;
+}
+
+/* Perform checksum validate (init). Note that this is a macro since we only
+ * want to calculate the pseudo header which is an input function if necessary.
+ * First we try to validate without any computation (checksum unnecessary) and
+ * then calculate based on checksum complete calling the function to compute
+ * pseudo header.
+ *
+ * Return values:
+ *   0: checksum is validated or try to in skb_checksum_complete
+ *   non-zero: value of invalid checksum
+ */
+#define __skb_checksum_validate(skb, proto, complete,			\
+				zero_okay, check, compute_pseudo)	\
+({									\
+	__sum16 __ret = 0;						\
+	if (__skb_checksum_validate_needed(skb, zero_okay, check))	\
+		__ret = __skb_checksum_validate_complete(skb,		\
+				complete, compute_pseudo(skb, proto));	\
+	__ret;								\
+})
+
+#define skb_checksum_init(skb, proto, compute_pseudo)			\
+	__skb_checksum_validate(skb, proto, false, false, 0, compute_pseudo)
+
+#define skb_checksum_init_zero_check(skb, proto, check, compute_pseudo)	\
+	__skb_checksum_validate(skb, proto, false, true, check, compute_pseudo)
+
+#define skb_checksum_validate(skb, proto, compute_pseudo)		\
+	__skb_checksum_validate(skb, proto, true, false, 0, compute_pseudo)
+
+#define skb_checksum_validate_zero_check(skb, proto, check,		\
+					 compute_pseudo)		\
+	__skb_checksum_validate_(skb, proto, true, true, check, compute_pseudo)
+
+#define skb_checksum_simple_validate(skb)				\
+	__skb_checksum_validate(skb, 0, true, false, 0, null_compute_pseudo)
+#endif
+
 #if defined(CONFIG_NF_CONNTRACK) || defined(CONFIG_NF_CONNTRACK_MODULE)
 extern void nf_conntrack_destroy(struct nf_conntrack *nfct);
 static inline void nf_conntrack_put(struct nf_conntrack *nfct)
@@ -2698,18 +2829,6 @@ static inline void nf_conntrack_get(struct nf_conntrack *nfct)
 {
 	if (nfct)
 		atomic_inc(&nfct->use);
-}
-#endif
-#ifdef NET_SKBUFF_NF_DEFRAG_NEEDED
-static inline void nf_conntrack_get_reasm(struct sk_buff *skb)
-{
-	if (skb)
-		atomic_inc(&skb->users);
-}
-static inline void nf_conntrack_put_reasm(struct sk_buff *skb)
-{
-	if (skb)
-		kfree_skb(skb);
 }
 #endif
 #ifdef CONFIG_BRIDGE_NETFILTER
@@ -2729,10 +2848,6 @@ static inline void nf_reset(struct sk_buff *skb)
 #if defined(CONFIG_NF_CONNTRACK) || defined(CONFIG_NF_CONNTRACK_MODULE)
 	nf_conntrack_put(skb->nfct);
 	skb->nfct = NULL;
-#endif
-#ifdef NET_SKBUFF_NF_DEFRAG_NEEDED
-	nf_conntrack_put_reasm(skb->nfct_reasm);
-	skb->nfct_reasm = NULL;
 #endif
 #ifdef CONFIG_BRIDGE_NETFILTER
 	nf_bridge_put(skb->nf_bridge);
@@ -2755,10 +2870,6 @@ static inline void __nf_copy(struct sk_buff *dst, const struct sk_buff *src)
 	nf_conntrack_get(src->nfct);
 	dst->nfctinfo = src->nfctinfo;
 #endif
-#ifdef NET_SKBUFF_NF_DEFRAG_NEEDED
-	dst->nfct_reasm = src->nfct_reasm;
-	nf_conntrack_get_reasm(src->nfct_reasm);
-#endif
 #ifdef CONFIG_BRIDGE_NETFILTER
 	dst->nf_bridge  = src->nf_bridge;
 	nf_bridge_get(src->nf_bridge);
@@ -2769,9 +2880,6 @@ static inline void nf_copy(struct sk_buff *dst, const struct sk_buff *src)
 {
 #if defined(CONFIG_NF_CONNTRACK) || defined(CONFIG_NF_CONNTRACK_MODULE)
 	nf_conntrack_put(dst->nfct);
-#endif
-#ifdef NET_SKBUFF_NF_DEFRAG_NEEDED
-	nf_conntrack_put_reasm(dst->nfct_reasm);
 #endif
 #ifdef CONFIG_BRIDGE_NETFILTER
 	nf_bridge_put(dst->nf_bridge);
@@ -2937,6 +3045,23 @@ u32 __skb_get_poff(const struct sk_buff *skb);
 static inline bool skb_head_is_locked(const struct sk_buff *skb)
 {
 	return !skb->head_frag || skb_cloned(skb);
+}
+
+/**
+ * skb_gso_network_seglen - Return length of individual segments of a gso packet
+ *
+ * @skb: GSO skb
+ *
+ * skb_gso_network_seglen is used to determine the real size of the
+ * individual segments, including Layer3 (IP, IPv6) and L4 headers (TCP/UDP).
+ *
+ * The MAC/L2 header is not accounted for.
+ */
+static inline unsigned int skb_gso_network_seglen(const struct sk_buff *skb)
+{
+	unsigned int hdr_len = skb_transport_header(skb) -
+			       skb_network_header(skb);
+	return hdr_len + skb_gso_transport_seglen(skb);
 }
 #endif	/* __KERNEL__ */
 #endif	/* _LINUX_SKBUFF_H */

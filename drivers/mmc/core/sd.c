@@ -646,12 +646,28 @@ static int mmc_sd_init_uhs_card(struct mmc_card *card)
 	if (err)
 		goto out;
 
+try:
 	/* SPI mode doesn't define CMD19 */
 	if (!mmc_host_is_spi(card->host) && card->host->ops->execute_tuning) {
+		card->host->tuning_progress |= MMC_HS200_TUNING;
 		mmc_host_clk_hold(card->host);
 		err = card->host->ops->execute_tuning(card->host,
 						      MMC_SEND_TUNING_BLOCK);
 		mmc_host_clk_release(card->host);
+		card->host->tuning_progress = 0;
+	}
+
+	if (err) {
+		if (card->sw_caps.uhs_max_dtr == UHS_SDR104_MAX_DTR)
+			card->sw_caps.uhs_max_dtr = UHS_SDR50_MAX_DTR;
+		else if (card->sw_caps.uhs_max_dtr == UHS_SDR50_MAX_DTR)
+			card->sw_caps.uhs_max_dtr = UHS_SDR25_MAX_DTR;
+		else if (card->sw_caps.uhs_max_dtr == UHS_SDR25_MAX_DTR)
+			card->sw_caps.uhs_max_dtr = UHS_SDR12_MAX_DTR;
+		else
+			goto out;
+		mmc_set_clock(card->host, card->sw_caps.uhs_max_dtr);
+		goto try;
 	}
 
 out:
@@ -932,6 +948,9 @@ static int mmc_sd_init_card(struct mmc_host *host, u32 ocr,
 	BUG_ON(!host);
 	WARN_ON(!host->claimed);
 
+	/* The initialization should be done at 3.3 V I/O voltage. */
+	__mmc_set_signal_voltage(host, MMC_SIGNAL_VOLTAGE_330);
+
 	err = mmc_sd_get_cid(host, ocr, cid, &rocr);
 	if (err)
 		return err;
@@ -1035,7 +1054,9 @@ free_card:
 static void mmc_sd_remove(struct mmc_host *host)
 {
 	BUG_ON(!host);
-	BUG_ON(!host->card);
+
+	if (!host->card)
+		return;
 
 	mmc_remove_card(host->card);
 	host->card = NULL;
@@ -1046,7 +1067,7 @@ static void mmc_sd_remove(struct mmc_host *host)
  */
 static int mmc_sd_alive(struct mmc_host *host)
 {
-	return mmc_send_status(host->card, NULL);
+	return mmc_send_status(host->card, NULL, 0);
 }
 
 /*
@@ -1062,6 +1083,21 @@ static void mmc_sd_detect(struct mmc_host *host)
 	BUG_ON(!host);
 	BUG_ON(!host->card);
 
+#if defined(CONFIG_MMC_BLOCK_DEFERRED_RESUME)
+	if (host->ops->get_cd && host->ops->get_cd(host) == 0) {
+		if (host->card) {
+			mmc_card_set_removed(host->card);
+			mmc_sd_remove(host);
+		}
+
+		mmc_claim_host(host);
+		mmc_detach_bus(host);
+		mmc_power_off(host);
+		mmc_release_host(host);
+		pr_err("%s: card is removed...\n", mmc_hostname(host));
+		return;
+	}
+#endif
 	mmc_claim_host(host);
 
 	/*
@@ -1069,7 +1105,7 @@ static void mmc_sd_detect(struct mmc_host *host)
 	 */
 #ifdef CONFIG_MMC_PARANOID_SD_INIT
 	while(retries) {
-		err = mmc_send_status(host->card, NULL);
+		err = mmc_send_status(host->card, NULL, 0);
 		if (err) {
 			retries--;
 			udelay(5);
@@ -1174,7 +1210,6 @@ static const struct mmc_bus_ops mmc_sd_ops = {
 	.resume = NULL,
 	.power_restore = mmc_sd_power_restore,
 	.alive = mmc_sd_alive,
-	.shutdown = mmc_sd_suspend,
 };
 
 static const struct mmc_bus_ops mmc_sd_ops_unsafe = {
@@ -1184,7 +1219,6 @@ static const struct mmc_bus_ops mmc_sd_ops_unsafe = {
 	.resume = mmc_sd_resume,
 	.power_restore = mmc_sd_power_restore,
 	.alive = mmc_sd_alive,
-	.shutdown = mmc_sd_suspend,
 };
 
 static void mmc_sd_attach_bus_ops(struct mmc_host *host)

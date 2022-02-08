@@ -22,6 +22,7 @@
 
 #include "scsi_priv.h"
 #include "scsi_logging.h"
+#include "ufs/ufshcd.h"
 
 static struct device_type scsi_dev_type;
 
@@ -233,6 +234,16 @@ show_shost_supported_mode(struct device *dev, struct device_attribute *attr,
 
 static DEVICE_ATTR(supported_mode, S_IRUGO | S_IWUSR, show_shost_supported_mode, NULL);
 
+/* for Argos */
+static ssize_t show_shost_transferred_cnt(struct device *dev, struct device_attribute *attr, char *buf)
+{
+    struct Scsi_Host *shost = class_to_shost(dev);
+    struct ufs_hba *hba = shost_priv(shost);
+
+    return sprintf(buf, "%u\n", hba->transferred_sector);
+}
+static DEVICE_ATTR(transferred_cnt, 0444, show_shost_transferred_cnt, NULL);
+
 static ssize_t
 show_shost_active_mode(struct device *dev,
 		       struct device_attribute *attr, char *buf)
@@ -308,6 +319,7 @@ static struct attribute *scsi_sysfs_shost_attrs[] = {
 	&dev_attr_prot_capabilities.attr,
 	&dev_attr_prot_guard_type.attr,
 	&dev_attr_host_reset.attr,
+	&dev_attr_transferred_cnt.attr,
 	NULL
 };
 
@@ -332,17 +344,14 @@ static void scsi_device_dev_release_usercontext(struct work_struct *work)
 {
 	struct scsi_device *sdev;
 	struct device *parent;
-	struct scsi_target *starget;
 	struct list_head *this, *tmp;
 	unsigned long flags;
 
 	sdev = container_of(work, struct scsi_device, ew.work);
 
 	parent = sdev->sdev_gendev.parent;
-	starget = to_scsi_target(parent);
 
 	spin_lock_irqsave(sdev->host->host_lock, flags);
-	starget->reap_ref++;
 	list_del(&sdev->siblings);
 	list_del(&sdev->same_target_siblings);
 	list_del(&sdev->starved_entry);
@@ -361,8 +370,6 @@ static void scsi_device_dev_release_usercontext(struct work_struct *work)
 	blk_put_queue(sdev->request_queue);
 	/* NULL queue means the device can't be used */
 	sdev->request_queue = NULL;
-
-	scsi_target_reap(scsi_target(sdev));
 
 	kfree(sdev->inquiry);
 	kfree(sdev);
@@ -794,7 +801,7 @@ sdev_store_queue_ramp_up_period(struct device *dev,
 		return -EINVAL;
 
 	sdev->queue_ramp_up_period = msecs_to_jiffies(period);
-	return period;
+	return count;
 }
 
 static struct device_attribute sdev_attr_queue_ramp_up_period =
@@ -848,7 +855,6 @@ static int scsi_target_add(struct scsi_target *starget)
 
 	pm_runtime_set_active(&starget->dev);
 	pm_runtime_enable(&starget->dev);
-	device_enable_async_suspend(&starget->dev);
 
 	return 0;
 }
@@ -870,17 +876,12 @@ int scsi_sysfs_add_sdev(struct scsi_device *sdev)
 	struct request_queue *rq = sdev->request_queue;
 	struct scsi_target *starget = sdev->sdev_target;
 
-	error = scsi_device_set_state(sdev, SDEV_RUNNING);
-	if (error)
-		return error;
-
 	error = scsi_target_add(starget);
 	if (error)
 		return error;
 
 	transport_configure_device(&starget->dev);
 
-	device_enable_async_suspend(&sdev->sdev_gendev);
 	scsi_autopm_get_target(starget);
 	pm_runtime_set_active(&sdev->sdev_gendev);
 	pm_runtime_forbid(&sdev->sdev_gendev);
@@ -899,7 +900,6 @@ int scsi_sysfs_add_sdev(struct scsi_device *sdev)
 				"failed to add device: %d\n", error);
 		return error;
 	}
-	device_enable_async_suspend(&sdev->sdev_dev);
 	error = device_add(&sdev->sdev_dev);
 	if (error) {
 		sdev_printk(KERN_INFO, sdev,
@@ -978,6 +978,13 @@ void __scsi_remove_device(struct scsi_device *sdev)
 		sdev->host->hostt->slave_destroy(sdev);
 	transport_destroy_device(dev);
 
+	/*
+	 * Paired with the kref_get() in scsi_sysfs_initialize().  We have
+	 * remoed sysfs visibility from the device, so make the target
+	 * invisible if this was the last device underneath it.
+	 */
+	scsi_target_reap(scsi_target(sdev));
+
 	put_device(dev);
 }
 
@@ -1028,31 +1035,25 @@ static void __scsi_remove_target(struct scsi_target *starget)
 void scsi_remove_target(struct device *dev)
 {
 	struct Scsi_Host *shost = dev_to_shost(dev->parent);
-	struct scsi_target *starget, *last = NULL;
+	struct scsi_target *starget, *last_target = NULL;
 	unsigned long flags;
 
-	/* remove targets being careful to lookup next entry before
-	 * deleting the last
-	 */
+restart:
 	spin_lock_irqsave(shost->host_lock, flags);
 	list_for_each_entry(starget, &shost->__targets, siblings) {
-		if (starget->state == STARGET_DEL)
+		if (starget->state == STARGET_DEL ||
+		    starget == last_target)
 			continue;
 		if (starget->dev.parent == dev || &starget->dev == dev) {
-			/* assuming new targets arrive at the end */
-			starget->reap_ref++;
+			kref_get(&starget->reap_ref);
+			last_target = starget;
 			spin_unlock_irqrestore(shost->host_lock, flags);
-			if (last)
-				scsi_target_reap(last);
-			last = starget;
 			__scsi_remove_target(starget);
-			spin_lock_irqsave(shost->host_lock, flags);
+			scsi_target_reap(starget);
+			goto restart;
 		}
 	}
 	spin_unlock_irqrestore(shost->host_lock, flags);
-
-	if (last)
-		scsi_target_reap(last);
 }
 EXPORT_SYMBOL(scsi_remove_target);
 
@@ -1124,6 +1125,12 @@ void scsi_sysfs_device_initialize(struct scsi_device *sdev)
 	list_add_tail(&sdev->same_target_siblings, &starget->devices);
 	list_add_tail(&sdev->siblings, &shost->__devices);
 	spin_unlock_irqrestore(shost->host_lock, flags);
+	/*
+	 * device can now only be removed via __scsi_remove_device() so hold
+	 * the target.  Target will be held in CREATED state until something
+	 * beneath it becomes visible (in which case it moves to RUNNING)
+	 */
+	kref_get(&starget->reap_ref);
 }
 
 int scsi_is_sdev_device(const struct device *dev)

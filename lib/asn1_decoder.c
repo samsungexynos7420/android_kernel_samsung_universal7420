@@ -210,8 +210,9 @@ next_op:
 		unsigned char tmp;
 
 		/* Skip conditional matches if possible */
-		if ((op & ASN1_OP_MATCH__COND && flags & FLAG_MATCHED) ||
-		    (op & ASN1_OP_MATCH__SKIP && dp == datalen)) {
+		if ((op & ASN1_OP_MATCH__COND &&
+		     flags & FLAG_MATCHED) ||
+		    dp == datalen) {
 			pc += asn1_op_lengths[op];
 			goto next_op;
 		}
@@ -319,7 +320,7 @@ next_op:
 		if (!(flags & FLAG_CONS)) {
 			if (flags & FLAG_INDEFINITE_LENGTH) {
 				size_t tmp = dp;
-
+				
 				ret = asn1_find_indefinite_length(
 					data, datalen, &tmp, &len, &errmsg);
 				if (ret < 0)

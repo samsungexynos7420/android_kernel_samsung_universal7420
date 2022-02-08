@@ -103,6 +103,8 @@ ENTRY(__kernel_clock_gettime)
 	bl	__do_get_tspec
 	seqcnt_check w9, 1b
 
+	mov	x30, x2
+
 	cmp	w0, #CLOCK_MONOTONIC
 	b.ne	6f
 
@@ -117,6 +119,9 @@ ENTRY(__kernel_clock_gettime)
 	cmp	w0, #CLOCK_REALTIME_COARSE
 	ccmp	w0, #CLOCK_MONOTONIC_COARSE, #0x4, ne
 	b.ne	8f
+
+	/* xtime_coarse_nsec is already right-shifted */
+	mov	x12, #0
 
 	/* Get coarse timespec. */
 	adr	vdso_data, _vdso_data
@@ -156,7 +161,7 @@ ENTRY(__kernel_clock_gettime)
 	lsr	x11, x11, x12
 	stp	x10, x11, [x1, #TSPEC_TV_SEC]
 	mov	x0, xzr
-	ret	x2
+	ret
 7:
 	mov	x30, x2
 8:	/* Syscall fallback. */
@@ -218,9 +223,14 @@ ENTRY(__do_get_tspec)
 	ldp	w11, w12, [vdso_data, #VDSO_CS_MULT]
 	seqcnt_read w9
 
-	/* Read the virtual counter. */
 	isb
+#ifdef CONFIG_ARCH_EXYNOS
+	/* Read the physical counter in only exynos */
+	mrs	x15, cntpct_el0
+#else
+	/* Read the virtual counter. */
 	mrs	x15, cntvct_el0
+#endif
 
 	/* Calculate cycle delta and convert to ns. */
 	sub	x10, x15, x10

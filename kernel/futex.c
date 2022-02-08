@@ -61,13 +61,16 @@
 #include <linux/nsproxy.h>
 #include <linux/ptrace.h>
 #include <linux/sched/rt.h>
+#include <linux/hugetlb.h>
 #include <linux/freezer.h>
 
 #include <asm/futex.h>
 
 #include "rtmutex_common.h"
 
+#ifndef CONFIG_HAVE_FUTEX_CMPXCHG
 int __read_mostly futex_cmpxchg_enabled;
+#endif
 
 #define FUTEX_HASHBITS (CONFIG_BASE_SMALL ? 4 : 8)
 
@@ -240,7 +243,6 @@ get_futex_key(u32 __user *uaddr, int fshared, union futex_key *key, int rw)
 	unsigned long address = (unsigned long)uaddr;
 	struct mm_struct *mm = current->mm;
 	struct page *page, *page_head;
-	struct address_space *mapping;
 	int err, ro = 0;
 
 	/*
@@ -288,7 +290,7 @@ again:
 		put_page(page);
 		/* serialize against __split_huge_page_splitting() */
 		local_irq_disable();
-		if (likely(__get_user_pages_fast(address, 1, 1, &page) == 1)) {
+		if (likely(__get_user_pages_fast(address, 1, !ro, &page) == 1)) {
 			page_head = compound_head(page);
 			/*
 			 * page_head is valid pointer but we must pin
@@ -318,19 +320,7 @@ again:
 	}
 #endif
 
-	/*
-	 * The treatment of mapping from this point on is critical. The page
-	 * lock protects many things but in this context the page lock
-	 * stabilizes mapping, prevents inode freeing in the shared
-	 * file-backed region case and guards against movement to swap cache.
-	 *
-	 * Strictly speaking the page lock is not needed in all cases being
-	 * considered here and page lock forces unnecessarily serialization
-	 * From this point on, mapping will be re-verified if necessary and
-	 * page lock will be acquired only if it is unavoidable
-	 */
-
-	mapping = READ_ONCE(page_head->mapping);
+	lock_page(page_head);
 
 	/*
 	 * If page_head->mapping is NULL, then it cannot be a PageAnon
@@ -347,30 +337,17 @@ again:
 	 * shmem_writepage move it from filecache to swapcache beneath us:
 	 * an unlikely race, but we do need to retry for page_head->mapping.
 	 */
-	if (unlikely(!mapping)) {
-		int shmem_swizzled;
-
-		/*
-		 * Page lock is required to identify which special case above
-		 * applies. If this is really a shmem page then the page lock
-		 * will prevent unexpected transitions.
-		 */
-		lock_page(page);
-		shmem_swizzled = PageSwapCache(page) || page->mapping;
+	if (!page_head->mapping) {
+		int shmem_swizzled = PageSwapCache(page_head);
 		unlock_page(page_head);
 		put_page(page_head);
-
 		if (shmem_swizzled)
 			goto again;
-
 		return -EFAULT;
 	}
 
 	/*
 	 * Private mappings are handled in a simple way.
-	 *
-	 * If the futex key is stored on an anonymous page, then the associated
-	 * object is the mm which is implicitly pinned by the calling process.
 	 *
 	 * NOTE: When userspace waits on a MAP_SHARED mapping, even if
 	 * it's a read-only handle, it's expected that futexes attach to
@@ -389,74 +366,16 @@ again:
 		key->both.offset |= FUT_OFF_MMSHARED; /* ref taken on mm */
 		key->private.mm = mm;
 		key->private.address = address;
-
-		get_futex_key_refs(key); /* implies smp_mb(); (B) */
-
 	} else {
-		struct inode *inode;
-
-		/*
-		 * The associated futex object in this case is the inode and
-		 * the page->mapping must be traversed. Ordinarily this should
-		 * be stabilised under page lock but it's not strictly
-		 * necessary in this case as we just want to pin the inode, not
-		 * update the radix tree or anything like that.
-		 *
-		 * The RCU read lock is taken as the inode is finally freed
-		 * under RCU. If the mapping still matches expectations then the
-		 * mapping->host can be safely accessed as being a valid inode.
-		 */
-		rcu_read_lock();
-
-		if (READ_ONCE(page_head->mapping) != mapping) {
-			rcu_read_unlock();
-			put_page(page_head);
-
-			goto again;
-		}
-
-		inode = READ_ONCE(mapping->host);
-		if (!inode) {
-			rcu_read_unlock();
-			put_page(page_head);
-
-			goto again;
-		}
-
-		/*
-		 * Take a reference unless it is about to be freed. Previously
-		 * this reference was taken by ihold under the page lock
-		 * pinning the inode in place so i_lock was unnecessary. The
-		 * only way for this check to fail is if the inode was
-		 * truncated in parallel so warn for now if this happens.
-		 *
-		 * We are not calling into get_futex_key_refs() in file-backed
-		 * cases, therefore a successful atomic_inc return below will
-		 * guarantee that get_futex_key() will still imply smp_mb(); (B).
-		 */
-		if (WARN_ON_ONCE(!atomic_inc_not_zero(&inode->i_count))) {
-			rcu_read_unlock();
-			put_page(page_head);
-
-			goto again;
-		}
-
-		/* Should be impossible but lets be paranoid for now */
-		if (WARN_ON_ONCE(inode->i_mapping != mapping)) {
-			err = -EFAULT;
-			rcu_read_unlock();
-			iput(inode);
-
-			goto out;
-		}
-
 		key->both.offset |= FUT_OFF_INODE; /* inode-based key */
-		key->shared.inode = inode;
-		key->shared.pgoff = page_head->index;
-		rcu_read_unlock();
+		key->shared.inode = page_head->mapping->host;
+		key->shared.pgoff = basepage_index(page);
 	}
 
+	get_futex_key_refs(key);
+
 out:
+	unlock_page(page_head);
 	put_page(page_head);
 	return err;
 }
@@ -822,6 +741,11 @@ lookup_pi_state(u32 uval, struct futex_hash_bucket *hb,
 	p = futex_find_get_task(pid);
 	if (!p)
 		return -ESRCH;
+
+	if (!p->mm) {
+		put_task_struct(p);
+		return -EPERM;
+	}
 
 	/*
 	 * We need to look at the task state flags to figure out,
@@ -1373,7 +1297,7 @@ void requeue_pi_wake_futex(struct futex_q *q, union futex_key *key,
  *
  * Return:
  *  0 - failed to acquire the lock atomically;
- *  1 - acquired the lock;
+ * >0 - acquired the lock, return value is vpid of the top_waiter
  * <0 - error
  */
 static int futex_proxy_trylock_atomic(u32 __user *pifutex,
@@ -1384,7 +1308,7 @@ static int futex_proxy_trylock_atomic(u32 __user *pifutex,
 {
 	struct futex_q *top_waiter = NULL;
 	u32 curval;
-	int ret;
+	int ret, vpid;
 
 	if (get_futex_value_locked(&curval, pifutex))
 		return -EFAULT;
@@ -1412,11 +1336,13 @@ static int futex_proxy_trylock_atomic(u32 __user *pifutex,
 	 * the contended case or if set_waiters is 1.  The pi_state is returned
 	 * in ps in contended cases.
 	 */
+	vpid = task_pid_vnr(top_waiter->task);
 	ret = futex_lock_pi_atomic(pifutex, hb2, key2, ps, top_waiter->task,
 				   set_waiters);
-	if (ret == 1)
+	if (ret == 1) {
 		requeue_pi_wake_futex(top_waiter, key2, hb2);
-
+		return vpid;
+	}
 	return ret;
 }
 
@@ -1448,7 +1374,6 @@ static int futex_requeue(u32 __user *uaddr1, unsigned int flags,
 	struct futex_hash_bucket *hb1, *hb2;
 	struct plist_head *head1;
 	struct futex_q *this, *next;
-	u32 curval2;
 
 	if (nr_wake < 0 || nr_requeue < 0)
 		return -EINVAL;
@@ -1553,16 +1478,25 @@ retry_private:
 		 * At this point the top_waiter has either taken uaddr2 or is
 		 * waiting on it.  If the former, then the pi_state will not
 		 * exist yet, look it up one more time to ensure we have a
-		 * reference to it.
+		 * reference to it. If the lock was taken, ret contains the
+		 * vpid of the top waiter task.
 		 */
-		if (ret == 1) {
+		if (ret > 0) {
 			WARN_ON(pi_state);
 			drop_count++;
 			task_count++;
-			ret = get_futex_value_locked(&curval2, uaddr2);
-			if (!ret)
-				ret = lookup_pi_state(curval2, hb2, &key2,
-						      &pi_state);
+			/*
+			 * If we acquired the lock, then the user
+			 * space value of uaddr2 should be vpid. It
+			 * cannot be changed by the top waiter as it
+			 * is blocked on hb2 lock if it tries to do
+			 * so. If something fiddled with it behind our
+			 * back the pi state lookup might unearth
+			 * it. So we rather use the known value than
+			 * rereading and handing potential crap to
+			 * lookup_pi_state.
+			 */
+			ret = lookup_pi_state(ret, hb2, &key2, &pi_state);
 		}
 
 		switch (ret) {
@@ -2483,7 +2417,6 @@ static int futex_wait_requeue_pi(u32 __user *uaddr, unsigned int flags,
 {
 	struct hrtimer_sleeper timeout, *to = NULL;
 	struct rt_mutex_waiter rt_waiter;
-	struct rt_mutex *pi_mutex = NULL;
 	struct futex_hash_bucket *hb;
 	union futex_key key2 = FUTEX_KEY_INIT;
 	struct futex_q q = futex_q_init;
@@ -2564,9 +2497,18 @@ static int futex_wait_requeue_pi(u32 __user *uaddr, unsigned int flags,
 		if (q.pi_state && (q.pi_state->owner != current)) {
 			spin_lock(q.lock_ptr);
 			ret = fixup_pi_state_owner(uaddr2, &q, current);
+			if (ret && rt_mutex_owner(&q.pi_state->pi_mutex) == current)
+				rt_mutex_unlock(&q.pi_state->pi_mutex);
+			/*
+			 * Drop the reference to the pi state which
+			 * the requeue_pi() code acquired for us.
+			 */
+			free_pi_state(q.pi_state);
 			spin_unlock(q.lock_ptr);
 		}
 	} else {
+		struct rt_mutex *pi_mutex;
+
 		/*
 		 * We have been woken up by futex_unlock_pi(), a timeout, or a
 		 * signal.  futex_unlock_pi() will not destroy the lock_ptr nor
@@ -2590,18 +2532,19 @@ static int futex_wait_requeue_pi(u32 __user *uaddr, unsigned int flags,
 		if (res)
 			ret = (res < 0) ? res : 0;
 
+		/*
+		 * If fixup_pi_state_owner() faulted and was unable to handle
+		 * the fault, unlock the rt_mutex and return the fault to
+		 * userspace.
+		 */
+		if (ret && rt_mutex_owner(pi_mutex) == current)
+			rt_mutex_unlock(pi_mutex);
+
 		/* Unqueue and drop the lock. */
 		unqueue_me_pi(&q);
 	}
 
-	/*
-	 * If fixup_pi_state_owner() faulted and was unable to handle the
-	 * fault, unlock the rt_mutex and return the fault to userspace.
-	 */
-	if (ret == -EFAULT) {
-		if (pi_mutex && rt_mutex_owner(pi_mutex) == current)
-			rt_mutex_unlock(pi_mutex);
-	} else if (ret == -EINTR) {
+	if (ret == -EINTR) {
 		/*
 		 * We've already been requeued, but cannot restart by calling
 		 * futex_lock_pi() directly. We could restart this syscall, but
@@ -2934,10 +2877,10 @@ SYSCALL_DEFINE6(futex, u32 __user *, uaddr, int, op, u32, val,
 	return do_futex(uaddr, op, val, tp, uaddr2, val2, val3);
 }
 
-static int __init futex_init(void)
+static void __init futex_detect_cmpxchg(void)
 {
+#ifndef CONFIG_HAVE_FUTEX_CMPXCHG
 	u32 curval;
-	int i;
 
 	/*
 	 * This will fail and we want it. Some arch implementations do
@@ -2951,6 +2894,14 @@ static int __init futex_init(void)
 	 */
 	if (cmpxchg_futex_value_locked(&curval, NULL, 0, 0) == -EFAULT)
 		futex_cmpxchg_enabled = 1;
+#endif
+}
+
+static int __init futex_init(void)
+{
+	int i;
+
+	futex_detect_cmpxchg();
 
 	for (i = 0; i < ARRAY_SIZE(futex_queues); i++) {
 		plist_head_init(&futex_queues[i].chain);
@@ -2959,4 +2910,4 @@ static int __init futex_init(void)
 
 	return 0;
 }
-__initcall(futex_init);
+core_initcall(futex_init);

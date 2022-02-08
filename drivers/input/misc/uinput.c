@@ -365,8 +365,16 @@ static int uinput_setup_device(struct uinput_device *udev,
 	int			i;
 	int			retval;
 
+#ifdef CONFIG_INPUT_EXPANDED_ABS
+	if (count != sizeof(struct uinput_user_dev))
+		printk(KERN_INFO "%s: size is different\n", UINPUT_NAME);
+
+	if (count > sizeof(struct uinput_user_dev))
+		return -EINVAL;
+#else
 	if (count != sizeof(struct uinput_user_dev))
 		return -EINVAL;
+#endif
 
 	if (!udev->dev) {
 		retval = uinput_allocate_device(udev);
@@ -835,9 +843,15 @@ static long uinput_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 }
 
 #ifdef CONFIG_COMPAT
+
+#define UI_SET_PHYS_COMPAT	_IOW(UINPUT_IOCTL_BASE, 108, compat_uptr_t)
+
 static long uinput_compat_ioctl(struct file *file,
 				unsigned int cmd, unsigned long arg)
 {
+	if (cmd == UI_SET_PHYS_COMPAT)
+		cmd = UI_SET_PHYS;
+
 	return uinput_ioctl_handler(file, cmd, arg, compat_ptr(arg));
 }
 #endif

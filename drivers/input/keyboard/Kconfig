@@ -2,7 +2,7 @@
 # Input core configuration
 #
 menuconfig INPUT_KEYBOARD
-	bool "Keyboards" if EXPERT || !X86
+	bool "Keyboards"
 	default y
 	help
 	  Say Y here, and a list of supported keyboards will be displayed.
@@ -11,6 +11,18 @@ menuconfig INPUT_KEYBOARD
 	  If unsure, say Y.
 
 if INPUT_KEYBOARD
+
+config KEYBOARD_ABOV_TOUCH
+	tristate "Abov FT16XX touchkey"
+	depends on I2C
+	help
+	  Say Y here if you want to use ABOV MC96FT16XX chip as touchkey.
+
+config KEYBOARD_ABOV_TOUCH_FOLDER
+	tristate "Abov FT16XX touchkey"
+	depends on I2C
+	help
+	  Say Y here if you want to use ABOV MC96FT16XX chip as touchkey for folder model.
 
 config KEYBOARD_ADP5520
 	tristate "Keypad Support for ADP5520 PMIC"
@@ -67,7 +79,7 @@ config KEYBOARD_ATARI
 	  module will be called atakbd.
 
 config KEYBOARD_ATKBD
-	tristate "AT keyboard" if EXPERT || !X86
+	tristate "AT keyboard"
 	default y
 	select SERIO
 	select SERIO_LIBPS2
@@ -641,4 +653,30 @@ config KEYBOARD_CROS_EC
 	  To compile this driver as a module, choose M here: the
 	  module will be called cros_ec_keyb.
 
+config SUPPORT_KEYPAD_LED
+	bool "SUPPORT KEYPAD LED"
+	depends on KEYBOARD_MATRIX
+	default n
+	help
+	  Say Y here to use the kaypad.
+
+config KEYBOARD_ABOV_FT16XX_TOUCH_VALLEY
+	tristate "Abov FT16XX touchkey for valley"
+	depends on I2C
+	help
+	  Say Y here if you want to use ABOV MC96FT16XX chip as touchkey.
+
+config TOUCHKEY_GRIP
+	tristate "touchkey grip for sar"
+	depends on I2C
+	help
+	  Say Y here if you want to use touchkey grip.
+
+config KEYBOARD_TC300K
+	tristate "Coreriver TC300K touchkey"
+	depends on I2C
+	help
+	 Say Y if you want use Coreriver TC300K chip as touchkey.
+
+source "drivers/input/keyboard/cypress_20075/Kconfig"
 endif

@@ -10,6 +10,7 @@
 #include <linux/stat.h>
 #include <linux/cache.h>
 #include <linux/list.h>
+#include <linux/llist.h>
 #include <linux/radix-tree.h>
 #include <linux/rbtree.h>
 #include <linux/init.h>
@@ -45,7 +46,6 @@ struct vfsmount;
 struct cred;
 struct swap_info_struct;
 struct seq_file;
-struct workqueue_struct;
 
 extern void __init inode_init(void);
 extern void __init inode_init_early(void);
@@ -63,7 +63,8 @@ struct buffer_head;
 typedef int (get_block_t)(struct inode *inode, sector_t iblock,
 			struct buffer_head *bh_result, int create);
 typedef void (dio_iodone_t)(struct kiocb *iocb, loff_t offset,
-			ssize_t bytes, void *private);
+			ssize_t bytes, void *private, int ret,
+			bool is_async);
 
 #define MAY_EXEC		0x00000001
 #define MAY_WRITE		0x00000002
@@ -120,6 +121,12 @@ typedef void (dio_iodone_t)(struct kiocb *iocb, loff_t offset,
 
 /* File is opened with O_PATH; almost nothing can be done with it */
 #define FMODE_PATH		((__force fmode_t)0x4000)
+
+/* File hasn't page cache and can't be mmaped, for stackable filesystem */
+#define FMODE_NONMAPPABLE        ((__force fmode_t)0x400000)
+   
+/* File page don't need to be cached, for stackable filesystem's lower file */
+#define FMODE_NONCACHEABLE     ((__force fmode_t)0x800000)
 
 /* File was opened by fanotify and shouldn't generate fanotify events */
 #define FMODE_NONOTIFY		((__force fmode_t)0x1000000)
@@ -364,7 +371,7 @@ struct address_space_operations {
 
 	/* Unfortunately this kludge is needed for FIBMAP. Don't use it */
 	sector_t (*bmap)(struct address_space *, sector_t);
-	void (*invalidatepage) (struct page *, unsigned int, unsigned int);
+	void (*invalidatepage) (struct page *, unsigned long);
 	int (*releasepage) (struct page *, gfp_t);
 	void (*freepage)(struct page *);
 	ssize_t (*direct_IO)(int, struct kiocb *, const struct iovec *iov,
@@ -420,6 +427,21 @@ struct address_space {
 	spinlock_t		private_lock;	/* for use by the address_space */
 	struct list_head	private_list;	/* ditto */
 	void			*private_data;	/* ditto */
+#if defined(CONFIG_MMC_DW_FMP_ECRYPT_FS) || defined(CONFIG_UFS_FMP_ECRYPT_FS)
+	unsigned char		*iv;		/* iv */
+	unsigned char		*key;		/* key */
+	unsigned long		key_length;	/* key length */
+	char			*alg;		/* algorithm */
+	pgoff_t			sensitive_data_index;	/* data starts here */
+	struct crypto_hash	*hash_tfm;	/* hash transform */
+#ifdef CONFIG_CRYPTO_FIPS
+	bool			cc_enable;	/* cc flag */
+#endif
+	bool			plain_text;	/* plain text flag */
+#endif
+#ifdef CONFIG_SDP
+	int userid;
+#endif
 } __attribute__((aligned(sizeof(long))));
 	/*
 	 * On most architectures that alignment is already the case; but
@@ -631,13 +653,8 @@ enum inode_i_mutex_lock_class
 	I_MUTEX_PARENT,
 	I_MUTEX_CHILD,
 	I_MUTEX_XATTR,
-	I_MUTEX_QUOTA,
-	I_MUTEX_NONDIR2,
-	I_MUTEX_PARENT2,
+	I_MUTEX_QUOTA
 };
-
-void lock_two_nondirectories(struct inode *, struct inode*);
-void unlock_two_nondirectories(struct inode *, struct inode*);
 
 /*
  * NOTE: in a 32bit arch with a preemptable kernel and
@@ -766,12 +783,8 @@ static inline int ra_has_index(struct file_ra_state *ra, pgoff_t index)
 #define FILE_MNT_WRITE_RELEASED	2
 
 struct file {
-	/*
-	 * fu_list becomes invalid after file_free is called and queued via
-	 * fu_rcuhead for RCU freeing
-	 */
 	union {
-		struct list_head	fu_list;
+		struct llist_node	fu_llist;
 		struct rcu_head 	fu_rcuhead;
 	} f_u;
 	struct path		f_path;
@@ -784,9 +797,6 @@ struct file {
 	 * Must not be taken from IRQ context.
 	 */
 	spinlock_t		f_lock;
-#ifdef CONFIG_SMP
-	int			f_sb_list_cpu;
-#endif
 	atomic_long_t		f_count;
 	unsigned int 		f_flags;
 	fmode_t			f_mode;
@@ -1262,11 +1272,6 @@ struct super_block {
 
 	struct list_head	s_inodes;	/* all inodes */
 	struct hlist_bl_head	s_anon;		/* anonymous dentries for (nfs) exporting */
-#ifdef CONFIG_SMP
-	struct list_head __percpu *s_files;
-#else
-	struct list_head	s_files;
-#endif
 	struct list_head	s_mounts;	/* list of mounts; _not_ for fs use */
 	/* s_dentry_lru, s_nr_dentry_unused protected by dcache.c lru locks */
 	struct list_head	s_dentry_lru;	/* unused dentry lru */
@@ -1327,9 +1332,6 @@ struct super_block {
 
 	/* Being remounted read-only */
 	int s_readonly_remount;
-
-	/* AIO completions deferred from interrupt context */
-	struct workqueue_struct *s_dio_done_wq;
 };
 
 /* superblock cache pruning functions */
@@ -1465,6 +1467,7 @@ extern int vfs_mkdir2(struct vfsmount *, struct inode *, struct dentry *, umode_
 extern int vfs_mknod(struct inode *, struct dentry *, umode_t, dev_t);
 extern int vfs_mknod2(struct vfsmount *, struct inode *, struct dentry *, umode_t, dev_t);
 extern int vfs_symlink(struct inode *, struct dentry *, const char *);
+extern int vfs_symlink2(struct vfsmount *, struct inode *, struct dentry *, const char *);
 extern int vfs_link(struct dentry *, struct inode *, struct dentry *);
 extern int vfs_link2(struct vfsmount *, struct dentry *, struct inode *, struct dentry *);
 extern int vfs_rmdir(struct inode *, struct dentry *);
@@ -1521,17 +1524,6 @@ int fiemap_check_flags(struct fiemap_extent_info *fieinfo, u32 fs_flags);
  * to have different dirent layouts depending on the binary type.
  */
 typedef int (*filldir_t)(void *, const char *, int, loff_t, u64, unsigned);
-struct dir_context {
-	const filldir_t actor;
-	loff_t pos;
-};
-
-static inline bool dir_emit(struct dir_context *ctx,
-			    const char *name, int namelen,
-			    u64 ino, unsigned type)
-{
-	return ctx->actor(ctx, name, namelen, ctx->pos, ino, type) == 0;
-}
 struct block_device_operations;
 
 /* These macros are for out of kernel modules to test that
@@ -1548,7 +1540,6 @@ struct file_operations {
 	ssize_t (*aio_read) (struct kiocb *, const struct iovec *, unsigned long, loff_t);
 	ssize_t (*aio_write) (struct kiocb *, const struct iovec *, unsigned long, loff_t);
 	int (*readdir) (struct file *, void *, filldir_t);
-	int (*iterate) (struct file *, struct dir_context *);
 	unsigned int (*poll) (struct file *, struct poll_table_struct *);
 	long (*unlocked_ioctl) (struct file *, unsigned int, unsigned long);
 	long (*compat_ioctl) (struct file *, unsigned int, unsigned long);
@@ -1570,6 +1561,8 @@ struct file_operations {
 	long (*fallocate)(struct file *file, int mode, loff_t offset,
 			  loff_t len);
 	int (*show_fdinfo)(struct seq_file *m, struct file *f);
+	/* get_lower_file is for stackable file system */
+	struct file* (*get_lower_file)(struct file *f);
 };
 
 struct inode_operations {
@@ -1591,6 +1584,8 @@ struct inode_operations {
 	int (*mknod) (struct inode *,struct dentry *,umode_t,dev_t);
 	int (*rename) (struct inode *, struct dentry *,
 			struct inode *, struct dentry *);
+	int (*rename2) (struct inode *, struct dentry *,
+			struct inode *, struct dentry *, unsigned int);
 	int (*setattr) (struct dentry *, struct iattr *);
 	int (*setattr2) (struct vfsmount *, struct dentry *, struct iattr *);
 	int (*getattr) (struct vfsmount *mnt, struct dentry *, struct kstat *);
@@ -1638,7 +1633,7 @@ struct super_operations {
 	void (*umount_begin) (struct super_block *);
 
 	int (*show_options)(struct seq_file *, struct dentry *);
-	int (*show_options2)(struct vfsmount *,struct seq_file *, struct dentry *);
+	int (*show_options2)(struct vfsmount *, struct seq_file *, struct dentry *);
 	int (*show_devname)(struct seq_file *, struct dentry *);
 	int (*show_path)(struct seq_file *, struct dentry *);
 	int (*show_stats)(struct seq_file *, struct dentry *);
@@ -1649,6 +1644,7 @@ struct super_operations {
 	int (*bdev_try_to_free_page)(struct super_block*, struct page*, gfp_t);
 	int (*nr_cached_objects)(struct super_block *);
 	void (*free_cached_objects)(struct super_block *, int);
+	long (*unlink_callback)(struct super_block *, char *);
 };
 
 /*
@@ -2241,6 +2237,8 @@ extern int vfs_fsync(struct file *file, int datasync);
 extern int generic_write_sync(struct file *file, loff_t pos, loff_t count);
 extern void emergency_sync(void);
 extern void emergency_remount(void);
+extern int intr_sync(int *);
+
 #ifdef CONFIG_BLOCK
 extern sector_t bmap(struct inode *, sector_t);
 #endif
@@ -2248,6 +2246,8 @@ extern int notify_change(struct dentry *, struct iattr *);
 extern int notify_change2(struct vfsmount *, struct dentry *, struct iattr *);
 extern int inode_permission(struct inode *, int);
 extern int inode_permission2(struct vfsmount *, struct inode *, int);
+extern int __inode_permission(struct inode *, int);
+extern int __inode_permission2(struct vfsmount *, struct inode *, int);
 extern int generic_permission(struct inode *, int);
 
 static inline bool execute_ok(struct inode *inode)
@@ -2511,9 +2511,6 @@ static inline ssize_t blockdev_direct_IO(int rw, struct kiocb *iocb,
 void inode_dio_wait(struct inode *inode);
 void inode_dio_done(struct inode *inode);
 
-extern void inode_set_flags(struct inode *inode, unsigned int flags,
-			    unsigned int mask);
-
 extern const struct file_operations generic_ro_fops;
 
 #define special_file(m) (S_ISCHR(m)||S_ISBLK(m)||S_ISFIFO(m)||S_ISSOCK(m))
@@ -2532,12 +2529,12 @@ extern void generic_fillattr(struct inode *, struct kstat *);
 extern int vfs_getattr(struct path *, struct kstat *);
 void __inode_add_bytes(struct inode *inode, loff_t bytes);
 void inode_add_bytes(struct inode *inode, loff_t bytes);
+void __inode_sub_bytes(struct inode *inode, loff_t bytes);
 void inode_sub_bytes(struct inode *inode, loff_t bytes);
 loff_t inode_get_bytes(struct inode *inode);
 void inode_set_bytes(struct inode *inode, loff_t bytes);
 
 extern int vfs_readdir(struct file *, filldir_t, void *);
-extern int iterate_dir(struct file *, struct dir_context *);
 
 extern int vfs_stat(const char __user *, struct kstat *);
 extern int vfs_lstat(const char __user *, struct kstat *);
@@ -2730,13 +2727,6 @@ static inline void inode_has_no_xattr(struct inode *inode)
 {
 	if (!is_sxid(inode->i_mode) && (inode->i_sb->s_flags & MS_NOSEC))
 		inode->i_flags |= S_NOSEC;
-}
-
-static inline bool dir_relax(struct inode *inode)
-{
-	mutex_unlock(&inode->i_mutex);
-	mutex_lock(&inode->i_mutex);
-	return !IS_DEADDIR(inode);
 }
 
 #endif /* _LINUX_FS_H */

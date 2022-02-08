@@ -1012,6 +1012,10 @@ void dccp_close(struct sock *sk, long timeout)
 		__kfree_skb(skb);
 	}
 
+	/* If socket has been already reset kill it. */
+	if (sk->sk_state == DCCP_CLOSED)
+		goto adjudge_to_death;
+
 	if (data_was_unread) {
 		/* Unread data was tossed, send an appropriate Reset Code */
 		DCCP_WARN("ABORT with %u bytes unread\n", data_was_unread);
@@ -1158,10 +1162,8 @@ static int __init dccp_init(void)
 		goto out_free_bind_bucket_cachep;
 	}
 
-	for (i = 0; i <= dccp_hashinfo.ehash_mask; i++) {
+	for (i = 0; i <= dccp_hashinfo.ehash_mask; i++)
 		INIT_HLIST_NULLS_HEAD(&dccp_hashinfo.ehash[i].chain, i);
-		INIT_HLIST_NULLS_HEAD(&dccp_hashinfo.ehash[i].twchain, i);
-	}
 
 	if (inet_ehash_locks_alloc(&dccp_hashinfo))
 			goto out_free_dccp_ehash;

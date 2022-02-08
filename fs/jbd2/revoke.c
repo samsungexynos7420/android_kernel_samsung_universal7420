@@ -91,9 +91,8 @@
 #include <linux/list.h>
 #include <linux/init.h>
 #include <linux/bio.h>
-#include <linux/log2.h>
-#include <linux/hash.h>
 #endif
+#include <linux/log2.h>
 
 static struct kmem_cache *jbd2_revoke_record_cache;
 static struct kmem_cache *jbd2_revoke_table_cache;
@@ -131,9 +130,16 @@ static void flush_descriptor(journal_t *, struct buffer_head *, int, int);
 
 /* Utility functions to maintain the revoke table */
 
+/* Borrowed from buffer.c: this is a tried and tested block hash function */
 static inline int hash(journal_t *journal, unsigned long long block)
 {
-	return hash_64(block, journal->j_revoke->hash_shift);
+	struct jbd2_revoke_table_s *table = journal->j_revoke;
+	int hash_shift = table->hash_shift;
+	int hash = (int)block ^ (int)((block >> 31) >> 1);
+
+	return ((hash << (hash_shift - 6)) ^
+		(hash >> 13) ^
+		(hash << (hash_shift - 12))) & (table->hash_size - 1);
 }
 
 static int insert_revoke_hash(journal_t *journal, unsigned long long blocknr,
@@ -591,7 +597,7 @@ static void write_one_revoke_record(journal_t *journal,
 	offset = *offsetp;
 
 	/* Do we need to leave space at the end for a checksum? */
-	if (jbd2_journal_has_csum_v2or3(journal))
+	if (JBD2_HAS_INCOMPAT_FEATURE(journal, JBD2_FEATURE_INCOMPAT_CSUM_V2))
 		csum_size = sizeof(struct jbd2_journal_revoke_tail);
 
 	/* Make sure we have a descriptor with space left for the record */
@@ -638,7 +644,7 @@ static void jbd2_revoke_csum_set(journal_t *j, struct buffer_head *bh)
 	struct jbd2_journal_revoke_tail *tail;
 	__u32 csum;
 
-	if (!jbd2_journal_has_csum_v2or3(j))
+	if (!JBD2_HAS_INCOMPAT_FEATURE(j, JBD2_FEATURE_INCOMPAT_CSUM_V2))
 		return;
 
 	tail = (struct jbd2_journal_revoke_tail *)(bh->b_data + j->j_blocksize -
@@ -673,6 +679,10 @@ static void flush_descriptor(journal_t *journal,
 	set_buffer_jwrite(descriptor);
 	BUFFER_TRACE(descriptor, "write");
 	set_buffer_dirty(descriptor);
+#ifdef CONFIG_JOURNAL_DATA_TAG
+	if (journal->j_flags & JBD2_JOURNAL_TAG)
+		set_buffer_journal(descriptor);
+#endif
 	write_dirty_buffer(descriptor, write_op);
 }
 #endif

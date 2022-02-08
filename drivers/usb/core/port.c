@@ -86,25 +86,22 @@ static int usb_port_runtime_resume(struct device *dev)
 	usb_autopm_get_interface(intf);
 	set_bit(port1, hub->busy_bits);
 
-	retval = usb_hub_set_port_power(hdev, port1, true);
+	retval = usb_hub_set_port_power(hdev, hub, port1, true);
 	if (port_dev->child && !retval) {
 		/*
-		 * Wait for usb hub port to be reconnected in order to make
-		 * the resume procedure successful.
+		 * Attempt to wait for usb hub port to be reconnected in order
+		 * to make the resume procedure successful.  The device may have
+		 * disconnected while the port was powered off, so ignore the
+		 * return status.
 		 */
 		retval = hub_port_debounce_be_connected(hub, port1);
-		if (retval < 0) {
+		if (retval < 0)
 			dev_dbg(&port_dev->dev, "can't get reconnection after setting port  power on, status %d\n",
 					retval);
-			goto out;
-		}
 		usb_clear_port_feature(hdev, port1, USB_PORT_FEAT_C_ENABLE);
-
-		/* Set return value to 0 if debounce successful */
 		retval = 0;
 	}
 
-out:
 	clear_bit(port1, hub->busy_bits);
 	usb_autopm_put_interface(intf);
 	return retval;
@@ -128,7 +125,7 @@ static int usb_port_runtime_suspend(struct device *dev)
 
 	usb_autopm_get_interface(intf);
 	set_bit(port1, hub->busy_bits);
-	retval = usb_hub_set_port_power(hdev, port1, false);
+	retval = usb_hub_set_port_power(hdev, hub, port1, false);
 	usb_clear_port_feature(hdev, port1, USB_PORT_FEAT_C_CONNECTION);
 	usb_clear_port_feature(hdev, port1,	USB_PORT_FEAT_C_ENABLE);
 	clear_bit(port1, hub->busy_bits);

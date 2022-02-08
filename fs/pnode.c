@@ -13,6 +13,10 @@
 #include "internal.h"
 #include "pnode.h"
 
+#ifdef CONFIG_RKP_NS_PROT
+void rkp_set_mnt_flags(struct vfsmount *mnt,int flags);
+void rkp_reset_mnt_flags(struct vfsmount *mnt,int flags);
+#endif
 /* return the next shared peer mount of @p */
 static inline struct mount *next_peer(struct mount *p)
 {
@@ -37,7 +41,11 @@ static struct mount *get_peer_under_root(struct mount *mnt,
 
 	do {
 		/* Check the namespace first for optimization */
+#ifdef CONFIG_RKP_NS_PROT
+		if (m->mnt_ns == ns && is_path_reachable(m, m->mnt->mnt_root, root))
+#else
 		if (m->mnt_ns == ns && is_path_reachable(m, m->mnt.mnt_root, root))
+#endif
 			return m;
 
 		m = next_peer(m);
@@ -76,7 +84,11 @@ static int do_make_slave(struct mount *mnt)
 	 * slave it to anything that is available.
 	 */
 	while ((peer_mnt = next_peer(peer_mnt)) != mnt &&
+#ifdef CONFIG_RKP_NS_PROT
+	       peer_mnt->mnt->mnt_root != mnt->mnt->mnt_root) ;
+#else
 	       peer_mnt->mnt.mnt_root != mnt->mnt.mnt_root) ;
+#endif
 
 	if (peer_mnt == mnt) {
 		peer_mnt = next_peer(mnt);
@@ -126,10 +138,20 @@ void change_mnt_propagation(struct mount *mnt, int type)
 	if (type != MS_SLAVE) {
 		list_del_init(&mnt->mnt_slave);
 		mnt->mnt_master = NULL;
-		if (type == MS_UNBINDABLE)
+		if (type == MS_UNBINDABLE) {
+#ifdef CONFIG_RKP_NS_PROT
+			rkp_set_mnt_flags(mnt->mnt,MNT_UNBINDABLE);
+#else
 			mnt->mnt.mnt_flags |= MNT_UNBINDABLE;
-		else
+#endif
+		}
+		else {
+#ifdef CONFIG_RKP_NS_PROT
+			rkp_reset_mnt_flags(mnt->mnt,MNT_UNBINDABLE);
+#else
 			mnt->mnt.mnt_flags &= ~MNT_UNBINDABLE;
+#endif
+		}
 	}
 }
 
@@ -164,94 +186,46 @@ static struct mount *propagation_next(struct mount *m,
 	}
 }
 
-static struct mount *next_group(struct mount *m, struct mount *origin)
+/*
+ * return the source mount to be used for cloning
+ *
+ * @dest 	the current destination mount
+ * @last_dest  	the last seen destination mount
+ * @last_src  	the last seen source mount
+ * @type	return CL_SLAVE if the new mount has to be
+ * 		cloned as a slave.
+ */
+static struct mount *get_source(struct mount *dest,
+				struct mount *last_dest,
+				struct mount *last_src,
+				int *type)
 {
-	while (1) {
-		while (1) {
-			struct mount *next;
-			if (!IS_MNT_NEW(m) && !list_empty(&m->mnt_slave_list))
-				return first_slave(m);
-			next = next_peer(m);
-			if (m->mnt_group_id == origin->mnt_group_id) {
-				if (next == origin)
-					return NULL;
-			} else if (m->mnt_slave.next != &next->mnt_slave)
-				break;
-			m = next;
-		}
-		/* m is the last peer */
-		while (1) {
-			struct mount *master = m->mnt_master;
-			if (m->mnt_slave.next != &master->mnt_slave_list)
-				return next_slave(m);
-			m = next_peer(master);
-			if (master->mnt_group_id == origin->mnt_group_id)
-				break;
-			if (master->mnt_slave.next == &m->mnt_slave)
-				break;
-			m = master;
-		}
-		if (m == origin)
-			return NULL;
-	}
-}
+	struct mount *p_last_src = NULL;
+	struct mount *p_last_dest = NULL;
 
-/* all accesses are serialized by namespace_sem */
-static struct user_namespace *user_ns;
-static struct mount *last_dest, *last_source, *dest_master;
-static struct mountpoint *mp;
-static struct list_head *list;
+	while (last_dest != dest->mnt_master) {
+		p_last_dest = last_dest;
+		p_last_src = last_src;
+		last_dest = last_dest->mnt_master;
+		last_src = last_src->mnt_master;
+	}
 
-static int propagate_one(struct mount *m)
-{
-	struct mount *child;
-	int type;
-	/* skip ones added by this propagate_mnt() */
-	if (IS_MNT_NEW(m))
-		return 0;
-	/* skip if mountpoint isn't covered by it */
-	if (!is_subdir(mp->m_dentry, m->mnt.mnt_root))
-		return 0;
-	if (m->mnt_group_id == last_dest->mnt_group_id) {
-		type = CL_MAKE_SHARED;
-	} else {
-		struct mount *n, *p;
-		for (n = m; ; n = p) {
-			p = n->mnt_master;
-			if (p == dest_master || IS_MNT_MARKED(p)) {
-				while (last_dest->mnt_master != p) {
-					last_source = last_source->mnt_master;
-					last_dest = last_source->mnt_parent;
-				}
-				if (n->mnt_group_id != last_dest->mnt_group_id) {
-					last_source = last_source->mnt_master;
-					last_dest = last_source->mnt_parent;
-				}
-				break;
-			}
+	if (p_last_dest) {
+		do {
+			p_last_dest = next_peer(p_last_dest);
+		} while (IS_MNT_NEW(p_last_dest));
+		/* is that a peer of the earlier? */
+		if (dest == p_last_dest) {
+			*type = CL_MAKE_SHARED;
+			return p_last_src;
 		}
-		type = CL_SLAVE;
-		/* beginning of peer group among the slaves? */
-		if (IS_MNT_SHARED(m))
-			type |= CL_MAKE_SHARED;
 	}
-		
-	/* Notice when we are propagating across user namespaces */
-	if (m->mnt_ns->user_ns != user_ns)
-		type |= CL_UNPRIVILEGED;
-	child = copy_tree(last_source, last_source->mnt.mnt_root, type);
-	if (IS_ERR(child))
-		return PTR_ERR(child);
-	mnt_set_mountpoint(m, mp, child);
-	last_dest = m;
-	last_source = child;
-	if (m->mnt_master != dest_master) {
-		br_write_lock(&vfsmount_lock);
-		SET_MNT_MARK(m->mnt_master);
-		br_write_unlock(&vfsmount_lock);
-	}
-	list_add_tail(&child->mnt_hash, list);
-	return 0;
+	/* slave of the earlier, then */
+	*type = CL_SLAVE;
+	/* beginning of peer group among the slaves? */
+	if (IS_MNT_SHARED(dest))
+		*type |= CL_MAKE_SHARED;
+	return last_src;
 }
 
 /*
@@ -270,46 +244,58 @@ static int propagate_one(struct mount *m)
 int propagate_mnt(struct mount *dest_mnt, struct mountpoint *dest_mp,
 		    struct mount *source_mnt, struct list_head *tree_list)
 {
-	struct mount *m, *n;
+	struct user_namespace *user_ns = current->nsproxy->mnt_ns->user_ns;
+	struct mount *m, *child;
 	int ret = 0;
+	struct mount *prev_dest_mnt = dest_mnt;
+	struct mount *prev_src_mnt  = source_mnt;
+	LIST_HEAD(tmp_list);
 
-	/*
-	 * we don't want to bother passing tons of arguments to
-	 * propagate_one(); everything is serialized by namespace_sem,
-	 * so globals will do just fine.
-	 */
-	user_ns = current->nsproxy->mnt_ns->user_ns;
-	last_dest = dest_mnt;
-	last_source = source_mnt;
-	mp = dest_mp;
-	list = tree_list;
-	dest_master = dest_mnt->mnt_master;
+	for (m = propagation_next(dest_mnt, dest_mnt); m;
+			m = propagation_next(m, dest_mnt)) {
+		int type;
+		struct mount *source;
 
-	/* all peers of dest_mnt, except dest_mnt itself */
-	for (n = next_peer(dest_mnt); n != dest_mnt; n = next_peer(n)) {
-		ret = propagate_one(n);
-		if (ret)
+		if (IS_MNT_NEW(m))
+			continue;
+
+		source =  get_source(m, prev_dest_mnt, prev_src_mnt, &type);
+
+		/* Notice when we are propagating across user namespaces */
+		if (m->mnt_ns->user_ns != user_ns)
+			type |= CL_UNPRIVILEGED;
+#ifdef CONFIG_RKP_NS_PROT
+		child = copy_tree(source, source->mnt->mnt_root, type);
+#else
+		child = copy_tree(source, source->mnt.mnt_root, type);
+#endif
+		if (IS_ERR(child)) {
+			ret = PTR_ERR(child);
+			list_splice(tree_list, tmp_list.prev);
 			goto out;
-	}
-
-	/* all slave groups */
-	for (m = next_group(dest_mnt, dest_mnt); m;
-			m = next_group(m, dest_mnt)) {
-		/* everything in that slave group */
-		n = m;
-		do {
-			ret = propagate_one(n);
-			if (ret)
-				goto out;
-			n = next_peer(n);
-		} while (n != m);
+		}
+#ifdef CONFIG_RKP_NS_PROT
+		if (is_subdir(dest_mp->m_dentry, m->mnt->mnt_root)) {
+#else
+		if (is_subdir(dest_mp->m_dentry, m->mnt.mnt_root)) {
+#endif
+			mnt_set_mountpoint(m, dest_mp, child);
+			list_add_tail(&child->mnt_hash, tree_list);
+		} else {
+			/*
+			 * This can happen if the parent mount was bind mounted
+			 * on some subdirectory of a shared/slave mount.
+			 */
+			list_add_tail(&child->mnt_hash, &tmp_list);
+		}
+		prev_dest_mnt = m;
+		prev_src_mnt  = child;
 	}
 out:
 	br_write_lock(&vfsmount_lock);
-	list_for_each_entry(n, tree_list, mnt_hash) {
-		m = n->mnt_parent;
-		if (m->mnt_master != dest_mnt->mnt_master)
-			CLEAR_MNT_MARK(m->mnt_master);
+	while (!list_empty(&tmp_list)) {
+		child = list_first_entry(&tmp_list, struct mount, mnt_hash);
+		umount_tree(child, 0);
 	}
 	br_write_unlock(&vfsmount_lock);
 	return ret;
@@ -353,7 +339,11 @@ int propagate_mount_busy(struct mount *mnt, int refcnt)
 
 	for (m = propagation_next(parent, parent); m;
 	     		m = propagation_next(m, parent)) {
+#ifdef CONFIG_RKP_NS_PROT
+		child = __lookup_mnt(m->mnt, mnt->mnt_mountpoint, 0);
+#else
 		child = __lookup_mnt(&m->mnt, mnt->mnt_mountpoint, 0);
+#endif
 		if (child && list_empty(&child->mnt_mounts) &&
 		    (ret = do_refcount_check(child, 1)))
 			break;
@@ -374,9 +364,13 @@ static void __propagate_umount(struct mount *mnt)
 
 	for (m = propagation_next(parent, parent); m;
 			m = propagation_next(m, parent)) {
-
+#ifdef CONFIG_RKP_NS_PROT
+		struct mount *child = __lookup_mnt(m->mnt,
+					mnt->mnt_mountpoint, 0);
+#else
 		struct mount *child = __lookup_mnt(&m->mnt,
 					mnt->mnt_mountpoint, 0);
+#endif
 		/*
 		 * umount the child only if the child has no
 		 * other children
@@ -425,13 +419,23 @@ static struct mount *next_descendent(struct mount *root, struct mount *cur)
 void propagate_remount(struct mount *mnt)
 {
 	struct mount *m = mnt;
-	struct super_block *sb = mnt->mnt.mnt_sb;
+#ifdef CONFIG_RKP_NS_PROT
+    struct super_block *sb = mnt->mnt->mnt_sb;
+#else
+    struct super_block *sb = mnt->mnt.mnt_sb;
+#endif
 
 	if (sb->s_op->copy_mnt_data) {
 		m = next_descendent(mnt, m);
 		while (m) {
+#ifdef CONFIG_RKP_NS_PROT
+			sb->s_op->copy_mnt_data(m->mnt->data, mnt->mnt->data);
+#else
 			sb->s_op->copy_mnt_data(m->mnt.data, mnt->mnt.data);
+#endif
 			m = next_descendent(mnt, m);
 		}
 	}
 }
+
+

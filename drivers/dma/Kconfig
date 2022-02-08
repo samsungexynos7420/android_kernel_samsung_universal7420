@@ -233,6 +233,11 @@ config PL330_DMA
 	  You need to provide platform specific settings via
 	  platform_data for a dma-pl330 device.
 
+config PL330TEST_LOG
+	bool "pl330 test log"
+	default 0
+	depends on PL330_DMA
+
 config PCH_DMA
 	tristate "Intel EG20T PCH / LAPIS Semicon IOH(ML7213/ML7223/ML7831) DMA"
 	depends on PCI && X86
@@ -333,6 +338,7 @@ config NET_DMA
 	bool "Network: TCP receive copy offload"
 	depends on DMA_ENGINE && NET
 	default (INTEL_IOATDMA || FSL_DMA)
+	depends on BROKEN
 	help
 	  This enables the use of DMA engines in the network stack to
 	  offload receive copy-to-user operations, freeing CPU cycles.

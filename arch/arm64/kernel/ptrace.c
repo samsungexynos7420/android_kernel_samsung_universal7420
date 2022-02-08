@@ -45,6 +45,9 @@
 #include <asm/traps.h>
 #include <asm/system_misc.h>
 
+#define CREATE_TRACE_POINTS
+#include <trace/events/syscalls.h>
+
 /*
  * TODO: does not yet catch signals sent when the child dies.
  * in exit.c or in signal.c.
@@ -85,7 +88,8 @@ static void ptrace_hbptriggered(struct perf_event *bp,
 			break;
 		}
 	}
-	for (i = ARM_MAX_BRP; i < ARM_MAX_HBP_SLOTS && !bp; ++i) {
+
+	for (i = 0; i < ARM_MAX_WRP; ++i) {
 		if (current->thread.debug.hbp_watch[i] == bp) {
 			info.si_errno = -((i << 1) + 1);
 			break;
@@ -216,34 +220,31 @@ static int ptrace_hbp_fill_attr_ctrl(unsigned int note_type,
 				     struct arch_hw_breakpoint_ctrl ctrl,
 				     struct perf_event_attr *attr)
 {
-	int err, len, type, offset, disabled = !ctrl.enabled;
+	int err, len, type, disabled = !ctrl.enabled;
 
-	if (disabled) {
-		len = 0;
-		type = HW_BREAKPOINT_EMPTY;
-        } else {
-		err = arch_bp_generic_fields(ctrl, &len, &type, &offset);
-		if (err)
-			return err;
+	attr->disabled = disabled;
+	if (disabled)
+		return 0;
 
-		switch (note_type) {
-		case NT_ARM_HW_BREAK:
-			if ((type & HW_BREAKPOINT_X) != type)
-				return -EINVAL;
-			break;
-		case NT_ARM_HW_WATCH:
-			if ((type & HW_BREAKPOINT_RW) != type)
-				return -EINVAL;
-			break;
-		default:
+	err = arch_bp_generic_fields(ctrl, &len, &type);
+	if (err)
+		return err;
+
+	switch (note_type) {
+	case NT_ARM_HW_BREAK:
+		if ((type & HW_BREAKPOINT_X) != type)
 			return -EINVAL;
-		}
+		break;
+	case NT_ARM_HW_WATCH:
+		if ((type & HW_BREAKPOINT_RW) != type)
+			return -EINVAL;
+		break;
+	default:
+		return -EINVAL;
 	}
 
 	attr->bp_len	= len;
 	attr->bp_type	= type;
-	attr->disabled	= disabled;
-	attr->bp_addr	+= offset;
 
 	return 0;
 }
@@ -296,7 +297,7 @@ static int ptrace_hbp_get_addr(unsigned int note_type,
 	if (IS_ERR(bp))
 		return PTR_ERR(bp);
 
-	*addr = bp ? counter_arch_bp(bp)->address : 0;
+	*addr = bp ? bp->attr.bp_addr : 0;
 	return 0;
 }
 
@@ -442,6 +443,8 @@ static int hw_break_set(struct task_struct *target,
 	/* (address, ctrl) registers */
 	limit = regset->n * regset->size;
 	while (count && offset < limit) {
+		if (count < PTRACE_HBP_ADDR_SZ)
+			return -EINVAL;
 		ret = user_regset_copyin(&pos, &count, &kbuf, &ubuf, &addr,
 					 offset, offset + PTRACE_HBP_ADDR_SZ);
 		if (ret)
@@ -451,6 +454,8 @@ static int hw_break_set(struct task_struct *target,
 			return ret;
 		offset += PTRACE_HBP_ADDR_SZ;
 
+		if (!count)
+			break;
 		ret = user_regset_copyin(&pos, &count, &kbuf, &ubuf, &ctrl,
 					 offset, offset + PTRACE_HBP_CTRL_SZ);
 		if (ret)
@@ -487,7 +492,7 @@ static int gpr_set(struct task_struct *target, const struct user_regset *regset,
 		   const void *kbuf, const void __user *ubuf)
 {
 	int ret;
-	struct user_pt_regs newregs;
+	struct user_pt_regs newregs = task_pt_regs(target)->user_regs;
 
 	ret = user_regset_copyin(&pos, &count, &kbuf, &ubuf, &newregs, 0, -1);
 	if (ret)
@@ -517,14 +522,14 @@ static int fpr_set(struct task_struct *target, const struct user_regset *regset,
 		   const void *kbuf, const void __user *ubuf)
 {
 	int ret;
-	struct user_fpsimd_state newstate;
+	struct user_fpsimd_state newstate =
+		target->thread.fpsimd_state.user_fpsimd;
 
 	ret = user_regset_copyin(&pos, &count, &kbuf, &ubuf, &newstate, 0, -1);
 	if (ret)
 		return ret;
 
 	target->thread.fpsimd_state.user_fpsimd = newstate;
-	fpsimd_flush_task_state(target);
 	return ret;
 }
 
@@ -541,7 +546,7 @@ static int tls_set(struct task_struct *target, const struct user_regset *regset,
 		   const void *kbuf, const void __user *ubuf)
 {
 	int ret;
-	unsigned long tls;
+	unsigned long tls = target->thread.tp_value;
 
 	ret = user_regset_copyin(&pos, &count, &kbuf, &ubuf, &tls, 0, -1);
 	if (ret)
@@ -658,18 +663,11 @@ static int compat_gpr_get(struct task_struct *target,
 			reg = task_pt_regs(target)->regs[idx];
 		}
 
-		if (kbuf) {
-			memcpy(kbuf, &reg, sizeof(reg));
-			kbuf += sizeof(reg);
-		} else {
-			ret = copy_to_user(ubuf, &reg, sizeof(reg));
-			if (ret) {
-				ret = -EFAULT;
-				break;
-			}
+		ret = copy_to_user(ubuf, &reg, sizeof(reg));
+		if (ret)
+			break;
 
-			ubuf += sizeof(reg);
-		}
+		ubuf += sizeof(reg);
 	}
 
 	return ret;
@@ -699,18 +697,11 @@ static int compat_gpr_set(struct task_struct *target,
 		unsigned int idx = start + i;
 		compat_ulong_t reg;
 
-		if (kbuf) {
-			memcpy(&reg, kbuf, sizeof(reg));
-			kbuf += sizeof(reg);
-		} else {
-			ret = copy_from_user(&reg, ubuf, sizeof(reg));
-			if (ret) {
-				ret = -EFAULT;
-				break;
-			}
+		ret = copy_from_user(&reg, ubuf, sizeof(reg));
+		if (ret)
+			return ret;
 
-			ubuf += sizeof(reg);
-		}
+		ubuf += sizeof(reg);
 
 		switch (idx) {
 		case 15:
@@ -786,7 +777,6 @@ static int compat_vfp_set(struct task_struct *target,
 		uregs->fpcr = fpscr & VFP_FPSCR_CTRL_MASK;
 	}
 
-	fpsimd_flush_task_state(target);
 	return ret;
 }
 
@@ -844,6 +834,7 @@ static int compat_ptrace_write_user(struct task_struct *tsk, compat_ulong_t off,
 				    compat_ulong_t val)
 {
 	int ret;
+	mm_segment_t old_fs = get_fs();
 
 	if (off & 3 || off >= COMPAT_USER_SZ)
 		return -EIO;
@@ -851,10 +842,13 @@ static int compat_ptrace_write_user(struct task_struct *tsk, compat_ulong_t off,
 	if (off >= sizeof(compat_elf_gregset_t))
 		return 0;
 
+	set_fs(KERNEL_DS);
 	ret = copy_regset_from_user(tsk, &user_aarch32_view,
 				    REGSET_COMPAT_GPR, off,
 				    sizeof(compat_ulong_t),
 				    &val);
+	set_fs(old_fs);
+
 	return ret;
 }
 
@@ -1079,6 +1073,7 @@ long arch_ptrace(struct task_struct *child, long request,
 		 unsigned long addr, unsigned long data)
 {
 	int ret;
+
 
 	switch (request) {
 		case PTRACE_SET_SYSCALL:

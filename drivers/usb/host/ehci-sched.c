@@ -491,7 +491,7 @@ static void qh_link_periodic(struct ehci_hcd *ehci, struct ehci_qh *qh)
 	unsigned	i;
 	unsigned	period = qh->period;
 
-	dev_dbg (&qh->dev->dev,
+	dev_vdbg (&qh->dev->dev,
 		"link qh%d-%04x/%p start %d [%d/%d us]\n",
 		period, hc32_to_cpup(ehci, &qh->hw->hw_info2)
 			& (QH_CMASK | QH_SMASK),
@@ -585,7 +585,7 @@ static void qh_unlink_periodic(struct ehci_hcd *ehci, struct ehci_qh *qh)
 		? ((qh->usecs + qh->c_usecs) / qh->period)
 		: (qh->usecs * 8);
 
-	dev_dbg (&qh->dev->dev,
+	dev_vdbg (&qh->dev->dev,
 		"unlink qh%d-%04x/%p start %d [%d/%d us]\n",
 		qh->period,
 		hc32_to_cpup(ehci, &qh->hw->hw_info2) & (QH_CMASK | QH_SMASK),
@@ -838,7 +838,7 @@ static int qh_schedule(struct ehci_hcd *ehci, struct ehci_qh *qh)
 			: cpu_to_hc32(ehci, QH_SMASK);
 		hw->hw_info2 |= c_mask;
 	} else
-		ehci_dbg (ehci, "reused qh %p schedule\n", qh);
+		ehci_vdbg (ehci, "reused qh %p schedule\n", qh);
 
 done:
 	return status;
@@ -1391,21 +1391,20 @@ iso_stream_schedule (
 
 		/* Behind the scheduling threshold? */
 		if (unlikely(start < next)) {
+			unsigned now2 = (now - base) & (mod - 1);
 
 			/* USB_ISO_ASAP: Round up to the first available slot */
 			if (urb->transfer_flags & URB_ISO_ASAP)
 				start += (next - start + period - 1) & -period;
 
 			/*
-			 * Not ASAP: Use the next slot in the stream.  If
-			 * the entire URB falls before the threshold, fail.
+			 * Not ASAP: Use the next slot in the stream,
+			 * no matter what.
 			 */
-			else if (start + span - period < next) {
-				ehci_dbg(ehci, "iso urb late %p (%u+%u < %u)\n",
+			else if (start + span - period < now2) {
+				ehci_dbg(ehci, "iso underrun %p (%u+%u < %u)\n",
 						urb, start + base,
-						span - period, next + base);
-				status = -EXDEV;
-				goto fail;
+						span - period, now2 + base);
 			}
 		}
 

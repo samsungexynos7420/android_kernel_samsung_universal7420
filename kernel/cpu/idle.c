@@ -13,6 +13,11 @@
 
 static int __read_mostly cpu_idle_force_poll;
 
+#if defined(CONFIG_BATTERY_SWELLING_SELF_DISCHARGING) \
+		&& defined(CONFIG_MACH_UNIVERSAL7420)
+bool bsdchg_cl0_idle_policy_set;
+#endif
+
 void cpu_idle_poll_ctrl(bool enable)
 {
 	if (enable) {
@@ -44,7 +49,7 @@ static inline int cpu_idle_poll(void)
 	rcu_idle_enter();
 	trace_cpu_idle_rcuidle(0, smp_processor_id());
 	local_irq_enable();
-	while (!need_resched())
+	while (!tif_need_resched())
 		cpu_relax();
 	trace_cpu_idle_rcuidle(PWR_EVENT_EXIT, smp_processor_id());
 	rcu_idle_exit();
@@ -67,6 +72,10 @@ void __weak arch_cpu_idle(void)
  */
 static void cpu_idle_loop(void)
 {
+#if defined(CONFIG_BATTERY_SWELLING_SELF_DISCHARGING) \
+		&& defined(CONFIG_MACH_UNIVERSAL7420)
+	bool bsdchg_cpu_idle_force_poll = false;
+#endif
 	while (1) {
 		tick_nohz_idle_enter();
 
@@ -80,6 +89,13 @@ static void cpu_idle_loop(void)
 			local_irq_disable();
 			arch_cpu_idle_enter();
 
+#if defined(CONFIG_BATTERY_SWELLING_SELF_DISCHARGING) \
+		&& defined(CONFIG_MACH_UNIVERSAL7420)
+			if (bsdchg_cl0_idle_policy_set && raw_smp_processor_id() < 1)
+				bsdchg_cpu_idle_force_poll = true;
+			else
+				bsdchg_cpu_idle_force_poll = false;
+#endif
 			/*
 			 * In poll mode we reenable interrupts and spin.
 			 *
@@ -89,11 +105,16 @@ static void cpu_idle_loop(void)
 			 * know that the IPI is going to arrive right
 			 * away
 			 */
+#if defined(CONFIG_BATTERY_SWELLING_SELF_DISCHARGING) \
+		&& defined(CONFIG_MACH_UNIVERSAL7420)
+			if (cpu_idle_force_poll || tick_check_broadcast_expired()
+					||bsdchg_cpu_idle_force_poll) {
+#else
 			if (cpu_idle_force_poll || tick_check_broadcast_expired()) {
+#endif
 				cpu_idle_poll();
 			} else {
-				current_clr_polling();
-				if (!need_resched()) {
+				if (!current_clr_polling_and_test()) {
 					stop_critical_timings();
 					rcu_idle_enter();
 					arch_cpu_idle();
@@ -103,7 +124,7 @@ static void cpu_idle_loop(void)
 				} else {
 					local_irq_enable();
 				}
-				current_set_polling();
+				__current_set_polling();
 			}
 			arch_cpu_idle_exit();
 		}
@@ -129,7 +150,7 @@ void cpu_startup_entry(enum cpuhp_state state)
 	 */
 	boot_init_stack_canary();
 #endif
-	current_set_polling();
+	__current_set_polling();
 	arch_cpu_idle_prepare();
 	cpu_idle_loop();
 }

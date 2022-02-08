@@ -462,6 +462,7 @@ static void __relink_lru(struct dm_buffer *b, int dirty)
 	c->n_buffers[dirty]++;
 	b->list_mode = dirty;
 	list_move(&b->lru_list, &c->lru[dirty]);
+	b->last_accessed = jiffies;
 }
 
 /*----------------------------------------------------------------
@@ -528,6 +529,19 @@ static void use_dmio(struct dm_buffer *b, int rw, sector_t block,
 		end_io(&b->bio, r);
 }
 
+static void inline_endio(struct bio *bio, int error)
+{
+	bio_end_io_t *end_fn = bio->bi_private;
+
+	/*
+	 * Reset the bio to free any attached resources
+	 * (e.g. bio integrity profiles).
+	 */
+	bio_reset(bio);
+
+	end_fn(bio, error);
+}
+
 static void use_inline_bio(struct dm_buffer *b, int rw, sector_t block,
 			   bio_end_io_t *end_io)
 {
@@ -539,7 +553,12 @@ static void use_inline_bio(struct dm_buffer *b, int rw, sector_t block,
 	b->bio.bi_max_vecs = DM_BUFIO_INLINE_VECS;
 	b->bio.bi_sector = block << b->c->sectors_per_block_bits;
 	b->bio.bi_bdev = b->c->bdev;
-	b->bio.bi_end_io = end_io;
+	b->bio.bi_end_io = inline_endio;
+	/*
+	 * Use of .bi_private isn't a problem here because
+	 * the dm_buffer's inline bio is local to bufio.
+	 */
+	b->bio.bi_private = end_io;
 
 	/*
 	 * We assume that if len >= PAGE_SIZE ptr is page-aligned.
@@ -732,11 +751,13 @@ enum new_flag {
 static struct dm_buffer *__alloc_buffer_wait_no_callback(struct dm_bufio_client *c, enum new_flag nf)
 {
 	struct dm_buffer *b;
+	bool tried_noio_alloc = false;
 
 	/*
 	 * dm-bufio is resistant to allocation failures (it just keeps
 	 * one buffer reserved in cases all the allocations fail).
 	 * So set flags to not try too hard:
+	 *	GFP_NOWAIT: don't sleep and don't release cache
 	 *	GFP_NOIO: don't recurse into the I/O layer
 	 *	__GFP_NORETRY: don't retry and rather return failure
 	 *	__GFP_NOMEMALLOC: don't use emergency reserves
@@ -747,13 +768,22 @@ static struct dm_buffer *__alloc_buffer_wait_no_callback(struct dm_bufio_client 
 	 */
 	while (1) {
 		if (dm_bufio_cache_size_latch != 1) {
-			b = alloc_buffer(c, GFP_NOIO | __GFP_NORETRY | __GFP_NOMEMALLOC | __GFP_NOWARN);
+			b = alloc_buffer(c, GFP_NOWAIT | __GFP_NORETRY | __GFP_NOMEMALLOC | __GFP_NOWARN);
 			if (b)
 				return b;
 		}
 
 		if (nf == NF_PREFETCH)
 			return NULL;
+
+		if (dm_bufio_cache_size_latch != 1 && !tried_noio_alloc) {
+			dm_bufio_unlock(c);
+			b = alloc_buffer(c, GFP_NOIO | __GFP_NORETRY | __GFP_NOMEMALLOC | __GFP_NOWARN);
+			dm_bufio_lock(c);
+			if (b)
+				return b;
+			tried_noio_alloc = true;
+		}
 
 		if (!list_empty(&c->reserved_buffers)) {
 			b = list_entry(c->reserved_buffers.next,
@@ -1660,6 +1690,11 @@ static int __init dm_bufio_init(void)
 {
 	__u64 mem;
 
+	dm_bufio_allocated_kmem_cache = 0;
+	dm_bufio_allocated_get_free_pages = 0;
+	dm_bufio_allocated_vmalloc = 0;
+	dm_bufio_current_allocated = 0;
+
 	memset(&dm_bufio_caches, 0, sizeof dm_bufio_caches);
 	memset(&dm_bufio_cache_names, 0, sizeof dm_bufio_cache_names);
 
@@ -1674,8 +1709,8 @@ static int __init dm_bufio_init(void)
 	 * Get the size of vmalloc space the same way as VMALLOC_TOTAL
 	 * in fs/proc/internal.h
 	 */
-	if (mem > (VMALLOC_END - VMALLOC_START) * DM_BUFIO_VMALLOC_PERCENT / 100)
-		mem = (VMALLOC_END - VMALLOC_START) * DM_BUFIO_VMALLOC_PERCENT / 100;
+	if (mem > (VMALLOC_END - VMALLOC_START) / 100 * DM_BUFIO_VMALLOC_PERCENT)
+		mem = (VMALLOC_END - VMALLOC_START) / 100 * DM_BUFIO_VMALLOC_PERCENT;
 #endif
 
 	dm_bufio_default_cache_size = mem;

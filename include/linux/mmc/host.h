@@ -54,12 +54,15 @@ struct mmc_ios {
 #define MMC_TIMING_LEGACY	0
 #define MMC_TIMING_MMC_HS	1
 #define MMC_TIMING_SD_HS	2
-#define MMC_TIMING_UHS_SDR12	3
-#define MMC_TIMING_UHS_SDR25	4
-#define MMC_TIMING_UHS_SDR50	5
-#define MMC_TIMING_UHS_SDR104	6
-#define MMC_TIMING_UHS_DDR50	7
-#define MMC_TIMING_MMC_HS200	8
+#define MMC_TIMING_UHS_SDR12	MMC_TIMING_LEGACY
+#define MMC_TIMING_UHS_SDR25	MMC_TIMING_SD_HS
+#define MMC_TIMING_UHS_SDR50	3
+#define MMC_TIMING_UHS_SDR104	4
+#define MMC_TIMING_UHS_DDR50	5
+#define MMC_TIMING_MMC_HS200	6
+#define MMC_TIMING_MMC_HS200_DDR	7
+#define MMC_TIMING_MMC_HS200_DDR_ES	8
+#define MMC_TIMING_MMC_HS200_DDR_ULP	9
 
 #define MMC_SDR_MODE		0
 #define MMC_1_2V_DDR_MODE	1
@@ -79,6 +82,7 @@ struct mmc_ios {
 #define MMC_SET_DRIVER_TYPE_A	1
 #define MMC_SET_DRIVER_TYPE_C	2
 #define MMC_SET_DRIVER_TYPE_D	3
+
 };
 
 struct mmc_host_ops {
@@ -147,6 +151,7 @@ struct device;
 
 struct mmc_async_req {
 	/* active mmc request */
+	struct mmc_request	*mrq_que;
 	struct mmc_request	*mrq;
 	/*
 	 * Check error status of completed mmc request.
@@ -196,34 +201,8 @@ struct mmc_supply {
 	struct regulator *vqmmc;	/* Optional Vccq supply */
 };
 
-/*
- * X-axis for IO latency histogram support.
- */
-static const u_int64_t latency_x_axis_us[] = {
-	100,
-	200,
-	300,
-	400,
-	500,
-	600,
-	700,
-	800,
-	900,
-	1000,
-	1200,
-	1400,
-	1600,
-	1800,
-	2000,
-	2500,
-	3000,
-	4000,
-	5000,
-	6000,
-	7000,
-	9000,
-	10000
-};
+#define EMMC_MAX_QUEUE_DEPTH		(16)
+#define EMMC_MIN_RT_CLASS_TAG_COUNT	(1)
 
 struct mmc_host {
 	struct device		*parent;
@@ -238,9 +217,14 @@ struct mmc_host {
 	u32			ocr_avail_sd;	/* SD-specific OCR */
 	u32			ocr_avail_mmc;	/* MMC-specific OCR */
 	struct notifier_block	pm_notify;
+
 	u32			max_current_330;
 	u32			max_current_300;
 	u32			max_current_180;
+
+#define MMC_HS200_TUNING	(1 << 0)	/* HS200 tuning mode */
+#define MMC_DDR200_TUNING	(1 << 1)	/* DDR200 tuning mode */
+	unsigned int		tuning_progress;
 
 #define MMC_VDD_165_195		0x00000080	/* VDD voltage 1.65 - 1.95 */
 #define MMC_VDD_20_21		0x00000100	/* VDD voltage 2.0 ~ 2.1 */
@@ -294,7 +278,7 @@ struct mmc_host {
 
 #define MMC_CAP2_BOOTPART_NOACC	(1 << 0)	/* Boot partition no access */
 #define MMC_CAP2_CACHE_CTRL	(1 << 1)	/* Allow cache control */
-#define MMC_CAP2_FULL_PWR_CYCLE	(1 << 2)	/* Can do full power cycle */
+#define MMC_CAP2_POWEROFF_NOTIFY (1 << 2)	/* Notify poweroff supported */
 #define MMC_CAP2_NO_MULTI_READ	(1 << 3)	/* Multiblock reads don't work */
 #define MMC_CAP2_NO_SLEEP_CMD	(1 << 4)	/* Don't allow sleep command */
 #define MMC_CAP2_HS200_1_8V_SDR	(1 << 5)        /* can support */
@@ -311,8 +295,26 @@ struct mmc_host {
 #define MMC_CAP2_PACKED_CMD	(MMC_CAP2_PACKED_RD | \
 				 MMC_CAP2_PACKED_WR)
 #define MMC_CAP2_NO_PRESCAN_POWERUP (1 << 14)	/* Don't power up before scan */
+#define MMC_CAP2_HS200_1_8V_DDR	(1 << 15)	/* can support */
+#define MMC_CAP2_HS200_1_2V_DDR	(1 << 16)	/* can support */
+#define MMC_CAP2_HS200_DDR	(MMC_CAP2_HS200_1_8V_DDR | \
+				 MMC_CAP2_HS200_1_2V_DDR)
+#define MMC_CAP2_STROBE_ENHANCED	(1 << 17)	/* enhanced strobe */
+#define MMC_CAP2_CMDQ		(MMC_CAP2_CACHE_CTRL | \
+				(1 << 18))	/* Allow command queuing */
+#define MMC_CAP2_SKIP_INIT_SCAN	(1 << 19)	/* skip init mmc scan */
+#define MMC_CAP2_CONTROL_VCCQ		(1<<31) /* One GPIO control vcc and vccq*/
 
 	mmc_pm_flag_t		pm_caps;	/* supported pm features */
+
+	unsigned int		dev_drv_str;	/* device driver strength */
+#define MMC_DRIVER_TYPE_0	0	/* Default, x1 */
+#define MMC_DRIVER_TYPE_1	1	/* x1.5 */
+#define MMC_DRIVER_TYPE_2	2	/* x0.75 */
+#define MMC_DRIVER_TYPE_3	3	/* x0.5 */
+#define MMC_DRIVER_TYPE_4	4	/* x1.2 */
+#define MMC_DRIVER_TYPE_5	5	/* x2 */
+
 
 #ifdef CONFIG_MMC_CLKGATE
 	int			clk_requests;	/* internal reference counter */
@@ -334,6 +336,7 @@ struct mmc_host {
 	unsigned int		max_blk_size;	/* maximum size of one mmc block */
 	unsigned int		max_blk_count;	/* maximum number of blocks in one req */
 	unsigned int		max_discard_to;	/* max. discard timeout in ms */
+	unsigned int		align_size;	/* size of bytes for alignment in host */
 
 	/* private data */
 	spinlock_t		lock;		/* lock for claim and bus ops */
@@ -360,7 +363,6 @@ struct mmc_host {
 
 	struct delayed_work	detect;
 	struct wake_lock	detect_wake_lock;
-	const char		*wlock_name;
 	int			detect_change;	/* card detect flag */
 	struct mmc_slot		slot;
 
@@ -390,6 +392,26 @@ struct mmc_host {
 	struct mmc_async_req	*areq;		/* active async req */
 	struct mmc_context_info	context_info;	/* async synchronization info */
 
+	struct mmc_async_req	*areq_que[EMMC_MAX_QUEUE_DEPTH];
+	struct mmc_async_req	*areq_cur;
+	atomic_t		areq_cnt;
+
+	spinlock_t		que_lock;
+	struct list_head	cmd_que;
+	struct list_head	dat_que;
+	unsigned long		state;
+#define MMC_CMDQ_IDLE		(0)
+#define MMC_CMDQ_CMD		(1 << 0)
+#define MMC_CMDQ_DAT		(1 << 1)
+#define MMC_CMDQ_QRDY		(1 << 2)
+	wait_queue_head_t	cmp_que;
+	struct mmc_request	*busy_mrq;
+	struct mmc_request	*done_mrq;
+	struct mmc_command	chk_cmd;
+	struct mmc_request	chk_mrq;
+	struct mmc_command	que_cmd;
+	struct mmc_request	que_mrq;
+
 #ifdef CONFIG_FAIL_MMC_REQUEST
 	struct fault_attr	fail_mmc_request;
 #endif
@@ -406,15 +428,6 @@ struct mmc_host {
 		int				num_funcs;
 	} embedded_sdio_data;
 #endif
-
-#define MMC_IO_LAT_HIST_DISABLE         0
-#define MMC_IO_LAT_HIST_ENABLE          1
-#define MMC_IO_LAT_HIST_ZERO            2
-	int		latency_hist_enabled;
-	u_int64_t	latency_y_axis_read[ARRAY_SIZE(latency_x_axis_us) + 1];
-	u_int64_t	latency_reads_elems;
-	u_int64_t	latency_y_axis_write[ARRAY_SIZE(latency_x_axis_us) + 1];
-	u_int64_t	latency_writes_elems;
 
 	unsigned long		private[0] ____cacheline_aligned;
 };
@@ -464,6 +477,11 @@ int mmc_power_restore_host(struct mmc_host *host);
 
 void mmc_detect_change(struct mmc_host *, unsigned long delay);
 void mmc_request_done(struct mmc_host *, struct mmc_request *);
+void mmc_handle_queued_request(struct mmc_host *host);
+int mmc_blk_end_queued_req(struct mmc_host *host,
+		struct mmc_async_req *areq, int index, int status);
+
+int mmc_cache_ctrl(struct mmc_host *, u8);
 
 static inline void mmc_signal_sdio_irq(struct mmc_host *host)
 {

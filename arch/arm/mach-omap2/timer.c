@@ -41,10 +41,10 @@
 #include <linux/of_irq.h>
 #include <linux/platform_device.h>
 #include <linux/platform_data/dmtimer-omap.h>
+#include <linux/sched_clock.h>
 
 #include <asm/mach/time.h>
 #include <asm/smp_twd.h>
-#include <asm/sched_clock.h>
 
 #include "omap_hwmod.h"
 #include "omap_device.h"
@@ -503,11 +503,11 @@ static void __init realtime_counter_init(void)
 	rate = clk_get_rate(sys_clk);
 	/* Numerator/denumerator values refer TRM Realtime Counter section */
 	switch (rate) {
-	case 1200000:
+	case 12000000:
 		num = 64;
 		den = 125;
 		break;
-	case 1300000:
+	case 13000000:
 		num = 768;
 		den = 1625;
 		break;
@@ -515,11 +515,11 @@ static void __init realtime_counter_init(void)
 		num = 8;
 		den = 25;
 		break;
-	case 2600000:
+	case 26000000:
 		num = 384;
 		den = 1625;
 		break;
-	case 2700000:
+	case 27000000:
 		num = 256;
 		den = 1125;
 		break;

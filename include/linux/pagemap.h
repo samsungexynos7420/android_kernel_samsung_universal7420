@@ -25,6 +25,9 @@ enum mapping_flags {
 	AS_MM_ALL_LOCKS	= __GFP_BITS_SHIFT + 2,	/* under mm_take_all_locks() */
 	AS_UNEVICTABLE	= __GFP_BITS_SHIFT + 3,	/* e.g., ramdisk, SHM_LOCK */
 	AS_BALLOON_MAP  = __GFP_BITS_SHIFT + 4, /* balloon page special map */
+#ifdef CONFIG_SDP
+	AS_SENSITIVE = __GFP_BITS_SHIFT + 5, /* Group of sensitive pages to be cleaned up */
+#endif
 };
 
 static inline void mapping_set_error(struct address_space *mapping, int error)
@@ -83,6 +86,25 @@ static inline void mapping_set_gfp_mask(struct address_space *m, gfp_t mask)
 	m->flags = (m->flags & ~(__force unsigned long)__GFP_BITS_MASK) |
 				(__force unsigned long)mask;
 }
+
+#ifdef CONFIG_SDP
+static inline void mapping_set_sensitive(struct address_space *mapping)
+{
+    set_bit(AS_SENSITIVE, &mapping->flags);
+}
+
+static inline void mapping_clear_sensitive(struct address_space *mapping)
+{
+    clear_bit(AS_SENSITIVE, &mapping->flags);
+}
+
+static inline int mapping_sensitive(struct address_space *mapping)
+{
+    if (mapping)
+        return test_bit(AS_SENSITIVE, &mapping->flags);
+    return !!mapping;
+}
+#endif
 
 /*
  * The page cache can done in larger chunks than
@@ -243,21 +265,8 @@ static inline struct page *page_cache_alloc_readahead(struct address_space *x)
 
 typedef int filler_t(void *, struct page *);
 
-pgoff_t page_cache_next_hole(struct address_space *mapping,
-                             pgoff_t index, unsigned long max_scan);
-
-extern struct page * find_get_page_flags(struct address_space *mapping,
-					 pgoff_t index, int fgp_flags);
-
-#define FGP_ACCESSED		0x00000001
-
-static inline struct page* find_get_page(struct address_space *mapping,
-					 pgoff_t index)
-{
-	return find_get_page_flags(mapping, index, 0);
-}
-
-
+extern struct page * find_get_page(struct address_space *mapping,
+				pgoff_t index);
 extern struct page * find_lock_page(struct address_space *mapping,
 				pgoff_t index);
 extern struct page * find_or_create_page(struct address_space *mapping,
@@ -404,7 +413,7 @@ static inline int wait_on_page_locked_killable(struct page *page)
 	return 0;
 }
 
-/*
+/* 
  * Wait for a page to be unlocked.
  *
  * This must be called with the caller "holding" the page,
@@ -417,7 +426,7 @@ static inline void wait_on_page_locked(struct page *page)
 		wait_on_page_bit(page, PG_locked);
 }
 
-/*
+/* 
  * Wait for a page to complete writeback
  */
 static inline void wait_on_page_writeback(struct page *page)
@@ -495,56 +504,56 @@ static inline int fault_in_pages_readable(const char __user *uaddr, int size)
  */
 static inline int fault_in_multipages_writeable(char __user *uaddr, int size)
 {
-	int ret = 0;
 	char __user *end = uaddr + size - 1;
 
 	if (unlikely(size == 0))
-		return ret;
+		return 0;
 
+	if (unlikely(uaddr > end))
+		return -EFAULT;
 	/*
 	 * Writing zeroes into userspace here is OK, because we know that if
 	 * the zero gets there, we'll be overwriting it.
 	 */
-	while (uaddr <= end) {
-		ret = __put_user(0, uaddr);
-		if (ret != 0)
-			return ret;
+	do {
+		if (unlikely(__put_user(0, uaddr) != 0))
+			return -EFAULT;
 		uaddr += PAGE_SIZE;
-	}
+	} while (uaddr <= end);
 
 	/* Check whether the range spilled into the next page. */
 	if (((unsigned long)uaddr & PAGE_MASK) ==
 			((unsigned long)end & PAGE_MASK))
-		ret = __put_user(0, end);
+		return __put_user(0, end);
 
-	return ret;
+	return 0;
 }
 
 static inline int fault_in_multipages_readable(const char __user *uaddr,
 					       int size)
 {
 	volatile char c;
-	int ret = 0;
 	const char __user *end = uaddr + size - 1;
 
 	if (unlikely(size == 0))
-		return ret;
+		return 0;
 
-	while (uaddr <= end) {
-		ret = __get_user(c, uaddr);
-		if (ret != 0)
-			return ret;
+	if (unlikely(uaddr > end))
+		return -EFAULT;
+
+	do {
+		if (unlikely(__get_user(c, uaddr) != 0))
+			return -EFAULT;
 		uaddr += PAGE_SIZE;
-	}
+	} while (uaddr <= end);
 
 	/* Check whether the range spilled into the next page. */
 	if (((unsigned long)uaddr & PAGE_MASK) ==
 			((unsigned long)end & PAGE_MASK)) {
-		ret = __get_user(c, end);
-		(void)c;
+		return __get_user(c, end);
 	}
 
-	return ret;
+	return 0;
 }
 
 int add_to_page_cache_locked(struct page *page, struct address_space *mapping,
@@ -568,6 +577,7 @@ static inline int add_to_page_cache(struct page *page,
 	error = add_to_page_cache_locked(page, mapping, offset, gfp_mask);
 	if (unlikely(error))
 		__clear_page_locked(page);
+
 	return error;
 }
 

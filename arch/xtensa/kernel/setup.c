@@ -64,8 +64,8 @@ extern struct rtc_ops no_rtc_ops;
 struct rtc_ops *rtc_ops;
 
 #ifdef CONFIG_BLK_DEV_INITRD
-extern void *initrd_start;
-extern void *initrd_end;
+extern unsigned long initrd_start;
+extern unsigned long initrd_end;
 int initrd_is_mapped = 0;
 extern int initrd_below_start_ok;
 #endif
@@ -152,35 +152,27 @@ static int __init parse_tag_initrd(const bp_tag_t* tag)
 {
 	meminfo_t* mi;
 	mi = (meminfo_t*)(tag->data);
-	initrd_start = (void*)(mi->start);
-	initrd_end = (void*)(mi->end);
+	initrd_start = (unsigned long)__va(mi->start);
+	initrd_end = (unsigned long)__va(mi->end);
 
 	return 0;
 }
 
 __tagtable(BP_TAG_INITRD, parse_tag_initrd);
 
+#endif /* CONFIG_BLK_DEV_INITRD */
+
 #ifdef CONFIG_OF
 
 static int __init parse_tag_fdt(const bp_tag_t *tag)
 {
-	dtb_start = (void *)(tag->data[0]);
+	dtb_start = __va(tag->data[0]);
 	return 0;
 }
 
 __tagtable(BP_TAG_FDT, parse_tag_fdt);
 
-void __init early_init_dt_setup_initrd_arch(unsigned long start,
-		unsigned long end)
-{
-	initrd_start = (void *)__va(start);
-	initrd_end = (void *)__va(end);
-	initrd_below_start_ok = 1;
-}
-
 #endif /* CONFIG_OF */
-
-#endif /* CONFIG_BLK_DEV_INITRD */
 
 static int __init parse_tag_cmdline(const bp_tag_t* tag)
 {

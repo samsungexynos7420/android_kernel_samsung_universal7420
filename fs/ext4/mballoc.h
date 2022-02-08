@@ -48,7 +48,7 @@ extern ushort ext4_mballoc_debug;
 		}							\
 	} while (0)
 #else
-#define mb_debug(n, fmt, a...)		no_printk(fmt, ## a)
+#define mb_debug(n, fmt, a...)
 #endif
 
 #define EXT4_MB_HISTORY_ALLOC		1	/* allocation */
@@ -91,10 +91,8 @@ extern ushort ext4_mballoc_debug;
 
 
 struct ext4_free_data {
-	/* MUST be the first member */
-	struct ext4_journal_cb_entry	efd_jce;
-
-	/* ext4_free_data private data starts from here */
+	/* this links the free block information from sb_info */
+	struct list_head		efd_list;
 
 	/* this links the free block information from group_info */
 	struct rb_node			efd_node;
@@ -175,6 +173,8 @@ struct ext4_allocation_context {
 	/* copy of the best found extent taken before preallocation efforts */
 	struct ext4_free_extent ac_f_ex;
 
+	/* number of iterations done. we have to track to limit searching */
+	unsigned long ac_ex_scanned;
 	__u16 ac_groups_scanned;
 	__u16 ac_found;
 	__u16 ac_tail;

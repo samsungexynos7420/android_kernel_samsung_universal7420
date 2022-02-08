@@ -50,7 +50,7 @@ static void resume_irqs(bool want_early)
 		bool is_early = desc->action &&
 			desc->action->flags & IRQF_EARLY_RESUME;
 
-		if (is_early != want_early)
+		if (!is_early && want_early)
 			continue;
 
 		raw_spin_lock_irqsave(&desc->lock, flags);
@@ -100,11 +100,18 @@ EXPORT_SYMBOL_GPL(resume_device_irqs);
 int check_wakeup_irqs(void)
 {
 	struct irq_desc *desc;
+	/* FIXME : Fix build error */
+	/* char suspend_abort[MAX_SUSPEND_ABORT_LEN]; */
 	int irq;
 
 	for_each_irq_desc(irq, desc) {
 		if (irqd_is_wakeup_set(&desc->irq_data)) {
-			if (desc->istate & IRQS_PENDING) {
+		   /*
+			* Only interrupts which are marked as wakeup source
+			* and have not been disabled before the suspend check
+			* can abort suspend.
+			*/
+			if (desc->depth == 1 && desc->istate & IRQS_PENDING) {
 				log_suspend_abort_reason("Wakeup IRQ %d %s pending",
 					irq,
 					desc->action && desc->action->name ?

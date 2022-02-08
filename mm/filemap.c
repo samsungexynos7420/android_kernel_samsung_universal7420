@@ -35,6 +35,10 @@
 #include <linux/cleancache.h>
 #include "internal.h"
 
+#ifdef CONFIG_SDP
+#include <sdp/cache_cleanup.h>
+#endif
+
 #define CREATE_TRACE_POINTS
 #include <trace/events/filemap.h>
 
@@ -115,6 +119,11 @@
 void __delete_from_page_cache(struct page *page)
 {
 	struct address_space *mapping = page->mapping;
+
+#ifdef CONFIG_SDP
+	if(mapping_sensitive(mapping))
+		sdp_page_cleanup(page);
+#endif
 
 	trace_mm_filemap_delete_from_page_cache(page);
 	/*
@@ -684,47 +693,6 @@ int __lock_page_or_retry(struct page *page, struct mm_struct *mm,
 }
 
 /**
- * page_cache_next_hole - find the next hole (not-present entry)
- * @mapping: mapping
- * @index: index
- * @max_scan: maximum range to search
- *
- * Search the set [index, min(index+max_scan-1, MAX_INDEX)] for the
- * lowest indexed hole.
- *
- * Returns: the index of the hole if found, otherwise returns an index
- * outside of the set specified (in which case 'return - index >=
- * max_scan' will be true). In rare cases of index wrap-around, 0 will
- * be returned.
- *
- * page_cache_next_hole may be called under rcu_read_lock. However,
- * like radix_tree_gang_lookup, this will not atomically search a
- * snapshot of the tree at a single point in time. For example, if a
- * hole is created at index 5, then subsequently a hole is created at
- * index 10, page_cache_next_hole covering both indexes may return 10
- * if called under rcu_read_lock.
- */
-pgoff_t page_cache_next_hole(struct address_space *mapping,
-                             pgoff_t index, unsigned long max_scan)
-{
-        unsigned long i;
-
-        for (i = 0; i < max_scan; i++) {
-                struct page *page;
-
-                page = radix_tree_lookup(&mapping->page_tree, index);
-                if (!page || radix_tree_exceptional_entry(page))
-                        break;
-                index++;
-                if (index == 0)
-                        break;
-        }
-
-        return index;
-}
-EXPORT_SYMBOL(page_cache_next_hole);
-
-/**
  * find_get_page - find and get a page reference
  * @mapping: the address_space to search
  * @offset: the page index
@@ -732,8 +700,7 @@ EXPORT_SYMBOL(page_cache_next_hole);
  * Is there a pagecache struct page at the given (mapping, offset) tuple?
  * If yes, increment its refcount and return it; if no, return NULL.
  */
-struct page *find_get_page_flags(struct address_space *mapping, pgoff_t offset,
-				 int fgp_flags)
+struct page *find_get_page(struct address_space *mapping, pgoff_t offset)
 {
 	void **pagep;
 	struct page *page;
@@ -770,8 +737,6 @@ repeat:
 		}
 	}
 out:
-	if (page && (fgp_flags & FGP_ACCESSED))
-		mark_page_accessed(page);
 	rcu_read_unlock();
 
 	return page;
@@ -1153,7 +1118,10 @@ static void do_generic_file_read(struct file *filp, loff_t *ppos,
 	unsigned int prev_offset;
 	int error;
 
-	trace_mm_filemap_do_generic_file_read(filp, *ppos, desc->count, 1);
+#ifdef CONFIG_SCFS_LOWER_PAGECACHE_INVALIDATION
+	//struct scfs_sb_info *sbi;
+	int is_sequential = (ra->prev_pos == *ppos) ? 1 : 0;
+#endif
 
 	index = *ppos >> PAGE_CACHE_SHIFT;
 	prev_index = ra->prev_pos >> PAGE_CACHE_SHIFT;
@@ -1169,6 +1137,11 @@ static void do_generic_file_read(struct file *filp, loff_t *ppos,
 
 		cond_resched();
 find_page:
+		if (fatal_signal_pending(current)) {
+			error = -EINTR;
+			goto out;
+		}
+
 		page = find_get_page(mapping, index);
 		if (!page) {
 			page_cache_sync_readahead(mapping,
@@ -1237,6 +1210,9 @@ page_ok:
 		 * only mark it as accessed the first time.
 		 */
 		if (prev_index != index || offset != prev_offset)
+#ifdef CONFIG_SCFS_LOWER_PAGECACHE_INVALIDATION
+			if (!(filp->f_flags & O_SCFSLOWER))
+#endif
 			mark_page_accessed(page);
 		prev_index = index;
 
@@ -1255,6 +1231,30 @@ page_ok:
 		index += offset >> PAGE_CACHE_SHIFT;
 		offset &= ~PAGE_CACHE_MASK;
 		prev_offset = offset;
+
+#ifdef CONFIG_SCFS_LOWER_PAGECACHE_INVALIDATION
+		if (filp->f_flags & O_SCFSLOWER) {
+			/*
+			   sbi = ;
+
+			   if (!PageScfslower(page) && !PageNocache(page))
+			   sbi->scfs_lowerpage_total_count++;
+			 */
+
+			/* Internal pages except first and last ones ||
+			 * page was sequentially referenced before due to preceding cluster access ||
+			 * first or last pages: random read
+			 */
+			if ((ret == PAGE_CACHE_SIZE) ||
+					(PageScfslower(page) && !offset) || !is_sequential) {
+				SetPageNocache(page);
+
+				if (PageLRU(page))
+					deactivate_page(page);
+			} else
+				SetPageScfslower(page);
+		}
+#endif
 
 		page_cache_release(page);
 		if (ret == nr && desc->count)
@@ -1549,7 +1549,7 @@ EXPORT_SYMBOL(generic_file_aio_read);
 static int page_cache_read(struct file *file, pgoff_t offset)
 {
 	struct address_space *mapping = file->f_mapping;
-	struct page *page;
+	struct page *page; 
 	int ret;
 
 	do {
@@ -1566,7 +1566,7 @@ static int page_cache_read(struct file *file, pgoff_t offset)
 		page_cache_release(page);
 
 	} while (ret == AOP_TRUNCATED_PAGE);
-
+		
 	return ret;
 }
 
@@ -1610,7 +1610,14 @@ static void do_sync_mmap_readahead(struct vm_area_struct *vma,
 	/*
 	 * mmap read-around
 	 */
+#if CONFIG_MMAP_READAROUND_LIMIT == 0
 	ra_pages = max_sane_readahead(ra->ra_pages);
+#else
+	if (ra->ra_pages > CONFIG_MMAP_READAROUND_LIMIT)
+		ra_pages = max_sane_readahead(CONFIG_MMAP_READAROUND_LIMIT);
+	else
+		ra_pages = max_sane_readahead(ra->ra_pages);
+#endif
 	ra->start = max_t(long, 0, offset - ra_pages / 2);
 	ra->size = ra_pages;
 	ra->async_size = ra_pages / 4;
@@ -2353,8 +2360,6 @@ static ssize_t generic_perform_write(struct file *file,
 	ssize_t written = 0;
 	unsigned int flags = 0;
 
-	trace_mm_filemap_generic_perform_write(file, pos, iov_iter_count(i), 0);
-
 	/*
 	 * Copies from kernel address space cannot fail (NFSD is a big user).
 	 */
@@ -2385,6 +2390,11 @@ again:
 		 */
 		if (unlikely(iov_iter_fault_in_readable(i, bytes))) {
 			status = -EFAULT;
+			break;
+		}
+
+		if (fatal_signal_pending(current)) {
+			status = -EINTR;
 			break;
 		}
 
@@ -2428,10 +2438,6 @@ again:
 		written += copied;
 
 		balance_dirty_pages_ratelimited(mapping);
-		if (fatal_signal_pending(current)) {
-			status = -EINTR;
-			break;
-		}
 	} while (iov_iter_count(i));
 
 	return written ? written : status;
@@ -2453,7 +2459,7 @@ generic_file_buffered_write(struct kiocb *iocb, const struct iovec *iov,
 		written += status;
 		*ppos = pos + status;
   	}
-
+	
 	return written ? written : status;
 }
 EXPORT_SYMBOL(generic_file_buffered_write);

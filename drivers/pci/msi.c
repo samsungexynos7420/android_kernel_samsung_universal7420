@@ -52,8 +52,8 @@ int default_setup_msi_irqs(struct pci_dev *dev, int nvec, int type)
 	 * If an architecture wants to support multiple MSI, it needs to
 	 * override arch_setup_msi_irqs()
 	 */
-	if (type == PCI_CAP_ID_MSI && nvec > 1)
-		return 1;
+//	if (type == PCI_CAP_ID_MSI && nvec > 1)
+//		return 1;
 
 	list_for_each_entry(entry, &dev->msi_list, list) {
 		ret = arch_setup_msi_irq(dev, entry);
@@ -530,6 +530,20 @@ out_unroll:
 	return ret;
 }
 
+static int msi_verify_entries(struct pci_dev *dev)
+{
+	struct msi_desc *entry;
+
+	list_for_each_entry(entry, &dev->msi_list, list) {
+		if (!dev->no_64bit_msi || !entry->msg.address_hi)
+			continue;
+		dev_err(&dev->dev, "Device has broken 64-bit MSI but arch"
+			" tried to assign one above 4G\n");
+		return -EIO;
+	}
+	return 0;
+}
+
 /**
  * msi_capability_init - configure device's MSI capability structure
  * @dev: pointer to the pci_dev data structure of MSI device function
@@ -583,6 +597,13 @@ static int msi_capability_init(struct pci_dev *dev, int nvec)
 		return ret;
 	}
 
+	ret = msi_verify_entries(dev);
+	if (ret) {
+		msi_mask_irq(entry, mask, ~mask);
+		free_msi_irqs(dev);
+		return ret;
+	}
+
 	ret = populate_msi_sysfs(dev);
 	if (ret) {
 		msi_mask_irq(entry, mask, ~mask);
@@ -595,7 +616,8 @@ static int msi_capability_init(struct pci_dev *dev, int nvec)
 	msi_set_enable(dev, 1);
 	dev->msi_enabled = 1;
 
-	dev->irq = entry->irq;
+	dev->irq = 750;
+
 	return 0;
 }
 
@@ -695,6 +717,11 @@ static int msix_capability_init(struct pci_dev *dev,
 		return ret;
 
 	ret = arch_setup_msi_irqs(dev, nvec, PCI_CAP_ID_MSIX);
+	if (ret)
+		goto error;
+
+	/* Check if all MSI entries honor device restrictions */
+	ret = msi_verify_entries(dev);
 	if (ret)
 		goto error;
 

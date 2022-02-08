@@ -67,6 +67,12 @@
 
 #include "audit.h"
 
+// [ SEC_SELINUX_PORTING_EXYNOS
+#ifdef CONFIG_SEC_AVC_LOG
+#include <linux/sec_debug.h>
+#endif
+// ] SEC_SELINUX_PORTING_EXYNOS
+
 /* No auditing will take place until audit_initialized == AUDIT_INITIALIZED.
  * (Initialization happens after skb_init is called.) */
 #define AUDIT_DISABLED		-1
@@ -83,7 +89,7 @@ int		audit_ever_enabled;
 EXPORT_SYMBOL_GPL(audit_enabled);
 
 /* Default state when kernel boots without any parameters. */
-static int	audit_default;
+static int	audit_default = 1;
 
 /* If auditing cannot proceed, audit_failure selects what happens. */
 static int	audit_failure = AUDIT_FAIL_PRINTK;
@@ -103,7 +109,8 @@ static int	audit_rate_limit;
 
 /* Number of outstanding audit_buffers allowed. */
 static int	audit_backlog_limit = 64;
-static int	audit_backlog_wait_time = 60 * HZ;
+#define AUDIT_BACKLOG_WAIT_TIME (60 * HZ)
+static int	audit_backlog_wait_time = AUDIT_BACKLOG_WAIT_TIME;
 static int	audit_backlog_wait_overflow = 0;
 
 /* The identity of the user shutting down the audit system. */
@@ -370,11 +377,17 @@ static void audit_printk_skb(struct sk_buff *skb)
 	struct nlmsghdr *nlh = nlmsg_hdr(skb);
 	char *data = nlmsg_data(nlh);
 
-	if (nlh->nlmsg_type != AUDIT_EOE) {
+	if (nlh->nlmsg_type != AUDIT_EOE && nlh->nlmsg_type != AUDIT_NETFILTER_CFG) {
+// [ SEC_SELINUX_PORTING_EXYNOS
+#ifdef CONFIG_SEC_AVC_LOG
+		sec_debug_avc_log("type=%d %s\n", nlh->nlmsg_type, data);
+#else
 		if (printk_ratelimit())
 			printk(KERN_NOTICE "type=%d %s\n", nlh->nlmsg_type, data);
 		else
 			audit_log_lost("printk limit exceeded\n");
+#endif
+// ] SEC_SELINUX_PORTING_EXYNOS
 	}
 
 	audit_hold_skb(skb);
@@ -393,9 +406,20 @@ static void kauditd_send_skb(struct sk_buff *skb)
 		audit_pid = 0;
 		/* we might get lucky and get this in the next auditd */
 		audit_hold_skb(skb);
-	} else
+	} else {
+// [ SEC_SELINUX_PORTING_EXYNOS
+#ifdef CONFIG_SEC_AVC_LOG
+		struct nlmsghdr *nlh = nlmsg_hdr(skb);
+		char *data = NLMSG_DATA(nlh);
+	
+		if (nlh->nlmsg_type != AUDIT_EOE && nlh->nlmsg_type != AUDIT_NETFILTER_CFG) {
+			sec_debug_avc_log("%s\n", data);
+		}
+#endif
+// ] SEC_SELINUX_PORTING_EXYNOS
 		/* drop the extra reference if sent ok */
 		consume_skb(skb);
+	}
 }
 
 /*
@@ -592,13 +616,13 @@ static int audit_netlink_ok(struct sk_buff *skb, u16 msg_type)
 	case AUDIT_TTY_SET:
 	case AUDIT_TRIM:
 	case AUDIT_MAKE_EQUIV:
-		if (!capable(CAP_AUDIT_CONTROL))
+		if (!netlink_capable(skb, CAP_AUDIT_CONTROL))
 			err = -EPERM;
 		break;
 	case AUDIT_USER:
 	case AUDIT_FIRST_USER_MSG ... AUDIT_LAST_USER_MSG:
 	case AUDIT_FIRST_USER_MSG2 ... AUDIT_LAST_USER_MSG2:
-		if (!capable(CAP_AUDIT_WRITE))
+		if (!netlink_capable(skb, CAP_AUDIT_WRITE))
 			err = -EPERM;
 		break;
 	default:  /* bad msg */
@@ -613,7 +637,7 @@ static int audit_log_common_recv_msg(struct audit_buffer **ab, u16 msg_type)
 	int rc = 0;
 	uid_t uid = from_kuid(&init_user_ns, current_uid());
 
-	if (!audit_enabled) {
+	if (!audit_enabled && msg_type != AUDIT_USER_AVC) {
 		*ab = NULL;
 		return rc;
 	}
@@ -659,6 +683,7 @@ static int audit_receive_msg(struct sk_buff *skb, struct nlmsghdr *nlh)
 
 	switch (msg_type) {
 	case AUDIT_GET:
+		status_set.mask		 = 0;
 		status_set.enabled	 = audit_enabled;
 		status_set.failure	 = audit_failure;
 		status_set.pid		 = audit_pid;
@@ -670,7 +695,7 @@ static int audit_receive_msg(struct sk_buff *skb, struct nlmsghdr *nlh)
 				 &status_set, sizeof(status_set));
 		break;
 	case AUDIT_SET:
-		if (nlh->nlmsg_len < sizeof(struct audit_status))
+		if (nlmsg_len(nlh) < sizeof(struct audit_status))
 			return -EINVAL;
 		status_get   = (struct audit_status *)data;
 		if (status_get->mask & AUDIT_STATUS_ENABLED) {
@@ -684,12 +709,6 @@ static int audit_receive_msg(struct sk_buff *skb, struct nlmsghdr *nlh)
 				return err;
 		}
 		if (status_get->mask & AUDIT_STATUS_PID) {
-			/* NOTE: we are using task_tgid_vnr() below because
-			 *       the s.pid value is relative to the namespace
-			 *       of the caller; at present this doesn't matter
-			 *       much since you can really only run auditd
-			 *       from the initial pid namespace, but something
-			 *       to keep in mind if this changes */
 			int new_pid = status_get->pid;
 
 			if (audit_enabled != AUDIT_OFF)
@@ -838,7 +857,7 @@ static int audit_receive_msg(struct sk_buff *skb, struct nlmsghdr *nlh)
 
 		memset(&s, 0, sizeof(s));
 		/* guard against past and future API changes */
-		memcpy(&s, data, min(sizeof(s), (size_t)nlh->nlmsg_len));
+		memcpy(&s, data, min_t(size_t, sizeof(s), nlmsg_len(nlh)));
 		if ((s.enabled != 0 && s.enabled != 1) ||
 		    (s.log_passwd != 0 && s.log_passwd != 1))
 			return -EINVAL;
@@ -1123,9 +1142,10 @@ struct audit_buffer *audit_log_start(struct audit_context *ctx, gfp_t gfp_mask,
 
 			sleep_time = timeout_start + audit_backlog_wait_time -
 					jiffies;
-			if ((long)sleep_time > 0)
+			if ((long)sleep_time > 0) {
 				wait_for_auditd(sleep_time);
-			continue;
+				continue;
+			}
 		}
 		if (audit_rate_check() && printk_ratelimit())
 			printk(KERN_WARNING
@@ -1138,6 +1158,8 @@ struct audit_buffer *audit_log_start(struct audit_context *ctx, gfp_t gfp_mask,
 		wake_up(&audit_backlog_wait);
 		return NULL;
 	}
+
+	audit_backlog_wait_time = AUDIT_BACKLOG_WAIT_TIME;
 
 	ab = audit_buffer_alloc(ctx, gfp_mask, type);
 	if (!ab) {
@@ -1413,7 +1435,7 @@ void audit_log_cap(struct audit_buffer *ab, char *prefix, kernel_cap_t *cap)
 	audit_log_format(ab, " %s=", prefix);
 	CAP_FOR_EACH_U32(i) {
 		audit_log_format(ab, "%08x",
-				 cap->cap[(_KERNEL_CAPABILITY_U32S-1) - i]);
+				 cap->cap[CAP_LAST_U32 - i]);
 	}
 }
 
@@ -1541,6 +1563,26 @@ void audit_log_name(struct audit_context *context, struct audit_names *n,
 		}
 	}
 
+	/* log the audit_names record type */
+	audit_log_format(ab, " nametype=");
+	switch(n->type) {
+	case AUDIT_TYPE_NORMAL:
+		audit_log_format(ab, "NORMAL");
+		break;
+	case AUDIT_TYPE_PARENT:
+		audit_log_format(ab, "PARENT");
+		break;
+	case AUDIT_TYPE_CHILD_DELETE:
+		audit_log_format(ab, "DELETE");
+		break;
+	case AUDIT_TYPE_CHILD_CREATE:
+		audit_log_format(ab, "CREATE");
+		break;
+	default:
+		audit_log_format(ab, "UNKNOWN");
+		break;
+	}
+
 	audit_log_fcaps(ab, n);
 	audit_log_end(ab);
 }
@@ -1594,11 +1636,12 @@ void audit_log_task_info(struct audit_buffer *ab, struct task_struct *tsk)
 	spin_unlock_irq(&tsk->sighand->siglock);
 
 	audit_log_format(ab,
-			 " ppid=%ld pid=%d auid=%u uid=%u gid=%u"
+			 " ppid=%ld ppcomm=%s pid=%d auid=%u uid=%u gid=%u"
 			 " euid=%u suid=%u fsuid=%u"
 			 " egid=%u sgid=%u fsgid=%u ses=%u tty=%s",
 			 sys_getppid(),
-			 task_tgid_nr(tsk),
+			 tsk->parent->comm,
+			 tsk->pid,
 			 from_kuid(&init_user_ns, audit_get_loginuid(tsk)),
 			 from_kuid(&init_user_ns, cred->uid),
 			 from_kgid(&init_user_ns, cred->gid),

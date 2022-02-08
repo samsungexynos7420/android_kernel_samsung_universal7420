@@ -606,6 +606,9 @@ try_again:
 	 * Inform the card of the voltage
 	 */
 	if (!powered_resume) {
+		/* The initialization should be done at 3.3 V I/O voltage. */
+		__mmc_set_signal_voltage(host, MMC_SIGNAL_VOLTAGE_330);
+
 		err = mmc_send_io_op_cond(host, host->ocr, &ocr);
 		if (err)
 			goto err;
@@ -1040,6 +1043,10 @@ static int mmc_sdio_power_restore(struct mmc_host *host)
 	 * restore the correct voltage setting of the card.
 	 */
 
+	/* The initialization should be done at 3.3 V I/O voltage. */
+	if (!mmc_card_keep_power(host))
+		__mmc_set_signal_voltage(host, MMC_SIGNAL_VOLTAGE_330);
+
 	sdio_reset(host);
 	mmc_go_idle(host);
 	mmc_send_if_cond(host, host->ocr_avail);
@@ -1222,6 +1229,15 @@ int mmc_attach_sdio(struct mmc_host *host)
 			goto remove_added;
 	}
 
+#if defined(CONFIG_BCM43455) || defined(CONFIG_BCM43455_MODULE)|| \
+    defined(CONFIG_BCM4343) || defined(CONFIG_BCM4343_MODULE) || \
+    defined(CONFIG_BCM43454) || defined(CONFIG_BCM43454_MODULE)
+	if(!strcmp("mmc0", mmc_hostname(host))) {
+		printk("%s, Set Nonremovable flag\n",mmc_hostname(host));
+		host->caps |= MMC_CAP_NONREMOVABLE;
+	}
+#endif /* CONFIG_BCM43455 || CONFIG_BCM43455_MODULE */
+
 	mmc_claim_host(host);
 	return 0;
 
@@ -1247,6 +1263,56 @@ err:
 
 int sdio_reset_comm(struct mmc_card *card)
 {
+#if defined(CONFIG_BCM43455) || defined(CONFIG_BCM43455_MODULE)|| \
+    defined(CONFIG_BCM4343) || defined(CONFIG_BCM4343_MODULE) || \
+    defined(CONFIG_BCM43454) || defined(CONFIG_BCM43454_MODULE)
+	struct mmc_host *host = card->host;
+	u32 ocr;
+	int err;
+
+	printk("%s():\n", __func__);
+	mmc_claim_host(host);
+
+	mmc_set_timing(host, MMC_TIMING_LEGACY);
+	mmc_set_clock(host, host->f_init);
+
+	sdio_reset(host);
+	mmc_go_idle(host);
+
+	mmc_send_if_cond(host, host->ocr_avail);
+
+	err = mmc_send_io_op_cond(host, 0, &ocr);
+	if (err)
+		goto err;
+
+	if (host->ocr_avail_sdio)
+		host->ocr_avail = host->ocr_avail_sdio;
+
+	host->ocr = mmc_select_voltage(host, ocr & ~0x7F);
+	if (!host->ocr) {
+		err = -EINVAL;
+		printk("%s(): voltage err\n", __func__);
+		goto err;
+	}
+
+	if (mmc_host_uhs(host)) {
+		/* to query card if 1.8V signalling is supported */
+		host->ocr |= R4_18V_PRESENT;
+	}
+
+	err = mmc_sdio_init_card(host, host->ocr, card, 0);
+	if (err)
+		goto err;
+
+	mmc_release_host(host);
+	return 0;
+err:
+	printk("%s: Error resetting SDIO communications (%d)\n",
+	       mmc_hostname(host), err);
+	mmc_release_host(host);
+	return err;
+
+#else /* CONFIG_BCM43455 || CONFIG_BCM43455_MODULE */
 	struct mmc_host *host = card->host;
 	u32 ocr;
 	int err;
@@ -1279,5 +1345,6 @@ err:
 	       mmc_hostname(host), err);
 	mmc_release_host(host);
 	return err;
+#endif
 }
 EXPORT_SYMBOL(sdio_reset_comm);

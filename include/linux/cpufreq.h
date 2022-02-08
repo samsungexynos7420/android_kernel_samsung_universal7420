@@ -21,7 +21,6 @@
 #include <linux/workqueue.h>
 #include <linux/cpumask.h>
 #include <asm/div64.h>
-#include <asm/cputime.h>
 
 #define CPUFREQ_NAME_LEN 16
 /* Print length for names. Extra 1 space for accomodating '\n' in prints */
@@ -108,6 +107,7 @@ struct cpufreq_policy {
 	unsigned int		policy; /* see above */
 	struct cpufreq_governor	*governor; /* see below */
 	void			*governor_data;
+	bool			governor_enabled; /* governor start/stop flag */
 
 	struct work_struct	update; /* if update_policy() needs to be
 					 * called, but you're in IRQ context */
@@ -381,6 +381,9 @@ static inline unsigned int cpufreq_quick_get_max(unsigned int cpu)
 #ifdef CONFIG_CPU_FREQ_GOV_PERFORMANCE
 extern struct cpufreq_governor cpufreq_gov_performance;
 #endif
+#ifdef CONFIG_CPU_FREQ_GOV_INTERACTIVE
+extern unsigned int cpufreq_interactive_get_hispeed_freq(int cpu);
+#endif
 #ifdef CONFIG_CPU_FREQ_DEFAULT_GOV_PERFORMANCE
 #define CPUFREQ_DEFAULT_GOVERNOR	(&cpufreq_gov_performance)
 #elif defined(CONFIG_CPU_FREQ_DEFAULT_GOV_POWERSAVE)
@@ -414,6 +417,35 @@ struct cpufreq_frequency_table {
 				    * order */
 };
 
+static inline bool cpufreq_next_valid(struct cpufreq_frequency_table **pos)
+{
+	while ((*pos)->frequency != CPUFREQ_TABLE_END)
+		if ((*pos)->frequency != CPUFREQ_ENTRY_INVALID)
+			return true;
+		else
+			(*pos)++;
+	return false;
+}
+
+/*
+ * cpufreq_for_each_entry -	iterate over a cpufreq_frequency_table
+ * @pos:	the cpufreq_frequency_table * to use as a loop cursor.
+ * @table:	the cpufreq_frequency_table * to iterate over.
+ */
+
+#define cpufreq_for_each_entry(pos, table)	\
+	for (pos = table; pos->frequency != CPUFREQ_TABLE_END; pos++)
+
+/*
+ * cpufreq_for_each_valid_entry -     iterate over a cpufreq_frequency_table
+ *	excluding CPUFREQ_ENTRY_INVALID frequencies.
+ * @pos:        the cpufreq_frequency_table * to use as a loop cursor.
+ * @table:      the cpufreq_frequency_table * to iterate over.
+ */
+
+#define cpufreq_for_each_valid_entry(pos, table)	\
+	for (pos = table; cpufreq_next_valid(&pos); pos++)
+
 int cpufreq_frequency_table_cpuinfo(struct cpufreq_policy *policy,
 				    struct cpufreq_frequency_table *table);
 
@@ -437,11 +469,4 @@ void cpufreq_frequency_table_get_attr(struct cpufreq_frequency_table *table,
 void cpufreq_frequency_table_update_policy_cpu(struct cpufreq_policy *policy);
 
 void cpufreq_frequency_table_put_attr(unsigned int cpu);
-
-/*********************************************************************
- *                         CPUFREQ STATS                             *
- *********************************************************************/
-
-void acct_update_power(struct task_struct *p, cputime_t cputime);
-
 #endif /* _LINUX_CPUFREQ_H */

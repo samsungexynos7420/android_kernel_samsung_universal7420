@@ -400,7 +400,7 @@ static int fib_nl_newrule(struct sk_buff *skb, struct nlmsghdr* nlh)
 			unresolved = 1;
 	} else if (rule->action == FR_ACT_GOTO)
 		goto errout_free;
-
+	
 	if (tb[FRA_UID_RANGE]) {
 		if (current_user_ns() != net->user_ns) {
 			err = -EPERM;
@@ -494,7 +494,7 @@ static int fib_nl_delrule(struct sk_buff *skb, struct nlmsghdr* nlh)
 	err = validate_rulemsg(frh, tb, ops);
 	if (err < 0)
 		goto errout;
-
+	
 	if (tb[FRA_UID_RANGE]) {
 		range = nla_get_kuid_range(tb);
 		if (!uid_range_set(&range))
@@ -788,6 +788,13 @@ static int fib_rules_event(struct notifier_block *this, unsigned long event,
 	case NETDEV_REGISTER:
 		list_for_each_entry(ops, &net->rules_ops, list)
 			attach_rules(&ops->rules_list, dev);
+		break;
+
+	case NETDEV_CHANGENAME:
+		list_for_each_entry(ops, &net->rules_ops, list) {
+			detach_rules(&ops->rules_list, dev);
+			attach_rules(&ops->rules_list, dev);
+		}
 		break;
 
 	case NETDEV_UNREGISTER:

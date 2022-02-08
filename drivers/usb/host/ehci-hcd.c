@@ -110,6 +110,87 @@ MODULE_PARM_DESC (ignore_oc, "ignore bogus hardware overcurrent indications");
 #include "ehci.h"
 #include "pci-quirks.h"
 
+void print_ehci_registers(struct usb_hcd *hcd)
+{
+	u32 reg;
+	u32 __iomem *reg_ptr;
+	struct ehci_hcd *ehci = hcd_to_ehci(hcd);
+
+	printk("\n%s\n", __func__);
+
+	reg = ehci_readl(ehci, &ehci->caps->hc_capbase);
+	printk("hcd reg(HCCPBASE):\t0x%08x\n", reg);
+
+	reg = ehci_readl(ehci, &ehci->caps->hcs_params);
+	printk("hcd reg(HCSPARAMS):\t0x%08x\n", reg);
+
+	reg = ehci_readl(ehci, &ehci->caps->hcc_params);
+	printk("hcd reg(HCCPARAMS):\t0x%08x\n", reg);
+
+	reg = ehci_readl(ehci, &ehci->regs->command);
+	printk("hcd reg(USBCMD):\t0x%08x\n", reg);
+
+	reg = ehci_readl(ehci, &ehci->regs->status);
+	printk("hcd reg(USBSTS):\t0x%08x\n", reg);
+
+	reg = ehci_readl(ehci, &ehci->regs->intr_enable);
+	printk("hcd reg(USBINTR):\t0x%08x\n", reg);
+
+	reg = ehci_readl(ehci, &ehci->regs->frame_index);
+	printk("hcd reg(FRINDEX):\t0x%08x\n", reg);
+
+	reg = ehci_readl(ehci, &ehci->regs->segment);
+	printk("hcd reg(CTRLDSSEGMENT):\t0x%08x\n", reg);
+
+	reg = ehci_readl(ehci, &ehci->regs->frame_list);
+	printk("hcd reg(PERIODICLISTBASE):\t0x%08x\n", reg);
+
+	reg = ehci_readl(ehci, &ehci->regs->async_next);
+	printk("hcd reg(ASYNCLISTADDR):\t0x%08x\n", reg);
+
+	reg = ehci_readl(ehci, &ehci->regs->configured_flag);
+	printk("hcd reg(CONFIGFLAG):\t0x%08x\n", reg);
+
+	reg = ehci_readl(ehci, &ehci->regs->port_status[0]);
+	printk("hcd reg(PORT0 Status/Control):\t0x%08x\n", reg);
+
+	reg_ptr = (u32 __iomem *)(((u8 __iomem *)ehci->regs) + 0x48);
+	reg = ehci_readl(ehci, reg_ptr);
+	printk("hcd reg(PORT1 Status/Control):\t0x%08x\n", reg);
+
+	reg_ptr = (u32 __iomem *)(((u8 __iomem *)ehci->regs) + 0x80);
+	reg = ehci_readl(ehci, reg_ptr);
+	printk("hcd reg(INSNREG00):\t0x%08x\n", reg);
+
+	reg_ptr = (u32 __iomem *)(((u8 __iomem *)ehci->regs) + 0x84);
+	reg = ehci_readl(ehci, reg_ptr);
+	printk("hcd reg(INSNREG01):\t0x%08x\n", reg);
+
+	reg_ptr = (u32 __iomem *)(((u8 __iomem *)ehci->regs) + 0x88);
+	reg = ehci_readl(ehci, reg_ptr);
+	printk("hcd reg(INSNREG02):\t0x%08x\n", reg);
+
+	reg_ptr = (u32 __iomem *)(((u8 __iomem *)ehci->regs) + 0x8C);
+	reg = ehci_readl(ehci, reg_ptr);
+	printk("hcd reg(INSNREG03):\t0x%08x\n", reg);
+
+	reg_ptr = (u32 __iomem *)(((u8 __iomem *)ehci->regs) + 0x90);
+	reg = ehci_readl(ehci, reg_ptr);
+	printk("hcd reg(INSNREG04):\t0x%08x\n", reg);
+
+	reg_ptr = (u32 __iomem *)(((u8 __iomem *)ehci->regs) + 0x94);
+	reg = ehci_readl(ehci, reg_ptr);
+	printk("hcd reg(INSNREG05):\t0x%08x\n", reg);
+
+	reg_ptr = (u32 __iomem *)(((u8 __iomem *)ehci->regs) + 0x98);
+	reg = ehci_readl(ehci, reg_ptr);
+	printk("hcd reg(INSNREG06):\t0x%08x\n", reg);
+
+	reg_ptr = (u32 __iomem *)(((u8 __iomem *)ehci->regs) + 0x9C);
+	reg = ehci_readl(ehci, reg_ptr);
+	printk("hcd reg(INSNREG07):\t0x%08x\n\n\n", reg);
+}
+
 /*
  * The MosChip MCS9990 controller updates its microframe counter
  * a little before the frame counter, and occasionally we will read
@@ -681,6 +762,9 @@ EXPORT_SYMBOL_GPL(ehci_setup);
 
 /*-------------------------------------------------------------------------*/
 
+#if 1 /* for IAA_watchdog */
+extern unsigned int watchdog_count;
+#endif
 static irqreturn_t ehci_irq (struct usb_hcd *hcd)
 {
 	struct ehci_hcd		*ehci = hcd_to_ehci (hcd);
@@ -706,6 +790,8 @@ static irqreturn_t ehci_irq (struct usb_hcd *hcd)
 	/* Shared IRQ? */
 	if (!masked_status || unlikely(ehci->rh_state == EHCI_RH_HALTED)) {
 		spin_unlock(&ehci->lock);
+		ehci_dbg(ehci, "%s: masked_status: %d, ehci->rh_state: %d\n",
+				__func__, masked_status, ehci->rh_state);
 		return IRQ_NONE;
 	}
 
@@ -732,6 +818,9 @@ static irqreturn_t ehci_irq (struct usb_hcd *hcd)
 
 	/* complete the unlinking of some qh [4.15.2.3] */
 	if (status & STS_IAA) {
+#if 1 /* for IAA_watchdog */
+		watchdog_count = 0;
+#endif
 
 		/* Turn off the IAA watchdog */
 		ehci->enabled_hrtimer_events &= ~BIT(EHCI_HRTIMER_IAA_WATCHDOG);
@@ -804,6 +893,9 @@ static irqreturn_t ehci_irq (struct usb_hcd *hcd)
 	/* PCI errors [4.15.2.4] */
 	if (unlikely ((status & STS_FATAL) != 0)) {
 		ehci_err(ehci, "fatal error\n");
+#if 1 /* for IAA_watchdog */
+		print_ehci_registers(hcd);
+#endif
 		dbg_cmd(ehci, "fatal", cmd);
 		dbg_status(ehci, "fatal", status);
 dead:
@@ -965,8 +1057,6 @@ rescan:
 	}
 
 	qh->exception = 1;
-	if (ehci->rh_state < EHCI_RH_RUNNING)
-		qh->qh_state = QH_STATE_IDLE;
 	switch (qh->qh_state) {
 	case QH_STATE_LINKED:
 	case QH_STATE_COMPLETING:

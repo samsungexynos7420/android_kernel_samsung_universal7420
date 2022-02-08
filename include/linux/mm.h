@@ -178,6 +178,7 @@ extern pgprot_t protection_map[16];
 #define FAULT_FLAG_RETRY_NOWAIT	0x10	/* Don't drop mmap_sem and wait when retrying */
 #define FAULT_FLAG_KILLABLE	0x20	/* The fault task is in SIGKILL killable region */
 #define FAULT_FLAG_TRIED	0x40	/* second try */
+#define FAULT_FLAG_USER		0x80	/* The fault originated in userspace */
 
 /*
  * vm_fault is filled by the the pagefault handler and passed to the vma's
@@ -374,8 +375,18 @@ static inline void compound_unlock_irqrestore(struct page *page,
 
 static inline struct page *compound_head(struct page *page)
 {
-	if (unlikely(PageTail(page)))
-		return page->first_page;
+	if (unlikely(PageTail(page))) {
+		struct page *head = page->first_page;
+
+		/*
+		 * page->first_page may be a dangling pointer to an old
+		 * compound page, so recheck that it is still a tail
+		 * page before returning.
+		 */
+		smp_rmb();
+		if (likely(PageTail(page)))
+			return head;
+	}
 	return page;
 }
 
@@ -779,11 +790,14 @@ static __always_inline void *lowmem_page_address(const struct page *page)
 #endif
 
 #if defined(WANT_PAGE_VIRTUAL)
-#define page_address(page) ((page)->virtual)
-#define set_page_address(page, address)			\
-	do {						\
-		(page)->virtual = (address);		\
-	} while(0)
+static inline void *page_address(const struct page *page)
+{
+	return page->virtual;
+}
+static inline void set_page_address(struct page *page, void *address)
+{
+	page->virtual = address;
+}
 #define page_address_init()  do { } while(0)
 #endif
 
@@ -890,6 +904,7 @@ static inline int page_mapped(struct page *page)
 #define VM_FAULT_WRITE	0x0008	/* Special case for get_user_pages */
 #define VM_FAULT_HWPOISON 0x0010	/* Hit poisoned small page */
 #define VM_FAULT_HWPOISON_LARGE 0x0020  /* Hit poisoned large page. Index encoded in upper bits */
+#define VM_FAULT_SIGSEGV 0x0040
 
 #define VM_FAULT_NOPAGE	0x0100	/* ->fault installed the pte, not return page */
 #define VM_FAULT_LOCKED	0x0200	/* ->fault locked the returned page */
@@ -897,8 +912,8 @@ static inline int page_mapped(struct page *page)
 
 #define VM_FAULT_HWPOISON_LARGE_MASK 0xf000 /* encodes hpage index for large hwpoison */
 
-#define VM_FAULT_ERROR	(VM_FAULT_OOM | VM_FAULT_SIGBUS | VM_FAULT_HWPOISON | \
-			 VM_FAULT_HWPOISON_LARGE)
+#define VM_FAULT_ERROR	(VM_FAULT_OOM | VM_FAULT_SIGBUS | VM_FAULT_SIGSEGV | \
+			 VM_FAULT_HWPOISON | VM_FAULT_HWPOISON_LARGE)
 
 /* Encode hstate index for a hwpoisoned large page */
 #define VM_FAULT_SET_HINDEX(x) ((x) << 12)
@@ -1056,8 +1071,7 @@ int get_kernel_page(unsigned long start, int write, struct page **pages);
 struct page *get_dump_page(unsigned long addr);
 
 extern int try_to_release_page(struct page * page, gfp_t gfp_mask);
-extern void do_invalidatepage(struct page *page, unsigned int offset,
-			      unsigned int length);
+extern void do_invalidatepage(struct page *page, unsigned long offset);
 
 int __set_page_dirty_nobuffers(struct page *page);
 int __set_page_dirty_no_writeback(struct page *page);
@@ -1068,6 +1082,7 @@ void account_page_writeback(struct page *page);
 int set_page_dirty(struct page *page);
 int set_page_dirty_lock(struct page *page);
 int clear_page_dirty_for_io(struct page *page);
+int get_cmdline(struct task_struct *task, char *buffer, int buflen);
 
 extern pid_t
 vm_is_stack(struct task_struct *task, struct vm_area_struct *vma, int in_group);
@@ -1149,11 +1164,6 @@ static inline void update_hiwater_vm(struct mm_struct *mm)
 {
 	if (mm->hiwater_vm < mm->total_vm)
 		mm->hiwater_vm = mm->total_vm;
-}
-
-static inline void reset_mm_hiwater_rss(struct mm_struct *mm)
-{
-	mm->hiwater_rss = get_mm_rss(mm);
 }
 
 static inline void setmax_mm_hiwater_rss(unsigned long *maxrss,
@@ -1575,7 +1585,7 @@ int write_one_page(struct page *page, int wait);
 void task_dirty_inc(struct task_struct *tsk);
 
 /* readahead.c */
-#define VM_MAX_READAHEAD	128	/* kbytes */
+#define VM_MAX_READAHEAD	256	/* kbytes */
 #define VM_MIN_READAHEAD	16	/* kbytes (includes current page) */
 
 int force_page_cache_readahead(struct address_space *mapping, struct file *filp,
@@ -1717,6 +1727,7 @@ static inline struct page *follow_page(struct vm_area_struct *vma,
 #define FOLL_HWPOISON	0x100	/* check page is hwpoisoned */
 #define FOLL_NUMA	0x200	/* force NUMA hinting page fault */
 #define FOLL_MIGRATION	0x400	/* wait for page to replace migration entry */
+#define FOLL_COW	0x4000	/* internal GUP flag */
 
 typedef int (*pte_fn_t)(pte_t *pte, pgtable_t token, unsigned long addr,
 			void *data);
@@ -1839,12 +1850,6 @@ static inline bool page_is_guard(struct page *page)
 static inline unsigned int debug_guardpage_minorder(void) { return 0; }
 static inline bool page_is_guard(struct page *page) { return false; }
 #endif /* CONFIG_DEBUG_PAGEALLOC */
-
-/* 3.18 backport */
-static inline void truncate_inode_pages_final(struct address_space *mapping)
-{
-	truncate_inode_pages(mapping, 0);
-}
 
 #if MAX_NUMNODES > 1
 void __init setup_nr_node_ids(void);

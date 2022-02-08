@@ -226,6 +226,7 @@ static DEFINE_RAW_SPINLOCK(die_lock);
  */
 void die(const char *str, struct pt_regs *regs, int err)
 {
+	enum bug_trap_type bug_type = BUG_TRAP_TYPE_NONE;
 	struct thread_info *thread = current_thread_info();
 	int ret;
 
@@ -234,6 +235,12 @@ void die(const char *str, struct pt_regs *regs, int err)
 	raw_spin_lock_irq(&die_lock);
 	console_verbose();
 	bust_spinlocks(1);
+
+	if (!user_mode(regs))
+		bug_type = report_bug(regs->pc, regs);
+	if (bug_type != BUG_TRAP_TYPE_NONE)
+		str = "Oops - BUG";
+
 	ret = __die(str, err, thread, regs);
 
 	if (regs && kexec_should_crash(thread->task))
@@ -245,9 +252,13 @@ void die(const char *str, struct pt_regs *regs, int err)
 	oops_exit();
 
 	if (in_interrupt())
-		panic("Fatal exception in interrupt");
+		panic("%s\nPC is at %pS\nLR is at %pS",
+				"Fatal exception in interrupt", (void *)regs->pc,
+				compat_user_mode(regs) ? (void *)regs->compat_lr : (void *)regs->regs[30]);
 	if (panic_on_oops)
-		panic("Fatal exception");
+		panic("%s\nPC is at %pS\nLR is at %pS",
+				"Fatal exception", (void *)regs->pc,
+				compat_user_mode(regs) ? (void *)regs->compat_lr : (void *)regs->regs[30]);
 	if (ret != NOTIFY_STOP)
 		do_exit(SIGSEGV);
 }
@@ -260,6 +271,13 @@ void arm64_notify_die(const char *str, struct pt_regs *regs,
 	else
 		die(str, regs, err);
 }
+
+#ifdef CONFIG_GENERIC_BUG
+int is_valid_bugaddr(unsigned long pc)
+{
+	return 1;
+}
+#endif
 
 static LIST_HEAD(undef_hook);
 
@@ -385,16 +403,33 @@ asmlinkage long do_ni_syscall(struct pt_regs *regs)
 }
 
 /*
- * bad_mode handles the impossible case in the exception vector.
+ * bad_mode handles the impossible case in the exception vector. This is always
+ * fatal.
  */
 asmlinkage void bad_mode(struct pt_regs *regs, int reason, unsigned int esr)
+{
+	console_verbose();
+
+	pr_crit("Bad mode in %s handler detected, code 0x%08x\n",
+		handler[reason], esr);
+
+	die("Oops - bad mode", regs, 0);
+	local_irq_disable();
+	panic("bad mode");
+}
+
+/*
+ * bad_el0_sync handles unexpected, but potentially recoverable synchronous
+ * exceptions taken from EL0. Unlike bad_mode, this returns.
+ */
+asmlinkage void bad_el0_sync(struct pt_regs *regs, int reason, unsigned int esr)
 {
 	siginfo_t info;
 	void __user *pc = (void __user *)instruction_pointer(regs);
 	console_verbose();
 
-	pr_crit("Bad mode in %s handler detected, code 0x%08x\n",
-		handler[reason], esr);
+	pr_crit("Bad EL0 synchronous exception detected on CPU%d, code 0x%08x\n",
+		smp_processor_id(), esr);
 	__show_regs(regs);
 
 	info.si_signo = SIGILL;
@@ -402,7 +437,7 @@ asmlinkage void bad_mode(struct pt_regs *regs, int reason, unsigned int esr)
 	info.si_code  = ILL_ILLOPC;
 	info.si_addr  = pc;
 
-	arm64_notify_die("Oops - bad mode", regs, &info, 0);
+	force_sig_info(info.si_signo, &info, current);
 }
 
 void __pte_error(const char *file, int line, unsigned long val)

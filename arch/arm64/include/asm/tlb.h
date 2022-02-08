@@ -35,6 +35,7 @@ struct mmu_gather {
 	struct mm_struct	*mm;
 	unsigned int		fullmm;
 	struct vm_area_struct	*vma;
+	unsigned long		start, end;
 	unsigned long		range_start;
 	unsigned long		range_end;
 	unsigned int		nr;
@@ -62,7 +63,7 @@ static inline void tlb_flush(struct mmu_gather *tlb)
 		flush_tlb_mm(tlb->mm);
 	else if (tlb->range_end > 0) {
 		flush_tlb_range(tlb->vma, tlb->range_start, tlb->range_end);
-		tlb->range_start = TASK_SIZE;
+		tlb->range_start = TASK_SIZE_64;
 		tlb->range_end = 0;
 	}
 }
@@ -97,10 +98,12 @@ static inline void tlb_flush_mmu(struct mmu_gather *tlb)
 }
 
 static inline void
-tlb_gather_mmu(struct mmu_gather *tlb, struct mm_struct *mm, unsigned int fullmm)
+tlb_gather_mmu(struct mmu_gather *tlb, struct mm_struct *mm, unsigned long start, unsigned long end)
 {
 	tlb->mm = mm;
-	tlb->fullmm = fullmm;
+	tlb->fullmm = !(start | (end+1));
+	tlb->start = start;
+	tlb->end = end;
 	tlb->vma = NULL;
 	tlb->max = ARRAY_SIZE(tlb->local);
 	tlb->pages = tlb->local;
@@ -139,7 +142,7 @@ tlb_start_vma(struct mmu_gather *tlb, struct vm_area_struct *vma)
 {
 	if (!tlb->fullmm) {
 		tlb->vma = vma;
-		tlb->range_start = TASK_SIZE;
+		tlb->range_start = TASK_SIZE_64;
 		tlb->range_end = 0;
 	}
 }
@@ -173,12 +176,31 @@ static inline void __pte_free_tlb(struct mmu_gather *tlb, pgtable_t pte,
 }
 
 #ifndef CONFIG_ARM64_64K_PAGES
+#ifndef CONFIG_TIMA_RKP
 static inline void __pmd_free_tlb(struct mmu_gather *tlb, pmd_t *pmdp,
 				  unsigned long addr)
 {
 	tlb_add_flush(tlb, addr);
 	tlb_remove_page(tlb, virt_to_page(pmdp));
 }
+#else
+static inline void __pmd_free_tlb(struct mmu_gather *tlb, pmd_t *pmdp,
+				  unsigned long addr)
+{
+	int rkp_do = 0;
+#ifdef CONFIG_KNOX_KAP
+	if (boot_mode_security)
+#endif	//CONFIG_KNOX_KAP
+		rkp_do = 1;
+	if (rkp_do && (unsigned long)pmdp >= (unsigned long)RKP_RBUF_VA && (unsigned long)pmdp < ((unsigned long)RKP_RBUF_VA + TIMA_ROBUF_SIZE))
+		rkp_ro_free((void*)pmdp);
+	else {
+		tlb_add_flush(tlb, addr);
+		tlb_remove_page(tlb, virt_to_page(pmdp));
+	}
+}
+
+#endif
 #endif
 
 #define pte_free_tlb(tlb, ptep, addr)	__pte_free_tlb(tlb, ptep, addr)
@@ -186,5 +208,11 @@ static inline void __pmd_free_tlb(struct mmu_gather *tlb, pmd_t *pmdp,
 #define pud_free_tlb(tlb, pudp, addr)	pud_free((tlb)->mm, pudp)
 
 #define tlb_migrate_finish(mm)		do { } while (0)
+
+static inline void
+tlb_remove_pmd_tlb_entry(struct mmu_gather *tlb, pmd_t *pmdp, unsigned long addr)
+{
+	tlb_add_flush(tlb, addr);
+}
 
 #endif

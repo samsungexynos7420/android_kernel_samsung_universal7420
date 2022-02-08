@@ -277,12 +277,16 @@ struct pcmcia_device_id {
 #define INPUT_DEVICE_ID_KEY_MIN_INTERESTING	0x71
 #define INPUT_DEVICE_ID_KEY_MAX		0x2ff
 #define INPUT_DEVICE_ID_REL_MAX		0x0f
+#ifdef CONFIG_INPUT_EXPANDED_ABS
+#define INPUT_DEVICE_ID_ABS_MAX		0x4f
+#else
 #define INPUT_DEVICE_ID_ABS_MAX		0x3f
+#endif
 #define INPUT_DEVICE_ID_MSC_MAX		0x07
 #define INPUT_DEVICE_ID_LED_MAX		0x0f
 #define INPUT_DEVICE_ID_SND_MAX		0x07
 #define INPUT_DEVICE_ID_FF_MAX		0x7f
-#define INPUT_DEVICE_ID_SW_MAX		0x0f
+#define INPUT_DEVICE_ID_SW_MAX		0x20
 
 #define INPUT_DEVICE_ID_MATCH_BUS	1
 #define INPUT_DEVICE_ID_MATCH_VENDOR	2
@@ -397,6 +401,7 @@ struct virtio_device_id {
 /*
  * For Hyper-V devices we use the device guid as the id.
  */
+#define vmbus_device_id hv_vmbus_device_id
 struct hv_vmbus_device_id {
 	__u8 guid[16];
 	kernel_ulong_t driver_data;	/* Data private to the driver */
@@ -456,7 +461,8 @@ enum dmi_field {
 };
 
 struct dmi_strmatch {
-	unsigned char slot;
+	unsigned char slot:7;
+	unsigned char exact_match:1;
 	char substr[79];
 };
 
@@ -474,7 +480,8 @@ struct dmi_system_id {
  */
 #define dmi_device_id dmi_system_id
 
-#define DMI_MATCH(a, b)	{ a, b }
+#define DMI_MATCH(a, b)	{ .slot = a, .substr = b }
+#define DMI_EXACT_MATCH(a, b)	{ .slot = a, .substr = b, .exact_match = 1 }
 
 #define PLATFORM_NAME_SIZE	20
 #define PLATFORM_MODULE_PREFIX	"platform:"
@@ -545,6 +552,11 @@ struct amba_id {
  * See documentation of "x86_match_cpu" for details.
  */
 
+/*
+ * MODULE_DEVICE_TABLE expects this struct to be called x86cpu_device_id.
+ * Although gcc seems to ignore this error, clang fails without this define.
+ */
+#define x86cpu_device_id x86_cpu_id
 struct x86_cpu_id {
 	__u16 vendor;
 	__u16 family;
@@ -581,6 +593,7 @@ struct ipack_device_id {
 #define MEI_CL_MODULE_PREFIX "mei:"
 #define MEI_CL_NAME_SIZE 32
 
+#define mei_device_id mei_cl_device_id
 struct mei_cl_device_id {
 	char name[MEI_CL_NAME_SIZE];
 	kernel_ulong_t driver_info;

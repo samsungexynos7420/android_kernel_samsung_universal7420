@@ -175,6 +175,8 @@ struct ehci_hcd {			/* one per controller */
 			suspended */
 	unsigned long		resuming_ports;		/* which ports have
 			started to resume */
+	unsigned long		hsic_ports;		/* which ports are
+			used for HSIC */
 
 	/* per-HC memory pools (could be per-bus, but ...) */
 	struct dma_pool		*qh_pool;	/* qh per active urb */
@@ -198,6 +200,7 @@ struct ehci_hcd {			/* one per controller */
 	unsigned		amd_pll_fix:1;
 	unsigned		use_dummy_qh:1;	/* AMD Frame List table quirk*/
 	unsigned		has_synopsys_hc_bug:1; /* Synopsys HC */
+	unsigned		has_synopsys_hsic_bug:1; /* Synopsys HC HSIC port */
 	unsigned		frame_index_bug:1; /* MosChip (AKA NetMos) */
 	unsigned		need_oc_pp_cycle:1; /* MPC834X port power */
 
@@ -392,8 +395,11 @@ struct ehci_qh {
 #define	QH_STATE_COMPLETING	5		/* don't touch token.HALT */
 
 	u8			xacterrs;	/* XactErr retry counter */
+#if defined(CONFIG_MDM_HSIC_PM)
+#define	QH_XACTERR_MAX		4		/* XactErr retry limit */
+#else
 #define	QH_XACTERR_MAX		32		/* XactErr retry limit */
-
+#endif
 	/* periodic schedule info */
 	u8			usecs;		/* intr bandwidth */
 	u8			gap_uf;		/* uframes split/csplit gap */

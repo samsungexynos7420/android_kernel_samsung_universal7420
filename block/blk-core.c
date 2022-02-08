@@ -378,7 +378,7 @@ EXPORT_SYMBOL(blk_put_queue);
  * If not, only ELVPRIV requests are drained.  The caller is responsible
  * for ensuring that no new requests which need to be drained are queued.
  */
-static void __blk_drain_queue(struct request_queue *q, bool drain_all)
+void __blk_drain_queue(struct request_queue *q, bool drain_all)
 	__releases(q->queue_lock)
 	__acquires(q->queue_lock)
 {
@@ -645,10 +645,12 @@ struct request_queue *blk_alloc_queue_node(gfp_t gfp_mask, int node_id)
 	__set_bit(QUEUE_FLAG_BYPASS, &q->queue_flags);
 
 	if (blkcg_init_queue(q))
-		goto fail_id;
+		goto fail_bdi;
 
 	return q;
 
+fail_bdi:
+	bdi_destroy(&q->backing_dev_info);
 fail_id:
 	ida_simple_remove(&blk_queue_ida, q->id);
 fail_q:
@@ -739,9 +741,17 @@ blk_init_allocated_queue(struct request_queue *q, request_fn_proc *rfn,
 
 	q->sg_reserved_size = INT_MAX;
 
+	/* Protect q->elevator from elevator_change */
+	mutex_lock(&q->sysfs_lock);
+
 	/* init elevator */
-	if (elevator_init(q, NULL))
+	if (elevator_init(q, NULL)) {
+		mutex_unlock(&q->sysfs_lock);
 		return NULL;
+	}
+
+	mutex_unlock(&q->sysfs_lock);
+
 	return q;
 }
 EXPORT_SYMBOL(blk_init_allocated_queue);
@@ -1456,6 +1466,11 @@ void init_request_from_bio(struct request *req, struct bio *bio)
 	if (bio->bi_rw & REQ_RAHEAD)
 		req->cmd_flags |= REQ_FAILFAST_MASK;
 
+#ifdef CONFIG_JOURNAL_DATA_TAG
+       if (bio_flagged(bio, BIO_JMETA) || bio_flagged(bio, BIO_JOURNAL))
+               req->cmd_flags |= REQ_META;
+#endif
+
 	req->errors = 0;
 	req->__sector = bio->bi_sector;
 	req->ioprio = bio_prio(bio);
@@ -2026,6 +2041,8 @@ static void blk_account_io_completion(struct request *req, unsigned int bytes)
 		cpu = part_stat_lock();
 		part = req->part;
 		part_stat_add(cpu, part, sectors[rw], bytes >> 9);
+		if (req->cmd_flags & REQ_DISCARD)
+			part_stat_add(cpu, part, discard_sectors, bytes >> 9);
 		part_stat_unlock();
 	}
 }
@@ -2050,10 +2067,17 @@ static void blk_account_io_done(struct request *req)
 		part_stat_add(cpu, part, ticks[rw], duration);
 		part_round_stats(cpu, part);
 		part_dec_in_flight(part, rw);
+		if (req->cmd_flags & REQ_DISCARD)
+			part_stat_inc(cpu, part, discard_ios);
+		if (!(req->cmd_flags & REQ_STARTED))
+			part_stat_inc(cpu, part, flush_ios);
 
 		hd_struct_put(part);
 		part_stat_unlock();
 	}
+
+	if (req->cmd_flags & REQ_FLUSH_SEQ)
+		req->q->flush_ios++;
 }
 
 #ifdef CONFIG_PM_RUNTIME
@@ -2198,6 +2222,8 @@ void blk_dequeue_request(struct request *rq)
 	 * the driver side.
 	 */
 	if (blk_account_rq(rq)) {
+		if (!queue_in_flight(q))
+			q->in_flight_stamp = ktime_get();
 		q->in_flight[rq_is_sync(rq)]++;
 		set_io_start_time_ns(rq);
 	}
@@ -2229,6 +2255,7 @@ void blk_start_request(struct request *req)
 	if (unlikely(blk_bidi_rq(req)))
 		req->next_rq->resid_len = blk_rq_bytes(req->next_rq);
 
+	BUG_ON(test_bit(REQ_ATOM_COMPLETE, &req->atomic_flags));
 	blk_add_timer(req);
 }
 EXPORT_SYMBOL(blk_start_request);
@@ -2288,7 +2315,7 @@ bool blk_update_request(struct request *req, int error, unsigned int nr_bytes)
 	if (!req->bio)
 		return false;
 
-	trace_block_rq_complete(req->q, req);
+	trace_block_rq_complete(req->q, req, nr_bytes);
 
 	/*
 	 * For fs requests, rq is just carrier of independent bio's
@@ -3086,6 +3113,9 @@ int blk_pre_runtime_suspend(struct request_queue *q)
 {
 	int ret = 0;
 
+	if (!q->dev)
+		return ret;
+
 	spin_lock_irq(q->queue_lock);
 	if (q->nr_pending) {
 		ret = -EBUSY;
@@ -3113,6 +3143,9 @@ EXPORT_SYMBOL(blk_pre_runtime_suspend);
  */
 void blk_post_runtime_suspend(struct request_queue *q, int err)
 {
+	if (!q->dev)
+		return;
+
 	spin_lock_irq(q->queue_lock);
 	if (!err) {
 		q->rpm_status = RPM_SUSPENDED;
@@ -3137,6 +3170,9 @@ EXPORT_SYMBOL(blk_post_runtime_suspend);
  */
 void blk_pre_runtime_resume(struct request_queue *q)
 {
+	if (!q->dev)
+		return;
+
 	spin_lock_irq(q->queue_lock);
 	q->rpm_status = RPM_RESUMING;
 	spin_unlock_irq(q->queue_lock);
@@ -3159,6 +3195,9 @@ EXPORT_SYMBOL(blk_pre_runtime_resume);
  */
 void blk_post_runtime_resume(struct request_queue *q, int err)
 {
+	if (!q->dev)
+		return;
+
 	spin_lock_irq(q->queue_lock);
 	if (!err) {
 		q->rpm_status = RPM_ACTIVE;
@@ -3180,7 +3219,8 @@ int __init blk_dev_init(void)
 
 	/* used for unplugging and affects IO latency/throughput - HIGHPRI */
 	kblockd_workqueue = alloc_workqueue("kblockd",
-					    WQ_MEM_RECLAIM | WQ_HIGHPRI, 0);
+					    WQ_MEM_RECLAIM | WQ_HIGHPRI |
+					    WQ_POWER_EFFICIENT, 0);
 	if (!kblockd_workqueue)
 		panic("Failed to create kblockd\n");
 

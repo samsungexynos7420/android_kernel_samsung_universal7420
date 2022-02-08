@@ -86,7 +86,13 @@ struct inet_request_sock {
 				wscale_ok  : 1,
 				ecn_ok	   : 1,
 				acked	   : 1,
+#ifndef CONFIG_MPTCP
 				no_srccheck: 1;
+#else
+				no_srccheck: 1,
+				mptcp_rqsk : 1,
+				saw_mpc    : 1;
+#endif
 	kmemcheck_bitfield_end(flags);
 	u32                     ir_mark;
 	struct ip_options_rcu	*opt;
@@ -153,10 +159,8 @@ struct inet_sock {
 	/* Socket demultiplex comparisons on incoming packets. */
 #define inet_daddr		sk.__sk_common.skc_daddr
 #define inet_rcv_saddr		sk.__sk_common.skc_rcv_saddr
-#define inet_addrpair		sk.__sk_common.skc_addrpair
 #define inet_dport		sk.__sk_common.skc_dport
 #define inet_num		sk.__sk_common.skc_num
-#define inet_portpair		sk.__sk_common.skc_portpair
 
 	__be32			inet_saddr;
 	__s16			uc_ttl;

@@ -392,7 +392,7 @@ scan:
 		}
 	}
 	offset = si->lowest_bit;
-	while (++offset < scan_base) {
+	while (offset < scan_base) {
 		if (!si->swap_map[offset]) {
 			spin_lock(&si->lock);
 			goto checks;
@@ -405,6 +405,7 @@ scan:
 			cond_resched();
 			latency_ration = LATENCY_LIMIT;
 		}
+		offset++;
 	}
 	spin_lock(&si->lock);
 
@@ -1964,6 +1965,8 @@ static unsigned long read_swap_header(struct swap_info_struct *p,
 		swab32s(&swap_header->info.version);
 		swab32s(&swap_header->info.last_page);
 		swab32s(&swap_header->info.nr_badpages);
+		if (swap_header->info.nr_badpages > MAX_SWAP_BADPAGES)
+			return 0;
 		for (i = 0; i < swap_header->info.nr_badpages; i++)
 			swab32s(&swap_header->info.badpages[i]);
 	}

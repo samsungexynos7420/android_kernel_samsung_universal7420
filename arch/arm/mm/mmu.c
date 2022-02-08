@@ -48,8 +48,6 @@ EXPORT_SYMBOL(empty_zero_page);
  */
 pmd_t *top_pmd;
 
-pmdval_t user_pmd_table = _PAGE_USER_TABLE;
-
 #define CPOLICY_UNCACHED	0
 #define CPOLICY_BUFFERED	1
 #define CPOLICY_WRITETHROUGH	2
@@ -66,6 +64,8 @@ pgprot_t pgprot_s2_device;
 
 EXPORT_SYMBOL(pgprot_user);
 EXPORT_SYMBOL(pgprot_kernel);
+
+static int enable_noexec;
 
 struct cachepolicy {
 	const char	policy[16];
@@ -460,23 +460,14 @@ static void __init build_mem_type_table(void)
 	s2_pgprot = cp->pte_s2;
 	hyp_device_pgprot = s2_device_pgprot = mem_types[MT_DEVICE].prot_pte;
 
-#ifndef CONFIG_ARM_LPAE
 	/*
 	 * We don't use domains on ARMv6 (since this causes problems with
 	 * v6/v7 kernels), so we must use a separate memory type for user
 	 * r/o, kernel r/w to map the vectors page.
 	 */
+#ifndef CONFIG_ARM_LPAE
 	if (cpu_arch == CPU_ARCH_ARMv6)
 		vecs_pgprot |= L_PTE_MT_VECTORS;
-
-	/*
-	 * Check is it with support for the PXN bit
-	 * in the Short-descriptor translation table format descriptors.
-	 */
-	if (cpu_arch == CPU_ARCH_ARMv7 &&
-		(read_cpuid_ext(CPUID_EXT_MMFR0) & 0xF) >= 4) {
-		user_pmd_table |= PMD_PXNTABLE;
-	}
 #endif
 
 	/*
@@ -543,11 +534,6 @@ static void __init build_mem_type_table(void)
 	}
 	kern_pgprot |= PTE_EXT_AF;
 	vecs_pgprot |= PTE_EXT_AF;
-
-	/*
-	 * Set PXN for user mappings
-	 */
-	user_pgprot |= PTE_EXT_PXN;
 #endif
 
 	for (i = 0; i < 16; i++) {
@@ -653,7 +639,8 @@ static void __init alloc_init_pte(pmd_t *pmd, unsigned long addr,
 	pte_t *pte = start_pte + pte_index(addr);
 
 	/* If replacing a section mapping, the whole section must be replaced */
-	BUG_ON(!pmd_none(*pmd) && pmd_bad(*pmd) && ((addr | end) & ~PMD_MASK));
+	if (!enable_noexec)
+		BUG_ON(!pmd_none(*pmd) && pmd_bad(*pmd) && ((addr | end) & ~PMD_MASK));
 
 	do {
 		set_pte_ext(pte, pfn_pte(pfn, __pgprot(type->prot_pte)), 0);
@@ -1002,6 +989,33 @@ void __init debug_ll_io_init(void)
 }
 #endif
 
+void mark_data_noexec(void)
+{
+	unsigned long start;
+	unsigned long size;
+
+	if (!enable_noexec)
+		return;
+
+	start = PAGE_ALIGN((unsigned long)PAGE_OFFSET);
+	size = PAGE_ALIGN((unsigned long)_text) - start;
+	pr_debug("Set kernel data: %lx - %lx to noexec\n",
+			start, start + size);
+	set_memory_xn(start, size >> PAGE_SHIFT);
+
+	start = PAGE_ALIGN((unsigned long)__start_rodata);
+	size = PAGE_ALIGN((unsigned long)__end_rodata) - start;
+	pr_debug("Set kernel data: %lx - %lx to noexec\n",
+			start, start + size);
+	set_memory_xn(start, size >> PAGE_SHIFT);
+
+	start = PFN_ALIGN((unsigned long)__end_rodata);
+	size = ALIGN(start, PMD_SIZE) - start;
+	pr_debug("Set kernel data: %lx - %lx to noexec\n",
+			start, start + size);
+	set_memory_xn(start, size >> PAGE_SHIFT);
+}
+
 static void * __initdata vmalloc_min =
 	(void *)(VMALLOC_END - (240 << 20) - VMALLOC_OFFSET);
 
@@ -1034,6 +1048,20 @@ static int __init early_vmalloc(char *arg)
 early_param("vmalloc", early_vmalloc);
 
 phys_addr_t arm_lowmem_limit __initdata = 0;
+
+static int __init early_noexec(char *arg)
+{
+	if (!arg)
+		return -EINVAL;
+
+	if (!strncmp(arg, "on", 2))
+		enable_noexec = 1;
+	else if (!strncmp(arg, "off", 3))
+		enable_noexec = 0;
+
+	return 0;
+}
+early_param("noexec", early_noexec);
 
 void __init sanity_check_meminfo(void)
 {
@@ -1340,13 +1368,26 @@ static void __init kmap_init(void)
 #endif
 }
 
+static inline void __init create_mapping_memory(phys_addr_t start, phys_addr_t end, bool force_pages)
+{
+	struct map_desc map;
+	map.pfn = __phys_to_pfn(start);
+	map.virtual = __phys_to_virt(start);
+	map.length = end - start;
+	map.type = MT_MEMORY;
+	create_mapping(&map, force_pages);
+	pr_info("%s: %s: %x ~ %x\n", __func__,
+			force_pages ? "page" : "section", start, end);
+}
 
 static void __init map_lowmem(void)
 {
 	struct memblock_region *reg;
 	phys_addr_t start;
 	phys_addr_t end;
-	struct map_desc map;
+
+	if (enable_noexec)
+		mem_types[MT_MEMORY].prot_sect |= PMD_SECT_XN;
 
 	/* Map all the lowmem memory banks. */
 	for_each_memblock(memory, reg) {
@@ -1358,24 +1399,44 @@ static void __init map_lowmem(void)
 		if (start >= end)
 			break;
 
-		map.pfn = __phys_to_pfn(start);
-		map.virtual = __phys_to_virt(start);
-		map.length = end - start;
-		map.type = MT_MEMORY;
-
-		create_mapping(&map, false);
+		create_mapping_memory(start, end, false);
 	}
 
 #ifdef CONFIG_DEBUG_RODATA
 	start = __pa(_stext) & PMD_MASK;
 	end = ALIGN(__pa(__end_rodata), PMD_SIZE);
+	create_mapping_memory(start, end, true);
+#else
+	if (enable_noexec) {
+		start = __pa(__init_begin);
+		end = ALIGN(__pa(__init_end), PAGE_SIZE);
+		create_mapping_memory(start, end, true);
 
-	map.pfn = __phys_to_pfn(start);
-	map.virtual = __phys_to_virt(start);
-	map.length = end - start;
-	map.type = MT_MEMORY;
+		mem_types[MT_MEMORY].prot_pte |= L_PTE_XN;
+		start = __pa(_stext) & PMD_MASK;
+		end = __pa(_stext) & PAGE_MASK;
+		if (start != end)
+			create_mapping_memory(start, end, true);
 
-	create_mapping(&map, true);
+#ifndef CONFIG_FTRACE
+		mem_types[MT_MEMORY].prot_pte |= L_PTE_RDONLY;
+#endif
+		mem_types[MT_MEMORY].prot_pte &= ~L_PTE_XN;
+		start = __pa(_stext) & PAGE_MASK;
+		end = __pa(__start_rodata);
+		create_mapping_memory(start, end, true);
+
+		mem_types[MT_MEMORY].prot_pte &= ~L_PTE_RDONLY;
+		mem_types[MT_MEMORY].prot_pte |= L_PTE_XN;
+		start = __pa(__start_rodata);
+		end = __pa(__init_begin);
+		create_mapping_memory(start, end, true);
+
+		start = ALIGN(__pa(__init_end), PAGE_SIZE);
+		end = ALIGN(__pa(__init_end), PMD_SIZE);
+		if (start != end)
+			create_mapping_memory(start, end, true);
+	}
 #endif
 }
 

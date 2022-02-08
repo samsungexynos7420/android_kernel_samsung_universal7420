@@ -252,50 +252,6 @@ static int fuse_dentry_revalidate(struct dentry *entry, unsigned int flags)
 	return 1;
 }
 
-/*
- * Get the canonical path. Since we must translate to a path, this must be done
- * in the context of the userspace daemon, however, the userspace daemon cannot
- * look up paths on its own. Instead, we handle the lookup as a special case
- * inside of the write request.
- */
-static void fuse_dentry_canonical_path(const struct path *path, struct path *canonical_path) {
-	struct inode *inode = path->dentry->d_inode;
-	struct fuse_conn *fc = get_fuse_conn(inode);
-	struct fuse_req *req;
-	int err;
-	char *path_name;
-
-	req = fuse_get_req(fc, 1);
-	err = PTR_ERR(req);
-	if (IS_ERR(req))
-		goto default_path;
-
-	path_name = (char*)__get_free_page(GFP_KERNEL);
-	if (!path_name) {
-		fuse_put_request(fc, req);
-		goto default_path;
-	}
-
-	req->in.h.opcode = FUSE_CANONICAL_PATH;
-	req->in.h.nodeid = get_node_id(inode);
-	req->in.numargs = 0;
-	req->out.numargs = 1;
-	req->out.args[0].size = PATH_MAX;
-	req->out.args[0].value = path_name;
-	req->canonical_path = canonical_path;
-	req->out.argvar = 1;
-	fuse_request_send(fc, req);
-	err = req->out.h.error;
-	fuse_put_request(fc, req);
-	free_page((unsigned long)path_name);
-	if (!err)
-		return;
-default_path:
-	canonical_path->dentry = path->dentry;
-	canonical_path->mnt = path->mnt;
-	path_get(canonical_path);
-}
-
 static int invalid_nodeid(u64 nodeid)
 {
 	return !nodeid || nodeid == FUSE_ROOT_ID;
@@ -303,7 +259,6 @@ static int invalid_nodeid(u64 nodeid)
 
 const struct dentry_operations fuse_dentry_operations = {
 	.d_revalidate	= fuse_dentry_revalidate,
-	.d_canonical_path = fuse_dentry_canonical_path,
 };
 
 int fuse_valid_type(int m)
@@ -506,6 +461,9 @@ static int fuse_create_open(struct inode *dir, struct dentry *entry,
 	err = req->out.h.error;
 	if (err)
 		goto out_free_ff;
+
+	if (req->private_lower_rw_file != NULL)
+		ff->rw_lower_file = req->private_lower_rw_file;
 
 	err = -EIO;
 	if (!S_ISREG(outentry.attr.mode) || invalid_nodeid(outentry.nodeid))
@@ -1220,6 +1178,8 @@ static int parse_dirfile(char *buf, size_t nbytes, struct file *file,
 			return -EIO;
 		if (reclen > nbytes)
 			break;
+		if (memchr(dirent->name, '/', dirent->namelen) != NULL)
+			return -EIO;
 
 		over = filldir(dstbuf, dirent->name, dirent->namelen,
 			       file->f_pos, dirent->ino, dirent->type);
@@ -1270,13 +1230,29 @@ static int fuse_direntplus_link(struct file *file,
 		if (name.name[1] == '.' && name.len == 2)
 			return 0;
 	}
+
+	if (invalid_nodeid(o->nodeid))
+		return -EIO;
+	if (!fuse_valid_type(o->attr.mode))
+		return -EIO;
+
 	fc = get_fuse_conn(dir);
 
 	name.hash = full_name_hash(name.name, name.len);
 	dentry = d_lookup(parent, &name);
-	if (dentry && dentry->d_inode) {
+	if (dentry) {
 		inode = dentry->d_inode;
-		if (get_node_id(inode) == o->nodeid) {
+		if (!inode) {
+			d_drop(dentry);
+		} else if (get_node_id(inode) != o->nodeid ||
+			   ((o->attr.mode ^ inode->i_mode) & S_IFMT)) {
+			err = d_invalidate(dentry);
+			if (err)
+				goto out;
+		} else if (is_bad_inode(inode)) {
+			err = -EIO;
+			goto out;
+		} else {
 			struct fuse_inode *fi;
 			fi = get_fuse_inode(inode);
 			spin_lock(&fc->lock);
@@ -1289,9 +1265,6 @@ static int fuse_direntplus_link(struct file *file,
 			 */
 			goto found;
 		}
-		err = d_invalidate(dentry);
-		if (err)
-			goto out;
 		dput(dentry);
 		dentry = NULL;
 	}
@@ -1306,10 +1279,19 @@ static int fuse_direntplus_link(struct file *file,
 	if (!inode)
 		goto out;
 
-	alias = d_materialise_unique(dentry, inode);
-	err = PTR_ERR(alias);
-	if (IS_ERR(alias))
-		goto out;
+	if (S_ISDIR(inode->i_mode)) {
+		mutex_lock(&fc->inst_mutex);
+		alias = fuse_d_add_directory(dentry, inode);
+		mutex_unlock(&fc->inst_mutex);
+		err = PTR_ERR(alias);
+		if (IS_ERR(alias)) {
+			iput(inode);
+			goto out;
+		}
+	} else {
+		alias = d_splice_alias(inode, dentry);
+	}
+
 	if (alias) {
 		dput(dentry);
 		dentry = alias;
@@ -1346,6 +1328,8 @@ static int parse_dirplusfile(char *buf, size_t nbytes, struct file *file,
 			return -EIO;
 		if (reclen > nbytes)
 			break;
+		if (memchr(dirent->name, '/', dirent->namelen) != NULL)
+			return -EIO;
 
 		if (!over) {
 			/* We fill entries into dstbuf only as much as
@@ -1617,6 +1601,7 @@ int fuse_do_setattr(struct inode *inode, struct iattr *attr,
 		    struct file *file)
 {
 	struct fuse_conn *fc = get_fuse_conn(inode);
+	struct fuse_inode *fi = get_fuse_inode(inode);
 	struct fuse_req *req;
 	struct fuse_setattr_in inarg;
 	struct fuse_attr_out outarg;
@@ -1644,8 +1629,10 @@ int fuse_do_setattr(struct inode *inode, struct iattr *attr,
 	if (IS_ERR(req))
 		return PTR_ERR(req);
 
-	if (is_truncate)
+	if (is_truncate) {
 		fuse_set_nowrite(inode);
+		set_bit(FUSE_I_SIZE_UNSTABLE, &fi->state);
+	}
 
 	memset(&inarg, 0, sizeof(inarg));
 	memset(&outarg, 0, sizeof(outarg));
@@ -1707,12 +1694,14 @@ int fuse_do_setattr(struct inode *inode, struct iattr *attr,
 		invalidate_inode_pages2(inode->i_mapping);
 	}
 
+	clear_bit(FUSE_I_SIZE_UNSTABLE, &fi->state);
 	return 0;
 
 error:
 	if (is_truncate)
 		fuse_release_nowrite(inode);
 
+	clear_bit(FUSE_I_SIZE_UNSTABLE, &fi->state);
 	return err;
 }
 
@@ -1776,6 +1765,8 @@ static int fuse_setxattr(struct dentry *entry, const char *name,
 		fc->no_setxattr = 1;
 		err = -EOPNOTSUPP;
 	}
+	if (!err)
+		fuse_invalidate_attr(inode);
 	return err;
 }
 
@@ -1905,6 +1896,8 @@ static int fuse_removexattr(struct dentry *entry, const char *name)
 		fc->no_removexattr = 1;
 		err = -EOPNOTSUPP;
 	}
+	if (!err)
+		fuse_invalidate_attr(inode);
 	return err;
 }
 

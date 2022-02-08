@@ -49,7 +49,7 @@
 
 int ip6_rcv_finish(struct sk_buff *skb)
 {
-	if (sysctl_ip_early_demux && !skb_dst(skb)) {
+	if (sysctl_ip_early_demux && !skb_dst(skb) && skb->sk == NULL) {
 		const struct inet6_protocol *ipprot;
 
 		ipprot = rcu_dereference(inet6_protos[ipv6_hdr(skb)->nexthdr]);
@@ -99,7 +99,17 @@ int ipv6_rcv(struct sk_buff *skb, struct net_device *dev, struct packet_type *pt
 	 * arrived via the sending interface (ethX), because of the
 	 * nature of scoping architecture. --yoshfuji
 	 */
-	IP6CB(skb)->iif = skb_dst(skb) ? ip6_dst_idev(skb_dst(skb))->dev->ifindex : dev->ifindex;
+	if (skb_dst(skb) && !ip6_dst_idev(skb_dst(skb))) {
+		struct dst_entry *dst = skb_dst(skb);
+		struct rt6_info *info = (struct rt6_info *)dst;
+
+		pr_err("%s: use=%d, rt6i_ref=%u, ifindex=%d\n", __func__, 
+				dst->__use, atomic_read(&info->rt6i_ref), 
+				dev->ifindex);
+	}
+	IP6CB(skb)->iif = skb_dst(skb) ? (skb_dst(skb)->__use ? 
+			ip6_dst_idev(skb_dst(skb))->dev->ifindex : 
+			dev->ifindex) : dev->ifindex; 
 
 	if (unlikely(!pskb_may_pull(skb, sizeof(*hdr))))
 		goto err;
@@ -325,10 +335,10 @@ int ip6_mc_input(struct sk_buff *skb)
 				if (offset < 0)
 					goto out;
 
-				if (!ipv6_is_mld(skb, nexthdr, offset))
-					goto out;
+				if (ipv6_is_mld(skb, nexthdr, offset))
+					deliver = true;
 
-				deliver = true;
+				goto out;
 			}
 			/* unknown RA - process it normally */
 		}

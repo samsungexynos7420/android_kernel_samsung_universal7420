@@ -371,34 +371,22 @@ static void to_utf8(struct vc_data *vc, uint c)
 
 static void do_compute_shiftstate(void)
 {
-	unsigned int i, j, k, sym, val;
+	unsigned int k, sym, val;
 
 	shift_state = 0;
 	memset(shift_down, 0, sizeof(shift_down));
 
-	for (i = 0; i < ARRAY_SIZE(key_down); i++) {
-
-		if (!key_down[i])
+	for_each_set_bit(k, key_down, min(NR_KEYS, KEY_CNT)) {
+		sym = U(key_maps[0][k]);
+		if (KTYP(sym) != KT_SHIFT && KTYP(sym) != KT_SLOCK)
 			continue;
 
-		k = i * BITS_PER_LONG;
+		val = KVAL(sym);
+		if (val == KVAL(K_CAPSSHIFT))
+			val = KVAL(K_SHIFT);
 
-		for (j = 0; j < BITS_PER_LONG; j++, k++) {
-
-			if (!test_bit(k, key_down))
-				continue;
-
-			sym = U(key_maps[0][k]);
-			if (KTYP(sym) != KT_SHIFT && KTYP(sym) != KT_SLOCK)
-				continue;
-
-			val = KVAL(sym);
-			if (val == KVAL(K_CAPSSHIFT))
-				val = KVAL(K_SHIFT);
-
-			shift_down[val]++;
-			shift_state |= (1 << val);
-		}
+		shift_down[val]++;
+		shift_state |= BIT(val);
 	}
 }
 
@@ -1016,6 +1004,7 @@ static inline unsigned char getleds(void)
 
 static int kbd_update_leds_helper(struct input_handle *handle, void *data)
 {
+#if 0
 	unsigned char leds = *(unsigned char *)data;
 
 	if (test_bit(EV_LED, handle->dev->evbit)) {
@@ -1024,7 +1013,7 @@ static int kbd_update_leds_helper(struct input_handle *handle, void *data)
 		input_inject_event(handle, EV_LED, LED_CAPSL,   !!(leds & 0x04));
 		input_inject_event(handle, EV_SYN, SYN_REPORT, 0);
 	}
-
+#endif
 	return 0;
 }
 

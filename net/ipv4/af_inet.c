@@ -105,6 +105,9 @@
 #include <net/ip_fib.h>
 #include <net/inet_connection_sock.h>
 #include <net/tcp.h>
+#ifdef CONFIG_MPTCP
+#include <net/mptcp.h>
+#endif
 #include <net/udp.h>
 #include <net/udplite.h>
 #include <net/ping.h>
@@ -122,6 +125,13 @@
 
 #ifdef CONFIG_ANDROID_PARANOID_NETWORK
 #include <linux/android_aid.h>
+
+/* START_OF_KNOX_VPN */
+#include <net/ncm.h>
+#include <linux/kfifo.h>
+#include <asm/current.h>
+#include <linux/pid.h>
+/* END_OF_KNOX_VPN */
 
 static inline int current_has_network(void)
 {
@@ -277,18 +287,18 @@ void build_ehash_secret(void)
 		get_random_bytes(&rnd, sizeof(rnd));
 	} while (rnd == 0);
 
-	if (cmpxchg(&inet_ehash_secret, 0, rnd) == 0) {
+	if (cmpxchg(&inet_ehash_secret, 0, rnd) == 0)
 		get_random_bytes(&ipv6_hash_secret, sizeof(ipv6_hash_secret));
-		net_secret_init();
-	}
 }
 EXPORT_SYMBOL(build_ehash_secret);
 
 /*
  *	Create an inet socket.
  */
-
-static int inet_create(struct net *net, struct socket *sock, int protocol,
+#ifndef CONFIG_MPTCP
+static
+#endif
+int inet_create(struct net *net, struct socket *sock, int protocol,
 		       int kern)
 {
 	struct sock *sk;
@@ -299,6 +309,9 @@ static int inet_create(struct net *net, struct socket *sock, int protocol,
 	char answer_no_check;
 	int try_loading_module = 0;
 	int err;
+
+	if (protocol < 0 || protocol >= IPPROTO_MAX)
+		return -EINVAL;
 
 	if (!current_has_network())
 		return -EACCES;
@@ -433,6 +446,66 @@ out_rcu_unlock:
 	goto out;
 }
 
+#ifdef CONFIG_KNOX_NCM
+/** The function is used to check if the ncm feature is enabled or not; if enabled then collect the socket meta-data information; **/
+static void knox_collect_metadata(struct socket *sock) {
+    if(check_ncm_flag()) {
+        struct knox_socket_metadata* ksm = kzalloc(sizeof(struct knox_socket_metadata),GFP_KERNEL);
+
+        struct sock *sk = sock->sk;
+        struct inet_sock *inet = inet_sk(sk);
+
+        struct pid *pid_struct;
+        struct task_struct *task;
+
+        struct pid *parent_pid_struct;
+        struct task_struct *parent_task;
+
+        struct timespec close_timespec;
+
+        if(ksm == NULL) return;
+
+        if((sock->ops->family == AF_INET) && (sk->inet_src_masq != 0)) {
+            pid_struct = find_get_pid(current->tgid);
+            task = pid_task(pid_struct,PIDTYPE_PID);
+            if(task != NULL) {
+                memcpy(ksm->process_name,task->comm, sizeof(task->comm));
+                if(task->parent != NULL) {
+                    parent_pid_struct = find_get_pid(task->parent->tgid);
+                    parent_task = pid_task(parent_pid_struct,PIDTYPE_PID);
+                    if(parent_task != NULL) {
+                        memcpy(ksm->parent_process_name,parent_task->comm,sizeof(ksm->parent_process_name));
+                        ksm->knox_puid = parent_task->cred->uid;
+                    }
+                }
+            }
+
+            ksm->srcport = ntohs(inet->inet_sport);
+            ksm->dstport = ntohs(inet->inet_dport);
+
+            sprintf(ksm->srcaddr,"%pI4",(void *)&sk->inet_src_masq);
+            sprintf(ksm->dstaddr,"%pI4",(void *)&inet->inet_daddr);
+
+            ksm->knox_sent = sock->knox_sent;
+            ksm->knox_recv = sock->knox_recv;
+            ksm->knox_uid = sk->knox_uid;
+            ksm->knox_pid = sk->knox_pid;
+            ksm->trans_proto = sk->sk_protocol;
+
+            memcpy(ksm->domain_name,sk->domain_name,sizeof(ksm->domain_name)-1);
+
+            ksm->open_time = sk->open_time;
+
+            close_timespec = current_kernel_time();
+            ksm->close_time = close_timespec.tv_sec;
+
+            insert_data_kfifo_kthread(ksm);
+        } else {
+            kfree(ksm);
+        }
+    }
+}
+#endif
 
 /*
  *	The peer socket should always be NULL (or else). When we call this
@@ -465,6 +538,9 @@ int inet_release(struct socket *sock)
 		if (sock_flag(sk, SOCK_LINGER) &&
 		    !(current->flags & PF_EXITING))
 			timeout = sk->sk_lingertime;
+#ifdef CONFIG_KNOX_NCM
+		knox_collect_metadata(sock);
+#endif
 		sock->sk = NULL;
 		sk->sk_prot->close(sk, timeout);
 	}
@@ -730,6 +806,23 @@ int inet_accept(struct socket *sock, struct socket *newsock, int flags)
 	lock_sock(sk2);
 
 	sock_rps_record_flow(sk2);
+#ifdef CONFIG_MPTCP
+	if (sk2->sk_protocol == IPPROTO_TCP && mptcp(tcp_sk(sk2))) {
+		struct sock *sk_it = sk2;
+
+		mptcp_for_each_sk(tcp_sk(sk2)->mpcb, sk_it)
+			sock_rps_record_flow(sk_it);
+
+		if (tcp_sk(sk2)->mpcb->master_sk) {
+			sk_it = tcp_sk(sk2)->mpcb->master_sk;
+
+			write_lock_bh(&sk_it->sk_callback_lock);
+			sk_it->sk_wq = newsock->wq;
+			sk_it->sk_socket = newsock;
+			write_unlock_bh(&sk_it->sk_callback_lock);
+		}
+	}
+#endif
 	WARN_ON(!((1 << sk2->sk_state) &
 		  (TCPF_ESTABLISHED | TCPF_SYN_RECV |
 		  TCPF_CLOSE_WAIT | TCPF_CLOSE)));
@@ -780,6 +873,7 @@ int inet_sendmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *msg,
 		 size_t size)
 {
 	struct sock *sk = sock->sk;
+	int err;
 
 	sock_rps_record_flow(sk);
 
@@ -788,7 +882,16 @@ int inet_sendmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *msg,
 	    inet_autobind(sk))
 		return -EAGAIN;
 
-	return sk->sk_prot->sendmsg(iocb, sk, msg, size);
+    err = sk->sk_prot->sendmsg(iocb, sk, msg, size);
+
+    if (err >= 0) {
+        if(sock->knox_sent + err > ULLONG_MAX) {
+            sock->knox_sent = ULLONG_MAX;
+        } else {
+            sock->knox_sent = sock->knox_sent + err;
+        }
+    }
+    return err;
 }
 EXPORT_SYMBOL(inet_sendmsg);
 
@@ -821,8 +924,14 @@ int inet_recvmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *msg,
 
 	err = sk->sk_prot->recvmsg(iocb, sk, msg, size, flags & MSG_DONTWAIT,
 				   flags & ~MSG_DONTWAIT, &addr_len);
-	if (err >= 0)
+	if (err >= 0) {
 		msg->msg_namelen = addr_len;
+        if(sock->knox_recv + err > ULLONG_MAX) {
+            sock->knox_recv = ULLONG_MAX;
+        } else {
+            sock->knox_recv = sock->knox_recv + err;
+        }
+    }
 	return err;
 }
 EXPORT_SYMBOL(inet_recvmsg);
@@ -1072,7 +1181,7 @@ static struct inet_protosw inetsw_array[] =
 		.type =       SOCK_DGRAM,
 		.protocol =   IPPROTO_ICMP,
 		.prot =       &ping_prot,
-		.ops =        &inet_dgram_ops,
+		.ops =        &inet_sockraw_ops,
 		.no_check =   UDP_CSUM_DEFAULT,
 		.flags =      INET_PROTOSW_REUSE,
        },
@@ -1788,6 +1897,11 @@ static int __init inet_init(void)
 	 */
 
 	ip_init();
+
+#ifdef CONFIG_MPTCP
+	/* We must initialize MPTCP before TCP. */
+	mptcp_init();
+#endif
 
 	tcp_v4_init();
 

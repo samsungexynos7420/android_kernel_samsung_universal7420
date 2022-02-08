@@ -41,6 +41,7 @@
 #include <asm/mach/arch.h>
 #include <asm/mach/irq.h>
 #include <asm/mach/time.h>
+#include <mach/exynos-ss.h>
 
 unsigned long irq_err_count;
 
@@ -65,7 +66,9 @@ int arch_show_interrupts(struct seq_file *p, int prec)
 void handle_IRQ(unsigned int irq, struct pt_regs *regs)
 {
 	struct pt_regs *old_regs = set_irq_regs(regs);
+	unsigned long long start_time;
 
+	exynos_ss_irq_exit_var(start_time);
 	irq_enter();
 
 	/*
@@ -81,6 +84,8 @@ void handle_IRQ(unsigned int irq, struct pt_regs *regs)
 	}
 
 	irq_exit();
+	exynos_ss_irq_exit(irq, start_time);
+
 	set_irq_regs(old_regs);
 }
 
@@ -158,12 +163,14 @@ static bool migrate_one_irq(struct irq_desc *desc)
 	if (cpumask_any_and(affinity, cpu_online_mask) >= nr_cpu_ids) {
 		affinity = cpu_online_mask;
 		ret = true;
+	} else if (unlikely(d->state_use_accessors & IRQD_GIC_MULTI_TARGET)) {
+		return false;
 	}
 
 	c = irq_data_get_irq_chip(d);
 	if (!c->irq_set_affinity)
 		pr_debug("IRQ%u: unable to set affinity\n", d->irq);
-	else if (c->irq_set_affinity(d, affinity, true) == IRQ_SET_MASK_OK && ret)
+	else if (c->irq_set_affinity(d, affinity, false) == IRQ_SET_MASK_OK && ret)
 		cpumask_copy(d->affinity, affinity);
 
 	return ret;

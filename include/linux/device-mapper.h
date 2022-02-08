@@ -381,12 +381,6 @@ void dm_set_mdptr(struct mapped_device *md, void *ptr);
 void *dm_get_mdptr(struct mapped_device *md);
 
 /*
- * Export the device via the ioctl interface (uses mdptr).
- */
-int dm_ioctl_export(struct mapped_device *md, const char *name,
-		    const char *uuid);
-
-/*
  * A device can still be used while suspended, but I/O is deferred.
  */
 int dm_suspend(struct mapped_device *md, unsigned suspend_flags);
@@ -411,12 +405,13 @@ int dm_noflush_suspending(struct dm_target *ti);
 union map_info *dm_get_mapinfo(struct bio *bio);
 union map_info *dm_get_rq_mapinfo(struct request *rq);
 
+struct queue_limits *dm_get_queue_limits(struct mapped_device *md);
+
 /*
  * Geometry functions.
  */
 int dm_get_geometry(struct mapped_device *md, struct hd_geometry *geo);
 int dm_set_geometry(struct mapped_device *md, struct hd_geometry *geo);
-
 
 /*-----------------------------------------------------------------
  * Functions for manipulating device-mapper tables.

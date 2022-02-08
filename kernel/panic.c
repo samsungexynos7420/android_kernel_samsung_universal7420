@@ -22,9 +22,21 @@
 #include <linux/sysrq.h>
 #include <linux/init.h>
 #include <linux/nmi.h>
+#include <linux/exynos-ss.h>
+#include <asm/core_regs.h>
+#include "sched/sched.h"
 
 #define PANIC_TIMER_STEP 100
 #define PANIC_BLINK_SPD 18
+#if defined(CONFIG_SOC_EXYNOS5422) || defined(CONFIG_SOC_EXYNOS5430)
+extern void show_exynos_pmu(void);
+#endif
+#if defined(CONFIG_SOC_EXYNOS5422) || defined(CONFIG_SOC_EXYNOS5430)
+extern void show_exynos_cmu(void);
+#endif
+
+/* Machine specific panic information string */
+char *mach_panic_string;
 
 /* Machine specific panic information string */
 char *mach_panic_string;
@@ -79,6 +91,9 @@ void panic(const char *fmt, ...)
 	long i, i_next = 0;
 	int state = 0;
 
+#ifdef CONFIG_EXYNOS_CORESIGHT_ETM
+	exynos_trace_stop();
+#endif
 	/*
 	 * Disable local interrupts. This will prevent panic_smp_self_stop
 	 * from deadlocking the first cpu that invokes the panic, since
@@ -106,12 +121,25 @@ void panic(const char *fmt, ...)
 	vsnprintf(buf, sizeof(buf), fmt, args);
 	va_end(args);
 	printk(KERN_EMERG "Kernel panic - not syncing: %s\n",buf);
+
+	exynos_ss_prepare_panic();
+	exynos_ss_dump_panic();
 #ifdef CONFIG_DEBUG_BUGVERBOSE
 	/*
 	 * Avoid nested stack-dumping if a panic occurs during oops processing
 	 */
 	if (!test_taint(TAINT_DIE) && oops_in_progress <= 1)
 		dump_stack();
+#endif
+
+#if defined(CONFIG_SOC_EXYNOS5422) || defined(CONFIG_SOC_EXYNOS5430)
+	show_exynos_pmu();
+#endif
+#if defined(CONFIG_SOC_EXYNOS5422) || defined(CONFIG_SOC_EXYNOS5430)
+	show_exynos_cmu();
+#endif
+#if CONFIG_SCHED_DEBUG
+	sysrq_sched_debug_show();
 #endif
 
 	/*
@@ -130,7 +158,11 @@ void panic(const char *fmt, ...)
 
 	kmsg_dump(KMSG_DUMP_PANIC);
 
+	exynos_cs_show_pcval();
+
 	atomic_notifier_call_chain(&panic_notifier_list, 0, buf);
+
+	exynos_ss_post_panic();
 
 	bust_spinlocks(0);
 
@@ -410,6 +442,9 @@ struct slowpath_args {
 static void warn_slowpath_common(const char *file, int line, void *caller,
 				 unsigned taint, struct slowpath_args *args)
 {
+#if defined(CONFIG_SEC_BAT_AUT) && !defined(CONFIG_SAMSUNG_PRODUCT_SHIP)
+	printk(BAT_AUTOMAION_TEST_PREFIX_WARN "KERNEL WARN START\n");
+#endif
 	printk(KERN_WARNING "------------[ cut here ]------------\n");
 	printk(KERN_WARNING "WARNING: at %s:%d %pS()\n", file, line, caller);
 
@@ -421,6 +456,9 @@ static void warn_slowpath_common(const char *file, int line, void *caller,
 	print_oops_end_marker();
 	/* Just a warning, don't kill lockdep. */
 	add_taint(taint, LOCKDEP_STILL_OK);
+#if defined(CONFIG_SEC_BAT_AUT) && !defined(CONFIG_SAMSUNG_PRODUCT_SHIP)
+	printk(BAT_AUTOMAION_TEST_PREFIX_WARN "KERNEL WARN END\n");
+#endif
 }
 
 void warn_slowpath_fmt(const char *file, int line, const char *fmt, ...)

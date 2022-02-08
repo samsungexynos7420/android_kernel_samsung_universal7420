@@ -110,8 +110,10 @@ static __inline__ struct ipv6_pinfo *inet6_sk_generic(struct sock *sk)
 	return (struct ipv6_pinfo *)(((u8 *)sk) + offset);
 }
 
-static int inet6_create(struct net *net, struct socket *sock, int protocol,
-			int kern)
+#ifndef CONFIG_MPTCP
+static 
+#endif
+int inet6_create(struct net *net, struct socket *sock, int protocol, int kern)
 {
 	struct inet_sock *inet;
 	struct ipv6_pinfo *np;
@@ -122,6 +124,9 @@ static int inet6_create(struct net *net, struct socket *sock, int protocol,
 	char answer_no_check;
 	int try_loading_module = 0;
 	int err;
+
+	if (protocol < 0 || protocol >= IPPROTO_MAX)
+		return -EINVAL;
 
 	if (!current_has_network())
 		return -EACCES;
@@ -379,7 +384,7 @@ int inet6_bind(struct socket *sock, struct sockaddr *uaddr, int addr_len)
 	inet->inet_rcv_saddr = v4addr;
 	inet->inet_saddr = v4addr;
 
-	np->rcv_saddr = addr->sin6_addr;
+	sk->sk_v6_rcv_saddr = addr->sin6_addr;
 
 	if (!(addr_type & IPV6_ADDR_MULTICAST))
 		np->saddr = addr->sin6_addr;
@@ -478,14 +483,14 @@ int inet6_getname(struct socket *sock, struct sockaddr *uaddr,
 		    peer == 1)
 			return -ENOTCONN;
 		sin->sin6_port = inet->inet_dport;
-		sin->sin6_addr = np->daddr;
+		sin->sin6_addr = sk->sk_v6_daddr;
 		if (np->sndflow)
 			sin->sin6_flowinfo = np->flow_label;
 	} else {
-		if (ipv6_addr_any(&np->rcv_saddr))
+		if (ipv6_addr_any(&sk->sk_v6_rcv_saddr))
 			sin->sin6_addr = np->saddr;
 		else
-			sin->sin6_addr = np->rcv_saddr;
+			sin->sin6_addr = sk->sk_v6_rcv_saddr;
 
 		sin->sin6_port = inet->inet_sport;
 	}
@@ -689,7 +694,7 @@ int inet6_sk_rebuild_header(struct sock *sk)
 
 		memset(&fl6, 0, sizeof(fl6));
 		fl6.flowi6_proto = sk->sk_protocol;
-		fl6.daddr = np->daddr;
+		fl6.daddr = sk->sk_v6_daddr;
 		fl6.saddr = np->saddr;
 		fl6.flowlabel = np->flow_label;
 		fl6.flowi6_oif = sk->sk_bound_dev_if;
@@ -940,6 +945,9 @@ static int __init inet6_init(void)
 	err = ip6_route_init();
 	if (err)
 		goto ip6_route_fail;
+	err = ndisc_late_init();
+	if (err)
+		goto ndisc_late_fail;
 	err = ip6_flowlabel_init();
 	if (err)
 		goto ip6_flowlabel_fail;
@@ -1006,6 +1014,8 @@ ipv6_exthdrs_fail:
 addrconf_fail:
 	ip6_flowlabel_cleanup();
 ip6_flowlabel_fail:
+	ndisc_late_cleanup();
+ndisc_late_fail:
 	ip6_route_cleanup();
 ip6_route_fail:
 #ifdef CONFIG_PROC_FS
@@ -1068,6 +1078,7 @@ static void __exit inet6_exit(void)
 	ipv6_exthdrs_exit();
 	addrconf_cleanup();
 	ip6_flowlabel_cleanup();
+	ndisc_late_cleanup();
 	ip6_route_cleanup();
 #ifdef CONFIG_PROC_FS
 

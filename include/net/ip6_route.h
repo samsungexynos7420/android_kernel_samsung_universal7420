@@ -32,6 +32,11 @@ struct route_info {
 #define RT6_LOOKUP_F_SRCPREF_PUBLIC	0x00000010
 #define RT6_LOOKUP_F_SRCPREF_COA	0x00000020
 
+/* We do not (yet ?) support IPv6 jumbograms (RFC 2675)
+ * Unlike IPv4, hdr->seg_len doesn't include the IPv6 header
+ */
+#define IP6_MAX_MTU (0xFFFF + sizeof(struct ipv6hdr))
+
 /*
  * rt6_srcprefs2flags() and rt6_flags2srcprefs() translate
  * between IPV6_ADDR_PREFERENCES socket option values
@@ -45,6 +50,14 @@ static inline int rt6_srcprefs2flags(unsigned int srcprefs)
 	/* No need to bitmask because srcprefs have only 3 bits. */
 	return srcprefs << 3;
 }
+
+#ifdef CONFIG_MPTCP
+static inline bool rt6_need_strict(const struct in6_addr *daddr)
+{
+	return ipv6_addr_type(daddr) &
+		(IPV6_ADDR_MULTICAST | IPV6_ADDR_LINKLOCAL | IPV6_ADDR_LOOPBACK);
+}
+#endif
 
 static inline unsigned int rt6_flags2srcprefs(int flags)
 {
@@ -135,7 +148,7 @@ extern void ip6_update_pmtu(struct sk_buff *skb, struct net *net, __be32 mtu,
 extern void ip6_sk_update_pmtu(struct sk_buff *skb, struct sock *sk,
 			       __be32 mtu);
 extern void ip6_redirect(struct sk_buff *skb, struct net *net, int oif, u32 mark,
-			 kuid_t uid);
+				kuid_t uid);
 extern void ip6_sk_redirect(struct sk_buff *skb, struct sock *sk);
 
 struct netlink_callback;
@@ -195,11 +208,9 @@ static inline int ip6_skb_dst_mtu(struct sk_buff *skb)
 	       skb_dst(skb)->dev->mtu : dst_mtu(skb_dst(skb));
 }
 
-static inline struct in6_addr *rt6_nexthop(struct rt6_info *rt, struct in6_addr *dest)
+static inline struct in6_addr *rt6_nexthop(struct rt6_info *rt)
 {
-	if (rt->rt6i_flags & RTF_GATEWAY)
-		return &rt->rt6i_gateway;
-	return dest;
+	return &rt->rt6i_gateway;
 }
 
 #endif

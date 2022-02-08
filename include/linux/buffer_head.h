@@ -36,7 +36,11 @@ enum bh_state_bits {
 	BH_Quiet,	/* Buffer Error Prinks to be quiet */
 	BH_Meta,	/* Buffer contains metadata */
 	BH_Prio,	/* Buffer should be submitted with REQ_PRIO */
-	BH_Defer_Completion, /* Defer AIO completion to workqueue */
+	BH_Sync_Flush,
+#ifdef CONFIG_JOURNAL_DATA_TAG
+	BH_Journal, /* Buffer contains journal data */
+	BH_Jmeta,   /* Buffer contains metadata */
+#endif
 
 	BH_PrivateStart,/* not a state bit, but the first bit available
 			 * for private allocation by other entities
@@ -129,7 +133,11 @@ BUFFER_FNS(Write_EIO, write_io_error)
 BUFFER_FNS(Unwritten, unwritten)
 BUFFER_FNS(Meta, meta)
 BUFFER_FNS(Prio, prio)
-BUFFER_FNS(Defer_Completion, defer_completion)
+BUFFER_FNS(Sync_Flush, sync_flush)
+#ifdef CONFIG_JOURNAL_DATA_TAG
+BUFFER_FNS(Journal, journal)
+BUFFER_FNS(Jmeta, jmeta)
+#endif
 
 #define bh_offset(bh)		((unsigned long)(bh)->b_data & ~PAGE_MASK)
 
@@ -146,6 +154,7 @@ BUFFER_FNS(Defer_Completion, defer_completion)
  */
 
 void mark_buffer_dirty(struct buffer_head *bh);
+void mark_buffer_dirty_sync(struct buffer_head *bh);
 void init_buffer(struct buffer_head *, bh_end_io_t *, void *);
 void touch_buffer(struct buffer_head *bh);
 void set_bh_page(struct buffer_head *bh,
@@ -161,6 +170,7 @@ void end_buffer_async_write(struct buffer_head *bh, int uptodate);
 
 /* Things to do with buffers at mapping->private_list */
 void mark_buffer_dirty_inode(struct buffer_head *bh, struct inode *inode);
+void mark_buffer_dirty_inode_sync(struct buffer_head *bh, struct inode *inode);
 int inode_has_buffers(struct inode *);
 void invalidate_inode_buffers(struct inode *);
 int remove_inode_buffers(struct inode *inode);
@@ -200,8 +210,7 @@ extern int buffer_heads_over_limit;
  * Generic address_space_operations implementations for buffer_head-backed
  * address_spaces.
  */
-void block_invalidatepage(struct page *page, unsigned int offset,
-			  unsigned int length);
+void block_invalidatepage(struct page *page, unsigned long offset);
 int block_write_full_page(struct page *page, get_block_t *get_block,
 				struct writeback_control *wbc);
 int block_write_full_page_endio(struct page *page, get_block_t *get_block,
@@ -295,18 +304,6 @@ static inline struct buffer_head *
 sb_bread(struct super_block *sb, sector_t block)
 {
 	return __bread(sb->s_bdev, block, sb->s_blocksize);
-}
-
-static inline struct buffer_head *
-sb_bread_unmovable(struct super_block *sb, sector_t block)
-{
-	return sb_bread(sb, block);
-}
-
-static inline struct buffer_head *getblk_unmovable(struct block_device *bdev,
-					sector_t block, unsigned size)
-{
-	return __getblk(bdev, block, size);
 }
 
 static inline void

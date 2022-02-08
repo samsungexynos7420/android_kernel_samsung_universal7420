@@ -284,6 +284,9 @@ static int interpret_urb_result(struct us_data *us, unsigned int pipe,
 		 * a failed command */
 		if (usb_pipecontrol(pipe)) {
 			usb_stor_dbg(us, "-- stall on control pipe\n");
+#ifdef CONFIG_USB_DEBUG_DETAILED_LOG
+			printk(KERN_ERR "usb storage -- stall on control pipe\n");
+#endif
 			return USB_STOR_XFER_STALLED;
 		}
 
@@ -297,26 +300,41 @@ static int interpret_urb_result(struct us_data *us, unsigned int pipe,
 	/* babble - the device tried to send more than we wanted to read */
 	case -EOVERFLOW:
 		usb_stor_dbg(us, "-- babble\n");
+#ifdef CONFIG_USB_DEBUG_DETAILED_LOG
+		printk(KERN_ERR "usb storage -- babble\n");
+#endif
 		return USB_STOR_XFER_LONG;
 
 	/* the transfer was cancelled by abort, disconnect, or timeout */
 	case -ECONNRESET:
 		usb_stor_dbg(us, "-- transfer cancelled\n");
+#ifdef CONFIG_USB_DEBUG_DETAILED_LOG
+		printk(KERN_ERR "usb storage -- transfer cancelled\n");
+#endif
 		return USB_STOR_XFER_ERROR;
 
 	/* short scatter-gather read transfer */
 	case -EREMOTEIO:
 		usb_stor_dbg(us, "-- short read transfer\n");
+#ifdef CONFIG_USB_DEBUG_DETAILED_LOG
+		printk(KERN_ERR "usb storage -- short read transfer\n");
+#endif
 		return USB_STOR_XFER_SHORT;
 
 	/* abort or disconnect in progress */
 	case -EIO:
 		usb_stor_dbg(us, "-- abort or disconnect in progress\n");
+#ifdef CONFIG_USB_DEBUG_DETAILED_LOG
+		printk(KERN_ERR "usb storage -- abort or disconnect in progress\n");
+#endif
 		return USB_STOR_XFER_ERROR;
 
 	/* the catch-all error case */
 	default:
 		usb_stor_dbg(us, "-- unknown error\n");
+#ifdef CONFIG_USB_DEBUG_DETAILED_LOG
+		printk(KERN_ERR "usb storage -- unknown error %d\n", result);
+#endif
 		return USB_STOR_XFER_ERROR;
 	}
 }
@@ -608,6 +626,9 @@ void usb_stor_invoke_transport(struct scsi_cmnd *srb, struct us_data *us)
 	 */
 	if (test_bit(US_FLIDX_TIMED_OUT, &us->dflags)) {
 		usb_stor_dbg(us, "-- command was aborted\n");
+#ifdef CONFIG_USB_DEBUG_DETAILED_LOG
+		printk(KERN_ERR "usb storage -- command was aborted\n");
+#endif
 		srb->result = DID_ABORT << 16;
 		goto Handle_Errors;
 	}
@@ -615,6 +636,9 @@ void usb_stor_invoke_transport(struct scsi_cmnd *srb, struct us_data *us)
 	/* if there is a transport error, reset and don't auto-sense */
 	if (result == USB_STOR_TRANSPORT_ERROR) {
 		usb_stor_dbg(us, "-- transport indicates error, resetting\n");
+#ifdef CONFIG_USB_DEBUG_DETAILED_LOG
+		printk(KERN_ERR "usb storage -- transport indicates error, resetting\n");
+#endif
 		srb->result = DID_ERROR << 16;
 		goto Handle_Errors;
 	}
@@ -718,6 +742,9 @@ Retry_Sense:
 
 		if (test_bit(US_FLIDX_TIMED_OUT, &us->dflags)) {
 			usb_stor_dbg(us, "-- auto-sense aborted\n");
+#ifdef CONFIG_USB_DEBUG_DETAILED_LOG
+			printk(KERN_ERR "usb storage -- auto-sense aborted\n");
+#endif
 			srb->result = DID_ABORT << 16;
 
 			/* If SANE_SENSE caused this problem, disable it */
@@ -745,6 +772,9 @@ Retry_Sense:
 		/* Other failures */
 		if (temp_result != USB_STOR_TRANSPORT_GOOD) {
 			usb_stor_dbg(us, "-- auto-sense failure\n");
+#ifdef CONFIG_USB_DEBUG_DETAILED_LOG
+			printk(KERN_ERR "usb storage -- auto-sense failure\n");
+#endif
 
 			/* we skip the reset if this happens to be a
 			 * multi-target device, since failure of an
@@ -875,6 +905,9 @@ Retry_Sense:
 	/* We must release the device lock because the pre_reset routine
 	 * will want to acquire it. */
 	mutex_unlock(&us->dev_mutex);
+#ifdef CONFIG_USB_STORAGE_DETECT
+	msleep(200);
+#endif
 	result = usb_stor_port_reset(us);
 	mutex_lock(&us->dev_mutex);
 
@@ -919,10 +952,15 @@ int usb_stor_CB_transport(struct scsi_cmnd *srb, struct us_data *us)
 
 	/* COMMAND STAGE */
 	/* let's send the command via the control pipe */
+	/*
+	 * Command is sometime (f.e. after scsi_eh_prep_cmnd) on the stack.
+	 * Stack may be vmallocated.  So no DMA for us.  Make a copy.
+	 */
+	memcpy(us->iobuf, srb->cmnd, srb->cmd_len);
 	result = usb_stor_ctrl_transfer(us, us->send_ctrl_pipe,
 				      US_CBI_ADSC, 
 				      USB_TYPE_CLASS | USB_RECIP_INTERFACE, 0, 
-				      us->ifnum, srb->cmnd, srb->cmd_len);
+				      us->ifnum, us->iobuf, srb->cmd_len);
 
 	/* check the return code for the command */
 	usb_stor_dbg(us, "Call to usb_stor_ctrl_transfer() returned %d\n",
@@ -1118,6 +1156,31 @@ int usb_stor_Bulk_transport(struct scsi_cmnd *srb, struct us_data *us)
 		 */
 		if (result == USB_STOR_XFER_LONG)
 			fake_sense = 1;
+
+		/*
+		 * Sometimes a device will mistakenly skip the data phase
+		 * and go directly to the status phase without sending a
+		 * zero-length packet.  If we get a 13-byte response here,
+		 * check whether it really is a CSW.
+		 */
+		if (result == USB_STOR_XFER_SHORT &&
+				srb->sc_data_direction == DMA_FROM_DEVICE &&
+				transfer_length - scsi_get_resid(srb) ==
+					US_BULK_CS_WRAP_LEN) {
+			struct scatterlist *sg = NULL;
+			unsigned int offset = 0;
+
+			if (usb_stor_access_xfer_buf((unsigned char *) bcs,
+					US_BULK_CS_WRAP_LEN, srb, &sg,
+					&offset, FROM_XFER_BUF) ==
+						US_BULK_CS_WRAP_LEN &&
+					bcs->Signature ==
+						cpu_to_le32(US_BULK_CS_SIGN)) {
+				usb_stor_dbg(us, "Device skipped data phase\n");
+				scsi_set_resid(srb, transfer_length);
+				goto skipped_data_phase;
+			}
+		}
 	}
 
 	/* See flow chart on pg 15 of the Bulk Only Transport spec for
@@ -1153,6 +1216,7 @@ int usb_stor_Bulk_transport(struct scsi_cmnd *srb, struct us_data *us)
 	if (result != USB_STOR_XFER_GOOD)
 		return USB_STOR_TRANSPORT_ERROR;
 
+ skipped_data_phase:
 	/* check bulk status */
 	residue = le32_to_cpu(bcs->Residue);
 	usb_stor_dbg(us, "Bulk Status S 0x%x T 0x%x R %u Stat 0x%x\n",

@@ -610,6 +610,13 @@ void mark_buffer_dirty_inode(struct buffer_head *bh, struct inode *inode)
 }
 EXPORT_SYMBOL(mark_buffer_dirty_inode);
 
+void mark_buffer_dirty_inode_sync(struct buffer_head *bh, struct inode *inode)
+{
+	set_buffer_sync_flush(bh);
+	mark_buffer_dirty_inode(bh, inode);
+}
+EXPORT_SYMBOL(mark_buffer_dirty_inode_sync);
+
 /*
  * Mark the page dirty, and set it dirty in the radix tree, and mark the inode
  * dirty.
@@ -620,14 +627,16 @@ EXPORT_SYMBOL(mark_buffer_dirty_inode);
 static void __set_page_dirty(struct page *page,
 		struct address_space *mapping, int warn)
 {
-	spin_lock_irq(&mapping->tree_lock);
+	unsigned long flags;
+
+	spin_lock_irqsave(&mapping->tree_lock, flags);
 	if (page->mapping) {	/* Race with truncate? */
 		WARN_ON_ONCE(warn && !PageUptodate(page));
 		account_page_dirtied(page, mapping);
 		radix_tree_tag_set(&mapping->page_tree,
 				page_index(page), PAGECACHE_TAG_DIRTY);
 	}
-	spin_unlock_irq(&mapping->tree_lock);
+	spin_unlock_irqrestore(&mapping->tree_lock, flags);
 	__mark_inode_dirty(mapping->host, I_DIRTY_PAGES);
 }
 
@@ -983,7 +992,8 @@ grow_dev_page(struct block_device *bdev, sector_t block,
 		bh = page_buffers(page);
 		if (bh->b_size == size) {
 			end_block = init_page_buffers(page, bdev,
-						index << sizebits, size);
+						(sector_t)index << sizebits,
+						size);
 			goto done;
 		}
 		if (!try_to_free_buffers(page))
@@ -1004,7 +1014,8 @@ grow_dev_page(struct block_device *bdev, sector_t block,
 	 */
 	spin_lock(&inode->i_mapping->private_lock);
 	link_dev_buffers(page, bh);
-	end_block = init_page_buffers(page, bdev, index << sizebits, size);
+	end_block = init_page_buffers(page, bdev, (sector_t)index << sizebits,
+			size);
 	spin_unlock(&inode->i_mapping->private_lock);
 done:
 	ret = (block < end_block) ? 1 : -ENXIO;
@@ -1143,6 +1154,34 @@ void mark_buffer_dirty(struct buffer_head *bh)
 	}
 }
 EXPORT_SYMBOL(mark_buffer_dirty);
+
+void mark_buffer_dirty_sync(struct buffer_head *bh)
+{
+	WARN_ON_ONCE(!buffer_uptodate(bh));
+
+	/*
+	 * Very *carefully* optimize the it-is-already-dirty case.
+	 *
+	 * Don't let the final "is it dirty" escape to before we
+	 * perhaps modified the buffer.
+	 */
+	if (buffer_dirty(bh)) {
+		smp_mb();
+		if (buffer_dirty(bh))
+			return;
+	}
+
+	set_buffer_sync_flush(bh);
+	if (!test_set_buffer_dirty(bh)) {
+		struct page *page = bh->b_page;
+		if (!TestSetPageDirty(page)) {
+			struct address_space *mapping = page_mapping(page);
+			if (mapping)
+				__set_page_dirty(page, mapping, 0);
+		}
+	}
+}
+EXPORT_SYMBOL(mark_buffer_dirty_sync);
 
 /*
  * Decrement a buffer_head's reference count.  If all buffers against a page
@@ -1454,8 +1493,7 @@ static void discard_buffer(struct buffer_head * bh)
  * block_invalidatepage - invalidate part or all of a buffer-backed page
  *
  * @page: the page which is affected
- * @offset: start of the range to invalidate
- * @length: length of the range to invalidate
+ * @offset: the index of the truncation point
  *
  * block_invalidatepage() is called when all or part of the page has become
  * invalidated by a truncate operation.
@@ -1466,33 +1504,20 @@ static void discard_buffer(struct buffer_head * bh)
  * point.  Because the caller is about to free (and possibly reuse) those
  * blocks on-disk.
  */
-void block_invalidatepage(struct page *page, unsigned int offset,
-			  unsigned int length)
+void block_invalidatepage(struct page *page, unsigned long offset)
 {
 	struct buffer_head *head, *bh, *next;
 	unsigned int curr_off = 0;
-	unsigned int stop = length + offset;
 
 	BUG_ON(!PageLocked(page));
 	if (!page_has_buffers(page))
 		goto out;
-
-	/*
-	 * Check for overflow
-	 */
-	BUG_ON(stop > PAGE_CACHE_SIZE || stop < length);
 
 	head = page_buffers(page);
 	bh = head;
 	do {
 		unsigned int next_off = curr_off + bh->b_size;
 		next = bh->b_this_page;
-
-		/*
-		 * Are we still fully in range ?
-		 */
-		if (next_off > stop)
-			goto out;
 
 		/*
 		 * is this block fully invalidated?
@@ -1514,7 +1539,6 @@ out:
 	return;
 }
 EXPORT_SYMBOL(block_invalidatepage);
-
 
 /*
  * We attach and possibly dirty the buffers atomically wrt
@@ -2268,6 +2292,11 @@ static int cont_expand_zero(struct file *file, struct address_space *mapping,
 		err = 0;
 
 		balance_dirty_pages_ratelimited(mapping);
+
+		if (unlikely(fatal_signal_pending(current))) {
+			err = -EINTR;
+			goto out;
+		}
 	}
 
 	/* page covers the boundary, find the boundary offset */
@@ -2859,7 +2888,7 @@ int block_write_full_page_endio(struct page *page, get_block_t *get_block,
 		 * they may have been added in ext3_writepage().  Make them
 		 * freeable here, so the page does not leak.
 		 */
-		do_invalidatepage(page, 0, PAGE_CACHE_SIZE);
+		do_invalidatepage(page, 0);
 		unlock_page(page);
 		return 0; /* don't care */
 	}
@@ -3008,6 +3037,21 @@ int _submit_bh(int rw, struct buffer_head *bh, unsigned long bio_flags)
 		rw |= REQ_META;
 	if (buffer_prio(bh))
 		rw |= REQ_PRIO;
+
+	if(buffer_sync_flush(bh)) {
+		rw |= REQ_SYNC;
+		clear_buffer_sync_flush(bh);
+	}
+#ifdef CONFIG_JOURNAL_DATA_TAG
+	if(buffer_journal(bh)) {
+		set_bit(BIO_JOURNAL, &bio->bi_flags);
+		clear_buffer_journal(bh);
+	}
+	if(buffer_jmeta(bh)) {
+		//set_bit(BIO_JMETA, &bio->bi_flags);
+		clear_buffer_jmeta(bh);
+	}
+#endif
 
 	bio_get(bio);
 	submit_bio(rw, bio);

@@ -220,8 +220,13 @@ void hci_send_to_monitor(struct hci_dev *hdev, struct sk_buff *skb)
 			struct hci_mon_hdr *hdr;
 
 			/* Create a private copy with headroom */
+#ifdef CONFIG_MPTCP
+			skb_copy = __pskb_copy_fclone(skb, HCI_MON_HDR_SIZE,
+					       GFP_ATOMIC, true);
+#else
 			skb_copy = __pskb_copy(skb, HCI_MON_HDR_SIZE,
 					       GFP_ATOMIC);
+#endif
 			if (!skb_copy)
 				continue;
 
@@ -751,8 +756,6 @@ static int hci_sock_recvmsg(struct kiocb *iocb, struct socket *sock,
 	skb = skb_recv_datagram(sk, flags, noblock, &err);
 	if (!skb)
 		return err;
-
-	msg->msg_namelen = 0;
 
 	copied = skb->len;
 	if (len < copied) {

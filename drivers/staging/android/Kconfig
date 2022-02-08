@@ -44,6 +44,15 @@ config ANDROID_LOW_MEMORY_KILLER_AUTODETECT_OOM_ADJ_VALUES
 	  /sys/module/lowmemorykiller/parameters/adj and convert them
 	  to oom_score_adj values.
 
+config ANDROID_INTF_ALARM_DEV
+	bool "Android alarm driver"
+	depends on RTC_CLASS
+	default n
+	---help---
+	  Provides non-wakeup and rtc backed wakeup alarms based on rtc or
+	  elapsed realtime, and a non-wakeup alarm on the monotonic clock.
+	  Also exports the alarm interface to user-space.
+
 config SYNC
 	bool "Synchronization framework"
 	default n
@@ -70,6 +79,17 @@ config SW_SYNC_USER
 	  Provides a user space API to the sw sync object.
 	  *WARNING* improper use of this can result in deadlocking kernel
 	  drivers from userspace.
+
+config SEC_OOM_KILLER
+        bool "Android OOM Killer"
+        default n
+        help
+          klaatu@samsung
+          This enables 'Android-Style oom-killer'
+          The way to select victim by oom-killer provided by
+          linux kernel is totally different from android policy.
+          Hence, it makes more sense that we select the oom victim
+          as android does when LMK is invoked.
 
 source "drivers/staging/android/ion/Kconfig"
 

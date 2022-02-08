@@ -78,14 +78,23 @@ config MMC_TEST
 	  This driver is only of interest to those developing or
 	  testing a host driver. Most people should say N here.
 
-config MMC_SIMULATE_MAX_SPEED
-	bool "Turn on maximum speed control per block device"
-	depends on MMC_BLOCK
+config MMC_SUPPORT_BKOPS_MODE
+	tristate "Support the bkops mode of eMMC 5.0"
 	help
-	  Say Y here to enable MMC device speed limiting. Used to test and
-	  simulate the behavior of the system when confronted with a slow MMC.
+	  Say Y here to enable the bkops mode
 
-	  Enables max_read_speed, max_write_speed and cache_size attributes to
-	  control the write or read maximum KB/second speed behaviors.
+config MMC_BKOPS_NODE_UID
+	int "User ID of BKOPS sysfs node"
+	depends on MMC_SUPPORT_BKOPS_MODE
+	default 0
+	help
+	  Owner user ID of BKOPS sysfs node.
+	  Default is 0. Do not touch the value if unsure.
 
-	  If unsure, say N here.
+config MMC_BKOPS_NODE_GID
+	int "Group ID of BKOPS sysfs node"
+	depends on MMC_SUPPORT_BKOPS_MODE
+	default 0
+	help
+	  Owner group ID of BKOPS sysfs node.
+	  Default is 0. Do not touch the value if unsure.

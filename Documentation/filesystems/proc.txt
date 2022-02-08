@@ -439,6 +439,7 @@ a single pte mapped, i.e.  is currently used by only one process, is accounted
 as private and not as shared.
 "Referenced" indicates the amount of memory currently marked as referenced or
 accessed.
+
 "Anonymous" shows the amount of memory that does not belong to any file.  Even
 a mapping associated with a file may contain anonymous pages: when MAP_PRIVATE
 and a page is modified, the file page is replaced by a private anonymous copy.
@@ -497,10 +498,6 @@ To clear the bits for the anonymous pages associated with the process
 To clear the bits for the file mapped pages associated with the process
     > echo 3 > /proc/PID/clear_refs
 Any other value written to /proc/PID/clear_refs will have no effect.
-
-To reset the peak resident set size ("high water mark") to the process's
-current value:
-    > echo 5 > /proc/PID/clear_refs
 
 The /proc/pid/pagemap gives the PFN, which can be used to find the pageflags
 using /proc/kpageflags and number of times a page is mapped using
@@ -1390,8 +1387,8 @@ may allocate from based on an estimation of its current memory and swap use.
 For example, if a task is using all allowed memory, its badness score will be
 1000.  If it is using half of its allowed memory, its score will be 500.
 
-There is an additional factor included in the badness score: root
-processes are given 3% extra memory over other tasks.
+There is an additional factor included in the badness score: the current memory
+and swap usage is discounted by 3% for root processes.
 
 The amount of "allowed" memory depends on the context in which the oom killer
 was called.  If it is due to the memory assigned to the allocating task's cpuset

@@ -83,8 +83,12 @@ static void tick_do_update_jiffies64(ktime_t now)
 
 		/* Keep the tick_next_period variable up to date */
 		tick_next_period = ktime_add(last_jiffies_update, tick_period);
+	} else {
+		write_sequnlock(&jiffies_lock);
+		return;
 	}
 	write_sequnlock(&jiffies_lock);
+	update_wall_time();
 }
 
 /*
@@ -545,12 +549,13 @@ static ktime_t tick_nohz_stop_sched_tick(struct tick_sched *ts,
 	struct clock_event_device *dev = __get_cpu_var(tick_cpu_device).evtdev;
 	u64 time_delta;
 
+	time_delta = timekeeping_max_deferment();
+
 	/* Read jiffies and the time when jiffies were updated last */
 	do {
 		seq = read_seqbegin(&jiffies_lock);
 		last_update = last_jiffies_update;
 		last_jiffies = jiffies;
-		time_delta = timekeeping_max_deferment();
 	} while (read_seqretry(&jiffies_lock, seq));
 
 	if (rcu_needs_cpu(cpu, &rcu_delta_jiffies) ||
@@ -720,8 +725,10 @@ static bool can_stop_idle_tick(int cpu, struct tick_sched *ts)
 		return false;
 	}
 
-	if (unlikely(ts->nohz_mode == NOHZ_MODE_INACTIVE))
+	if (unlikely(ts->nohz_mode == NOHZ_MODE_INACTIVE)) {
+		ts->sleep_length = (ktime_t) { .tv64 = NSEC_PER_SEC/HZ };
 		return false;
+	}
 
 	if (need_resched())
 		return false;
@@ -832,13 +839,10 @@ void tick_nohz_irq_exit(void)
 {
 	struct tick_sched *ts = &__get_cpu_var(tick_cpu_sched);
 
-	if (ts->inidle) {
-		/* Cancel the timer because CPU already waken up from the C-states*/
-		menu_hrtimer_cancel();
+	if (ts->inidle)
 		__tick_nohz_idle_enter(ts);
-	} else {
+	else
 		tick_nohz_full_stop_tick(ts);
-	}
 }
 
 /**
@@ -936,8 +940,6 @@ void tick_nohz_idle_exit(void)
 
 	ts->inidle = 0;
 
-	/* Cancel the timer because CPU already waken up from the C-states*/
-	menu_hrtimer_cancel();
 	if (ts->idle_active || ts->tick_stopped)
 		now = ktime_get();
 

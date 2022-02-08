@@ -17,6 +17,8 @@
 #include <asm/pgtable-hwdef.h>
 #include <asm/pgtable.h>
 
+#include <mach/smc.h>
+
 #include "proc-macros.S"
 
 #ifdef CONFIG_ARM_LPAE
@@ -75,13 +77,14 @@ ENTRY(cpu_v7_do_idle)
 ENDPROC(cpu_v7_do_idle)
 
 ENTRY(cpu_v7_dcache_clean_area)
-	ALT_SMP(mov	pc, lr)			@ MP extensions imply L1 PTW
-	ALT_UP(W(nop))
-	dcache_line_size r2, r3
-1:	mcr	p15, 0, r0, c7, c10, 1		@ clean D entry
+	ALT_SMP(W(nop))			@ MP extensions imply L1 PTW
+	ALT_UP_B(1f)
+	mov	pc, lr
+1:	dcache_line_size r2, r3
+2:	mcr	p15, 0, r0, c7, c10, 1		@ clean D entry
 	add	r0, r0, r2
 	subs	r1, r1, r2
-	bhi	1b
+	bhi	2b
 	dsb
 	mov	pc, lr
 ENDPROC(cpu_v7_dcache_clean_area)
@@ -127,7 +130,12 @@ ENTRY(cpu_v7_do_resume)
 	mcr	p15, 0, r11, c2, c0, 2	@ TTB control register
 	mrc	p15, 0, r4, c1, c0, 1	@ Read Auxiliary control register
 	teq	r4, r9			@ Is it already set?
-	mcrne	p15, 0, r9, c1, c0, 1	@ No, so write it
+	beq	1f
+	ldr	r0, =SMC_CMD_REG
+	ldr	r1, =SMC_REG_ID_CP15(1, 0, 0, 1)
+	mov	r2, r9
+	smc	0
+1:
 	mcr	p15, 0, r10, c1, c0, 2	@ Co-processor access control
 	ldr	r4, =PRRR		@ PRRR
 	ldr	r5, =NMRR		@ NMRR
@@ -200,7 +208,6 @@ __v7_pj4b_setup:
 /* Auxiliary Debug Modes Control 1 Register */
 #define PJ4B_STATIC_BP (1 << 2) /* Enable Static BP */
 #define PJ4B_INTER_PARITY (1 << 8) /* Disable Internal Parity Handling */
-#define PJ4B_BCK_OFF_STREX (1 << 5) /* Enable the back off of STREX instr */
 #define PJ4B_CLEAN_LINE (1 << 16) /* Disable data transfer for clean line */
 
 /* Auxiliary Debug Modes Control 2 Register */
@@ -223,7 +230,6 @@ __v7_pj4b_setup:
 	/* Auxiliary Debug Modes Control 1 Register */
 	mrc	p15, 1,	r0, c15, c1, 1
 	orr     r0, r0, #PJ4B_CLEAN_LINE
-	orr     r0, r0, #PJ4B_BCK_OFF_STREX
 	orr     r0, r0, #PJ4B_INTER_PARITY
 	bic	r0, r0, #PJ4B_STATIC_BP
 	mcr	p15, 1,	r0, c15, c1, 1
@@ -290,12 +296,13 @@ __v7_setup:
 	orreq	r10, r10, #(1 << 22)		@ set the Write Allocate disable bit
 	mcreq	p15, 1, r10, c9, c0, 2		@ write the L2 cache aux ctrl register
 #endif
-	b	3f
+	b	4f
 
 	/* Cortex-A9 Errata */
 2:	ldr	r10, =0x00000c09		@ Cortex-A9 primary part number
 	teq	r0, r10
 	bne	3f
+#ifndef CONFIG_ARM_TRUSTZONE
 #ifdef CONFIG_ARM_ERRATA_742230
 	cmp	r6, #0x22			@ only present up to r2p2
 	mrcle	p15, 0, r10, c15, c0, 1		@ read diagnostic register
@@ -311,6 +318,11 @@ __v7_setup:
 	orreq	r10, r10, #1 << 22		@ set bit #22
 	mcreq	p15, 0, r10, c15, c0, 1		@ write diagnostic register
 #endif
+#ifdef CONFIG_ARM_ERRATA_761320
+	mrc	p15, 0, r10, c15, c0, 1		@ read diagnostic register
+	orr	r10, r10, #1 << 21		@ set bit #21
+	mcr	p15, 0, r10, c15, c0, 1		@ write diagnostic register
+#endif
 #ifdef CONFIG_ARM_ERRATA_743622
 	teq	r5, #0x00200000			@ only present in r2p*
 	mrceq	p15, 0, r10, c15, c0, 1		@ read diagnostic register
@@ -325,10 +337,45 @@ __v7_setup:
 	mcrlt	p15, 0, r10, c15, c0, 1		@ write diagnostic register
 1:
 #endif
+#endif
+	b	4f
 
-3:	mov	r10, #0
+	/* Cortex-A15 Errata */
+3:	ldr	r10, =0x00000c0f		@ Cortex-A15 primary part number
+	teq	r0, r10
+	bne	4f
+
+	stmia	r12, {r0-r3}
+	mov	r3, #0
+/* Enable Non-cacheable streaming enhancement */
+	mrc	p15, 0, r10, c1, c0, 1		@ read aux control register
+	orr	r10, r10, #1 << 24		@ set bit #24
+	ldr	r0, =SMC_CMD_REG
+	ldr	r1, =SMC_REG_ID_CP15(1, 0, 0, 1)
+	mov	r2, r10
+	smc	0
+#ifdef CONFIG_ARM_ERRATA_773022
+	teq	r6, #0x4			@ present in r0p4
+	mrceq	p15, 0, r10, c1, c0, 1		@ read aux control register
+	orreq	r10, r10, #1 << 1		@ set bit #1
+	ldreq	r0, =SMC_CMD_REG
+	ldreq	r1, =SMC_REG_ID_CP15(1, 0, 0, 1)
+	moveq	r2, r10
+	smceq	0
+#endif
+#ifdef CONFIG_ARM_ERRATA_774769
+	teq	r6, #0x4			@ present in r0p4
+	mrceq	p15, 0, r10, c1, c0, 1		@ read aux control register
+	orreq	r10, r10, #1 << 25		@ set bit #25
+	ldreq	r0, =SMC_CMD_REG
+	ldreq	r1, =SMC_REG_ID_CP15(1, 0, 0, 1)
+	moveq	r2, r10
+	smceq	0
+#endif
+	ldmia	r12, {r0-r3}
+
+4:	mov	r10, #0
 	mcr	p15, 0, r10, c7, c5, 0		@ I+BTB cache invalidate
-	dsb
 #ifdef CONFIG_MMU
 	mcr	p15, 0, r10, c8, c7, 0		@ invalidate I + D TLBs
 	v7_ttb_setup r10, r4, r8, r5		@ TTBCR, TTBRx setup
@@ -337,6 +384,7 @@ __v7_setup:
 	mcr	p15, 0, r5, c10, c2, 0		@ write PRRR
 	mcr	p15, 0, r6, c10, c2, 1		@ write NMRR
 #endif
+	dsb					@ Complete invalidations
 #ifndef CONFIG_ARM_THUMBEE
 	mrc	p15, 0, r0, c0, c1, 0		@ read ID_PFR0 for ThumbEE
 	and	r0, r0, #(0xf << 12)		@ ThumbEE enabled field
@@ -351,9 +399,7 @@ __v7_setup:
 #endif
 	adr	r5, v7_crval
 	ldmia	r5, {r5, r6}
-#ifdef CONFIG_CPU_ENDIAN_BE8
-	orr	r6, r6, #1 << 25		@ big-endian page tables
-#endif
+ ARM_BE8(orr	r6, r6, #1 << 25)		@ big-endian page tables
 #ifdef CONFIG_SWP_EMULATE
 	orr     r5, r5, #(1 << 10)              @ set SW bit in "clear"
 	bic     r6, r6, #(1 << 10)              @ clear it in "mmuset"

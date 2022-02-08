@@ -168,6 +168,21 @@ int inode_init_always(struct super_block *sb, struct inode *inode)
 	mapping->private_data = NULL;
 	mapping->backing_dev_info = &default_backing_dev_info;
 	mapping->writeback_index = 0;
+#if defined(CONFIG_MMC_DW_FMP_ECRYPT_FS) || defined(CONFIG_UFS_FMP_ECRYPT_FS)
+	mapping->iv = NULL;
+	mapping->key = NULL;
+	mapping->key_length = 0;
+	mapping->alg = NULL;
+	mapping->sensitive_data_index = 0;
+	mapping->hash_tfm = NULL;
+#ifdef CONFIG_CRYPTO_FIPS
+	mapping->cc_enable = 0;
+#endif
+	mapping->plain_text = 0;
+#endif
+#ifdef CONFIG_SDP
+	mapping->userid = 0;
+#endif
 
 	/*
 	 * If the block_device provides a backing_dev_info for client
@@ -978,41 +993,6 @@ void unlock_new_inode(struct inode *inode)
 	spin_unlock(&inode->i_lock);
 }
 EXPORT_SYMBOL(unlock_new_inode);
-
-/**
- * lock_two_nondirectories - take two i_mutexes on non-directory objects
- *
- * Lock any non-NULL argument that is not a directory.
- * Zero, one or two objects may be locked by this function.
- *
- * @inode1: first inode to lock
- * @inode2: second inode to lock
- */
-void lock_two_nondirectories(struct inode *inode1, struct inode *inode2)
-{
-	if (inode1 > inode2)
-		swap(inode1, inode2);
-
-	if (inode1 && !S_ISDIR(inode1->i_mode))
-		mutex_lock(&inode1->i_mutex);
-	if (inode2 && !S_ISDIR(inode2->i_mode) && inode2 != inode1)
-		mutex_lock_nested(&inode2->i_mutex, I_MUTEX_NONDIR2);
-}
-EXPORT_SYMBOL(lock_two_nondirectories);
-
-/**
- * unlock_two_nondirectories - release locks from lock_two_nondirectories()
- * @inode1: first inode to unlock
- * @inode2: second inode to unlock
- */
-void unlock_two_nondirectories(struct inode *inode1, struct inode *inode2)
-{
-	if (inode1 && !S_ISDIR(inode1->i_mode))
-		mutex_unlock(&inode1->i_mutex);
-	if (inode2 && !S_ISDIR(inode2->i_mode) && inode2 != inode1)
-		mutex_unlock(&inode2->i_mutex);
-}
-EXPORT_SYMBOL(unlock_two_nondirectories);
 
 /**
  * iget5_locked - obtain an inode from a mounted file system
@@ -1860,8 +1840,14 @@ void inode_init_owner(struct inode *inode, const struct inode *dir,
 	inode->i_uid = current_fsuid();
 	if (dir && dir->i_mode & S_ISGID) {
 		inode->i_gid = dir->i_gid;
+
+		/* Directories are special, and always inherit S_ISGID */
 		if (S_ISDIR(mode))
 			mode |= S_ISGID;
+		else if ((mode & (S_ISGID | S_IXGRP)) == (S_ISGID | S_IXGRP) &&
+			!in_group_p(inode->i_gid) &&
+			!capable_wrt_inode_uidgid(dir, CAP_FSETID))
+			mode &= ~S_ISGID;
 	} else
 		inode->i_gid = current_fsgid();
 	inode->i_mode = mode;
@@ -1935,34 +1921,3 @@ void inode_dio_done(struct inode *inode)
 		wake_up_bit(&inode->i_state, __I_DIO_WAKEUP);
 }
 EXPORT_SYMBOL(inode_dio_done);
-
-/*
- * inode_set_flags - atomically set some inode flags
- *
- * Note: the caller should be holding i_mutex, or else be sure that
- * they have exclusive access to the inode structure (i.e., while the
- * inode is being instantiated).  The reason for the cmpxchg() loop
- * --- which wouldn't be necessary if all code paths which modify
- * i_flags actually followed this rule, is that there is at least one
- * code path which doesn't today --- for example,
- * __generic_file_aio_write() calls file_remove_suid() without holding
- * i_mutex --- so we use cmpxchg() out of an abundance of caution.
- *
- * In the long run, i_mutex is overkill, and we should probably look
- * at using the i_lock spinlock to protect i_flags, and then make sure
- * it is so documented in include/linux/fs.h and that all code follows
- * the locking convention!!
- */
-void inode_set_flags(struct inode *inode, unsigned int flags,
-		     unsigned int mask)
-{
-	unsigned int old_flags, new_flags;
-
-	WARN_ON_ONCE(flags & ~mask);
-	do {
-		old_flags = ACCESS_ONCE(inode->i_flags);
-		new_flags = (old_flags & ~mask) | flags;
-	} while (unlikely(cmpxchg(&inode->i_flags, old_flags,
-				  new_flags) != old_flags));
-}
-EXPORT_SYMBOL(inode_set_flags);

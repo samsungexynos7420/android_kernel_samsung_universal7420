@@ -85,6 +85,7 @@ struct audit_names {
 
 	struct filename		*name;
 	int			name_len;	/* number of chars to log */
+	bool			hidden;		/* don't log this record */
 	bool			name_put;	/* call __putname()? */
 
 	unsigned long		ino;
@@ -103,6 +104,11 @@ struct audit_names {
 	 * should be freed on syscall exit.
 	 */
 	bool			should_free;
+};
+
+struct audit_proctitle {
+	int	len;	/* length of the cmdline field. */
+	char	*value;	/* the cmdline field */
 };
 
 /* The per-task audit context. */
@@ -198,6 +204,7 @@ struct audit_context {
 		} mmap;
 	};
 	int fds[2];
+	struct audit_proctitle proctitle;
 
 #if AUDIT_DEBUG
 	int		    put_count;

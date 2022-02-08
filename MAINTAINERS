@@ -3032,8 +3032,8 @@ F:	Documentation/x86/efi-stub.txt
 F:	arch/ia64/kernel/efi.c
 F:	arch/x86/boot/compressed/eboot.[ch]
 F:	arch/x86/include/asm/efi.h
-F:	arch/x86/platform/efi/*
-F:	drivers/firmware/efi/*
+F:	arch/x86/platform/efi/
+F:	drivers/firmware/efi/
 F:	include/linux/efi*.h
 
 EFI VARIABLE FILESYSTEM
@@ -5151,6 +5151,14 @@ L:	netdev@vger.kernel.org
 S:	Maintained
 F:	drivers/net/macvlan.c
 F:	include/linux/if_macvlan.h
+
+MAILBOX API
+M:	Jassi Brar <jassisinghbrar@gmail.com>
+L:	linux-kernel@vger.kernel.org
+S:	Maintained
+F:	drivers/mailbox/
+F:	include/linux/mailbox_client.h
+F:	include/linux/mailbox_controller.h
 
 MAN-PAGES: MANUAL PAGES FOR LINUX -- Sections 2, 3, 4, 5, and 7
 M:	Michael Kerrisk <mtk.manpages@gmail.com>
@@ -7667,6 +7675,7 @@ STABLE BRANCH
 M:	Greg Kroah-Hartman <gregkh@linuxfoundation.org>
 L:	stable@vger.kernel.org
 S:	Supported
+F:	Documentation/stable_kernel_rules.txt
 
 STAGING SUBSYSTEM
 M:	Greg Kroah-Hartman <gregkh@linuxfoundation.org>
@@ -8072,6 +8081,7 @@ S:      Supported
 F:      drivers/thermal/
 F:      include/linux/thermal.h
 F:      include/linux/cpu_cooling.h
+F:      Documentation/devicetree/bindings/thermal/
 
 THINGM BLINK(1) USB RGB LED DRIVER
 M:	Vivien Didelot <vivien.didelot@savoirfairelinux.com>
@@ -9187,13 +9197,6 @@ F:	Documentation/networking/z8530drv.txt
 F:	drivers/net/hamradio/*scc.c
 F:	drivers/net/hamradio/z8530.h
 
-ZBUD COMPRESSED PAGE ALLOCATOR
-M:	Seth Jennings <sjenning@linux.vnet.ibm.com>
-L:	linux-mm@kvack.org
-S:	Maintained
-F:	mm/zbud.c
-F:	include/linux/zbud.h
-
 ZD1211RW WIRELESS DRIVER
 M:	Daniel Drake <dsd@gentoo.org>
 M:	Ulrich Kunitz <kune@deine-taler.de>
@@ -9215,21 +9218,6 @@ ZS DECSTATION Z85C30 SERIAL DRIVER
 M:	"Maciej W. Rozycki" <macro@linux-mips.org>
 S:	Maintained
 F:	drivers/tty/serial/zs.*
-
-ZSMALLOC COMPRESSED SLAB MEMORY ALLOCATOR
-M:	Minchan Kim <minchan@kernel.org>
-M:	Nitin Gupta <ngupta@vflare.org>
-L:	linux-mm@kvack.org
-S:	Maintained
-F:	mm/zsmalloc.c
-F:	include/linux/zsmalloc.h
-F:	Documentation/vm/zsmalloc.txt
-
-ZSWAP COMPRESSED SWAP CACHING
-M:	Seth Jennings <sjenning@linux.vnet.ibm.com>
-L:	linux-mm@kvack.org
-S:	Maintained
-F:	mm/zswap.c
 
 THE REST
 M:	Linus Torvalds <torvalds@linux-foundation.org>

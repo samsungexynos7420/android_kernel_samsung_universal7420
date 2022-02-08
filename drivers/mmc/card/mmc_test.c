@@ -795,7 +795,7 @@ static int mmc_test_nonblock_transfer(struct mmc_test_card *test,
 	struct mmc_async_req *cur_areq = &test_areq[0].areq;
 	struct mmc_async_req *other_areq = &test_areq[1].areq;
 	int i;
-	int ret;
+	int ret = RESULT_OK;
 
 	test_areq[0].test = test;
 	test_areq[1].test = test;
@@ -3025,17 +3025,12 @@ static void mmc_test_remove(struct mmc_card *card)
 	mmc_test_free_dbgfs_file(card);
 }
 
-static void mmc_test_shutdown(struct mmc_card *card)
-{
-}
-
 static struct mmc_driver mmc_driver = {
 	.drv		= {
 		.name	= "mmc_test",
 	},
 	.probe		= mmc_test_probe,
 	.remove		= mmc_test_remove,
-	.shutdown	= mmc_test_shutdown,
 };
 
 static int __init mmc_test_init(void)

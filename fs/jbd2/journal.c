@@ -103,37 +103,18 @@ EXPORT_SYMBOL(jbd2_inode_cache);
 static void __journal_abort_soft (journal_t *journal, int errno);
 static int jbd2_journal_create_slab(size_t slab_size);
 
-#ifdef CONFIG_JBD2_DEBUG
-void __jbd2_debug(int level, const char *file, const char *func,
-		  unsigned int line, const char *fmt, ...)
-{
-	struct va_format vaf;
-	va_list args;
-
-	if (level > jbd2_journal_enable_debug)
-		return;
-	va_start(args, fmt);
-	vaf.fmt = fmt;
-	vaf.va = &args;
-	printk(KERN_DEBUG "%s: (%s, %u): %pV\n", file, func, line, &vaf);
-	va_end(args);
-}
-EXPORT_SYMBOL(__jbd2_debug);
-#endif
-
 /* Checksumming functions */
-static int jbd2_verify_csum_type(journal_t *j, journal_superblock_t *sb)
+int jbd2_verify_csum_type(journal_t *j, journal_superblock_t *sb)
 {
-	if (!jbd2_journal_has_csum_v2or3(j))
+	if (!JBD2_HAS_INCOMPAT_FEATURE(j, JBD2_FEATURE_INCOMPAT_CSUM_V2))
 		return 1;
 
 	return sb->s_checksum_type == JBD2_CRC32C_CHKSUM;
 }
 
-static __be32 jbd2_superblock_csum(journal_t *j, journal_superblock_t *sb)
+static __u32 jbd2_superblock_csum(journal_t *j, journal_superblock_t *sb)
 {
-	__u32 csum;
-	__be32 old_csum;
+	__u32 csum, old_csum;
 
 	old_csum = sb->s_checksum;
 	sb->s_checksum = 0;
@@ -143,17 +124,17 @@ static __be32 jbd2_superblock_csum(journal_t *j, journal_superblock_t *sb)
 	return cpu_to_be32(csum);
 }
 
-static int jbd2_superblock_csum_verify(journal_t *j, journal_superblock_t *sb)
+int jbd2_superblock_csum_verify(journal_t *j, journal_superblock_t *sb)
 {
-	if (!jbd2_journal_has_csum_v2or3(j))
+	if (!JBD2_HAS_INCOMPAT_FEATURE(j, JBD2_FEATURE_INCOMPAT_CSUM_V2))
 		return 1;
 
 	return sb->s_checksum == jbd2_superblock_csum(j, sb);
 }
 
-static void jbd2_superblock_csum_set(journal_t *j, journal_superblock_t *sb)
+void jbd2_superblock_csum_set(journal_t *j, journal_superblock_t *sb)
 {
-	if (!jbd2_journal_has_csum_v2or3(j))
+	if (!JBD2_HAS_INCOMPAT_FEATURE(j, JBD2_FEATURE_INCOMPAT_CSUM_V2))
 		return;
 
 	sb->s_checksum = jbd2_superblock_csum(j, sb);
@@ -302,8 +283,8 @@ static void journal_kill_thread(journal_t *journal)
 	journal->j_flags |= JBD2_UNMOUNT;
 
 	while (journal->j_task) {
-		write_unlock(&journal->j_state_lock);
 		wake_up(&journal->j_wait_commit);
+		write_unlock(&journal->j_state_lock);
 		wait_event(journal->j_wait_done_commit, journal->j_task == NULL);
 		write_lock(&journal->j_state_lock);
 	}
@@ -497,6 +478,35 @@ repeat:
  */
 
 /*
+ * __jbd2_log_space_left: Return the number of free blocks left in the journal.
+ *
+ * Called with the journal already locked.
+ *
+ * Called under j_state_lock
+ */
+
+int __jbd2_log_space_left(journal_t *journal)
+{
+	int left = journal->j_free;
+
+	/* assert_spin_locked(&journal->j_state_lock); */
+
+	/*
+	 * Be pessimistic here about the number of those free blocks which
+	 * might be required for log descriptor control blocks.
+	 */
+
+#define MIN_LOG_RESERVED_BLOCKS 32 /* Allow for rounding errors */
+
+	left -= MIN_LOG_RESERVED_BLOCKS;
+
+	if (left <= 0)
+		return 0;
+	left -= (left >> 3);
+	return left;
+}
+
+/*
  * Called with j_state_lock locked for writing.
  * Returns true if a transaction commit was started.
  */
@@ -548,17 +558,20 @@ int jbd2_log_start_commit(journal_t *journal, tid_t tid)
 }
 
 /*
- * Force and wait any uncommitted transactions.  We can only force the running
- * transaction if we don't have an active handle, otherwise, we will deadlock.
- * Returns: <0 in case of error,
- *           0 if nothing to commit,
- *           1 if transaction was successfully committed.
+ * Force and wait upon a commit if the calling process is not within
+ * transaction.  This is used for forcing out undo-protected data which contains
+ * bitmaps, when the fs is running out of space.
+ *
+ * We can only force the running transaction if we don't have an active handle;
+ * otherwise, we will deadlock.
+ *
+ * Returns true if a transaction was started.
  */
-static int __jbd2_journal_force_commit(journal_t *journal)
+int jbd2_journal_force_commit_nested(journal_t *journal)
 {
 	transaction_t *transaction = NULL;
 	tid_t tid;
-	int need_to_start = 0, ret = 0;
+	int need_to_start = 0;
 
 	read_lock(&journal->j_state_lock);
 	if (journal->j_running_transaction && !current->journal_info) {
@@ -569,53 +582,16 @@ static int __jbd2_journal_force_commit(journal_t *journal)
 		transaction = journal->j_committing_transaction;
 
 	if (!transaction) {
-		/* Nothing to commit */
 		read_unlock(&journal->j_state_lock);
-		return 0;
+		return 0;	/* Nothing to retry */
 	}
+
 	tid = transaction->t_tid;
 	read_unlock(&journal->j_state_lock);
 	if (need_to_start)
 		jbd2_log_start_commit(journal, tid);
-	ret = jbd2_log_wait_commit(journal, tid);
-	if (!ret)
-		ret = 1;
-
-	return ret;
-}
-
-/**
- * Force and wait upon a commit if the calling process is not within
- * transaction.  This is used for forcing out undo-protected data which contains
- * bitmaps, when the fs is running out of space.
- *
- * @journal: journal to force
- * Returns true if progress was made.
- */
-int jbd2_journal_force_commit_nested(journal_t *journal)
-{
-	int ret;
-
-	ret = __jbd2_journal_force_commit(journal);
-	return ret > 0;
-}
-
-/**
- * int journal_force_commit() - force any uncommitted transactions
- * @journal: journal to force
- *
- * Caller want unconditional commit. We can only force the running transaction
- * if we don't have an active handle, otherwise, we will deadlock.
- */
-int jbd2_journal_force_commit(journal_t *journal)
-{
-	int ret;
-
-	J_ASSERT(!current->journal_info);
-	ret = __jbd2_journal_force_commit(journal);
-	if (ret > 0)
-		ret = 0;
-	return ret;
+	jbd2_log_wait_commit(journal, tid);
+	return 1;
 }
 
 /*
@@ -702,7 +678,7 @@ int jbd2_log_wait_commit(journal_t *journal, tid_t tid)
 	read_lock(&journal->j_state_lock);
 #ifdef CONFIG_JBD2_DEBUG
 	if (!tid_geq(journal->j_commit_request, tid)) {
-		printk(KERN_ERR
+		printk(KERN_EMERG
 		       "%s: error: j_commit_request=%d, tid=%d\n",
 		       __func__, journal->j_commit_request, tid);
 	}
@@ -710,16 +686,18 @@ int jbd2_log_wait_commit(journal_t *journal, tid_t tid)
 	while (tid_gt(tid, journal->j_commit_sequence)) {
 		jbd_debug(1, "JBD2: want %d, j_commit_sequence=%d\n",
 				  tid, journal->j_commit_sequence);
-		read_unlock(&journal->j_state_lock);
 		wake_up(&journal->j_wait_commit);
+		read_unlock(&journal->j_state_lock);
 		wait_event(journal->j_wait_done_commit,
 				!tid_gt(tid, journal->j_commit_sequence));
 		read_lock(&journal->j_state_lock);
 	}
 	read_unlock(&journal->j_state_lock);
 
-	if (unlikely(is_journal_aborted(journal)))
+	if (unlikely(is_journal_aborted(journal))) {
+		printk(KERN_EMERG "journal commit I/O error\n");
 		err = -EIO;
+	}
 	return err;
 }
 
@@ -885,9 +863,10 @@ int jbd2_journal_get_log_tail(journal_t *journal, tid_t *tid,
  *
  * Requires j_checkpoint_mutex
  */
-void __jbd2_update_log_tail(journal_t *journal, tid_t tid, unsigned long block)
+int __jbd2_update_log_tail(journal_t *journal, tid_t tid, unsigned long block)
 {
 	unsigned long freed;
+	int ret;
 
 	BUG_ON(!mutex_is_locked(&journal->j_checkpoint_mutex));
 
@@ -897,7 +876,10 @@ void __jbd2_update_log_tail(journal_t *journal, tid_t tid, unsigned long block)
 	 * space and if we lose sb update during power failure we'd replay
 	 * old transaction with possibly newly overwritten data.
 	 */
-	jbd2_journal_update_sb_log_tail(journal, tid, block, WRITE_FUA);
+	ret = jbd2_journal_update_sb_log_tail(journal, tid, block, WRITE_FUA);
+	if (ret)
+		goto out;
+
 	write_lock(&journal->j_state_lock);
 	freed = block - journal->j_tail;
 	if (block < journal->j_tail)
@@ -913,6 +895,9 @@ void __jbd2_update_log_tail(journal_t *journal, tid_t tid, unsigned long block)
 	journal->j_tail_sequence = tid;
 	journal->j_tail = block;
 	write_unlock(&journal->j_state_lock);
+
+out:
+	return ret;
 }
 
 /*
@@ -1078,10 +1063,11 @@ static journal_t * journal_init_common (void)
 		return NULL;
 
 	init_waitqueue_head(&journal->j_wait_transaction_locked);
+	init_waitqueue_head(&journal->j_wait_logspace);
 	init_waitqueue_head(&journal->j_wait_done_commit);
+	init_waitqueue_head(&journal->j_wait_checkpoint);
 	init_waitqueue_head(&journal->j_wait_commit);
 	init_waitqueue_head(&journal->j_wait_updates);
-	init_waitqueue_head(&journal->j_wait_reserved);
 	mutex_init(&journal->j_barrier);
 	mutex_init(&journal->j_checkpoint_mutex);
 	spin_lock_init(&journal->j_revoke_lock);
@@ -1091,7 +1077,6 @@ static journal_t * journal_init_common (void)
 	journal->j_commit_interval = (HZ * JBD2_DEFAULT_MAX_COMMIT_AGE);
 	journal->j_min_batch_time = 0;
 	journal->j_max_batch_time = 15000; /* 15ms */
-	atomic_set(&journal->j_reserved_credits, 0);
 
 	/* The journal is marked for error until we succeed with recovery! */
 	journal->j_flags = JBD2_ABORT;
@@ -1237,7 +1222,7 @@ journal_t * jbd2_journal_init_inode (struct inode *inode)
 		goto out_err;
 	}
 
-	bh = getblk_unmovable(journal->j_dev, blocknr, journal->j_blocksize);
+	bh = __getblk(journal->j_dev, blocknr, journal->j_blocksize);
 	if (!bh) {
 		printk(KERN_ERR
 		       "%s: Cannot get buffer for journal superblock\n",
@@ -1331,7 +1316,7 @@ static int journal_reset(journal_t *journal)
 	return jbd2_journal_start_thread(journal);
 }
 
-static void jbd2_write_superblock(journal_t *journal, int write_op)
+static int jbd2_write_superblock(journal_t *journal, int write_op)
 {
 	struct buffer_head *bh = journal->j_sb_buffer;
 	journal_superblock_t *sb = journal->j_superblock;
@@ -1359,6 +1344,10 @@ static void jbd2_write_superblock(journal_t *journal, int write_op)
 	jbd2_superblock_csum_set(journal, sb);
 	get_bh(bh);
 	bh->b_end_io = end_buffer_write_sync;
+#ifdef CONFIG_JOURNAL_DATA_TAG
+	if (journal->j_flags & JBD2_JOURNAL_TAG)
+		set_buffer_journal(bh);
+#endif
 	ret = submit_bh(write_op, bh);
 	wait_on_buffer(bh);
 	if (buffer_write_io_error(bh)) {
@@ -1370,7 +1359,10 @@ static void jbd2_write_superblock(journal_t *journal, int write_op)
 		printk(KERN_ERR "JBD2: Error %d detected when updating "
 		       "journal superblock for %s.\n", ret,
 		       journal->j_devname);
+		jbd2_journal_abort(journal, ret);
 	}
+
+	return ret;
 }
 
 /**
@@ -1383,10 +1375,11 @@ static void jbd2_write_superblock(journal_t *journal, int write_op)
  * Update a journal's superblock information about log tail and write it to
  * disk, waiting for the IO to complete.
  */
-void jbd2_journal_update_sb_log_tail(journal_t *journal, tid_t tail_tid,
+int jbd2_journal_update_sb_log_tail(journal_t *journal, tid_t tail_tid,
 				     unsigned long tail_block, int write_op)
 {
 	journal_superblock_t *sb = journal->j_superblock;
+	int ret;
 
 	BUG_ON(!mutex_is_locked(&journal->j_checkpoint_mutex));
 	jbd_debug(1, "JBD2: updating superblock (start %lu, seq %u)\n",
@@ -1395,23 +1388,29 @@ void jbd2_journal_update_sb_log_tail(journal_t *journal, tid_t tail_tid,
 	sb->s_sequence = cpu_to_be32(tail_tid);
 	sb->s_start    = cpu_to_be32(tail_block);
 
-	jbd2_write_superblock(journal, write_op);
+	ret = jbd2_write_superblock(journal, write_op);
+	if (ret)
+		goto out;
 
 	/* Log is no longer empty */
 	write_lock(&journal->j_state_lock);
 	WARN_ON(!sb->s_sequence);
 	journal->j_flags &= ~JBD2_FLUSHED;
 	write_unlock(&journal->j_state_lock);
+
+out:
+	return ret;
 }
 
 /**
  * jbd2_mark_journal_empty() - Mark on disk journal as empty.
  * @journal: The journal to update.
+ * @write_op: With which operation should we write the journal sb
  *
  * Update a journal's dynamic superblock fields to show that journal is empty.
  * Write updated superblock to disk waiting for IO to complete.
  */
-static void jbd2_mark_journal_empty(journal_t *journal)
+static void jbd2_mark_journal_empty(journal_t *journal, int write_op)
 {
 	journal_superblock_t *sb = journal->j_superblock;
 
@@ -1429,7 +1428,7 @@ static void jbd2_mark_journal_empty(journal_t *journal)
 	sb->s_start    = cpu_to_be32(0);
 	read_unlock(&journal->j_state_lock);
 
-	jbd2_write_superblock(journal, WRITE_FUA);
+	jbd2_write_superblock(journal, write_op);
 
 	/* Log is no longer empty */
 	write_lock(&journal->j_state_lock);
@@ -1455,7 +1454,7 @@ void jbd2_journal_update_sb_errno(journal_t *journal)
 	sb->s_errno    = cpu_to_be32(journal->j_errno);
 	read_unlock(&journal->j_state_lock);
 
-	jbd2_write_superblock(journal, WRITE_SYNC);
+	jbd2_write_superblock(journal, WRITE_FUA);
 }
 EXPORT_SYMBOL(jbd2_journal_update_sb_errno);
 
@@ -1522,32 +1521,24 @@ static int journal_get_superblock(journal_t *journal)
 		goto out;
 	}
 
-	if (JBD2_HAS_INCOMPAT_FEATURE(journal, JBD2_FEATURE_INCOMPAT_CSUM_V2) &&
-	    JBD2_HAS_INCOMPAT_FEATURE(journal, JBD2_FEATURE_INCOMPAT_CSUM_V3)) {
-		/* Can't have checksum v2 and v3 at the same time! */
-		printk(KERN_ERR "JBD2: Can't enable checksumming v2 and v3 "
-		       "at the same time!\n");
-		goto out;
-	}
-
-	if (jbd2_journal_has_csum_v2or3(journal) &&
-	    JBD2_HAS_COMPAT_FEATURE(journal, JBD2_FEATURE_COMPAT_CHECKSUM)) {
+	if (JBD2_HAS_COMPAT_FEATURE(journal, JBD2_FEATURE_COMPAT_CHECKSUM) &&
+	    JBD2_HAS_INCOMPAT_FEATURE(journal, JBD2_FEATURE_INCOMPAT_CSUM_V2)) {
 		/* Can't have checksum v1 and v2 on at the same time! */
-		printk(KERN_ERR "JBD2: Can't enable checksumming v1 and v2/3 "
+		printk(KERN_ERR "JBD: Can't enable checksumming v1 and v2 "
 		       "at the same time!\n");
 		goto out;
 	}
 
 	if (!jbd2_verify_csum_type(journal, sb)) {
-		printk(KERN_ERR "JBD2: Unknown checksum type\n");
+		printk(KERN_ERR "JBD: Unknown checksum type\n");
 		goto out;
 	}
 
 	/* Load the checksum driver */
-	if (jbd2_journal_has_csum_v2or3(journal)) {
+	if (JBD2_HAS_INCOMPAT_FEATURE(journal, JBD2_FEATURE_INCOMPAT_CSUM_V2)) {
 		journal->j_chksum_driver = crypto_alloc_shash("crc32c", 0, 0);
 		if (IS_ERR(journal->j_chksum_driver)) {
-			printk(KERN_ERR "JBD2: Cannot load crc32c driver.\n");
+			printk(KERN_ERR "JBD: Cannot load crc32c driver.\n");
 			err = PTR_ERR(journal->j_chksum_driver);
 			journal->j_chksum_driver = NULL;
 			goto out;
@@ -1556,12 +1547,12 @@ static int journal_get_superblock(journal_t *journal)
 
 	/* Check superblock checksum */
 	if (!jbd2_superblock_csum_verify(journal, sb)) {
-		printk(KERN_ERR "JBD2: journal checksum error\n");
+		printk(KERN_ERR "JBD: journal checksum error\n");
 		goto out;
 	}
 
 	/* Precompute checksum seed for all metadata */
-	if (jbd2_journal_has_csum_v2or3(journal))
+	if (JBD2_HAS_INCOMPAT_FEATURE(journal, JBD2_FEATURE_INCOMPAT_CSUM_V2))
 		journal->j_csum_seed = jbd2_chksum(journal, ~0, sb->s_uuid,
 						   sizeof(sb->s_uuid));
 
@@ -1705,7 +1696,13 @@ int jbd2_journal_destroy(journal_t *journal)
 	if (journal->j_sb_buffer) {
 		if (!is_journal_aborted(journal)) {
 			mutex_lock(&journal->j_checkpoint_mutex);
-			jbd2_mark_journal_empty(journal);
+
+			write_lock(&journal->j_state_lock);
+			journal->j_tail_sequence =
+				++journal->j_transaction_sequence;
+			write_unlock(&journal->j_state_lock);
+
+			jbd2_mark_journal_empty(journal, WRITE_FLUSH_FUA);
 			mutex_unlock(&journal->j_checkpoint_mutex);
 		} else
 			err = -EIO;
@@ -1821,14 +1818,8 @@ int jbd2_journal_set_features (journal_t *journal, unsigned long compat,
 	if (!jbd2_journal_check_available_features(journal, compat, ro, incompat))
 		return 0;
 
-	/* If enabling v2 checksums, turn on v3 instead */
-	if (incompat & JBD2_FEATURE_INCOMPAT_CSUM_V2) {
-		incompat &= ~JBD2_FEATURE_INCOMPAT_CSUM_V2;
-		incompat |= JBD2_FEATURE_INCOMPAT_CSUM_V3;
-	}
-
-	/* Asking for checksumming v3 and v1?  Only give them v3. */
-	if (incompat & JBD2_FEATURE_INCOMPAT_CSUM_V3 &&
+	/* Asking for checksumming v2 and v1?  Only give them v2. */
+	if (incompat & JBD2_FEATURE_INCOMPAT_CSUM_V2 &&
 	    compat & JBD2_FEATURE_COMPAT_CHECKSUM)
 		compat &= ~JBD2_FEATURE_COMPAT_CHECKSUM;
 
@@ -1837,8 +1828,8 @@ int jbd2_journal_set_features (journal_t *journal, unsigned long compat,
 
 	sb = journal->j_superblock;
 
-	/* If enabling v3 checksums, update superblock */
-	if (INCOMPAT_FEATURE_ON(JBD2_FEATURE_INCOMPAT_CSUM_V3)) {
+	/* If enabling v2 checksums, update superblock */
+	if (INCOMPAT_FEATURE_ON(JBD2_FEATURE_INCOMPAT_CSUM_V2)) {
 		sb->s_checksum_type = JBD2_CRC32C_CHKSUM;
 		sb->s_feature_compat &=
 			~cpu_to_be32(JBD2_FEATURE_COMPAT_CHECKSUM);
@@ -1848,24 +1839,25 @@ int jbd2_journal_set_features (journal_t *journal, unsigned long compat,
 			journal->j_chksum_driver = crypto_alloc_shash("crc32c",
 								      0, 0);
 			if (IS_ERR(journal->j_chksum_driver)) {
-				printk(KERN_ERR "JBD2: Cannot load crc32c "
+				printk(KERN_ERR "JBD: Cannot load crc32c "
 				       "driver.\n");
 				journal->j_chksum_driver = NULL;
 				return 0;
 			}
+		}
 
-			/* Precompute checksum seed for all metadata */
+		/* Precompute checksum seed for all metadata */
+		if (JBD2_HAS_INCOMPAT_FEATURE(journal,
+					      JBD2_FEATURE_INCOMPAT_CSUM_V2))
 			journal->j_csum_seed = jbd2_chksum(journal, ~0,
 							   sb->s_uuid,
 							   sizeof(sb->s_uuid));
-		}
 	}
 
 	/* If enabling v1 checksums, downgrade superblock */
 	if (COMPAT_FEATURE_ON(JBD2_FEATURE_COMPAT_CHECKSUM))
 		sb->s_feature_incompat &=
-			~cpu_to_be32(JBD2_FEATURE_INCOMPAT_CSUM_V2 |
-				     JBD2_FEATURE_INCOMPAT_CSUM_V3);
+			~cpu_to_be32(JBD2_FEATURE_INCOMPAT_CSUM_V2);
 
 	sb->s_feature_compat    |= cpu_to_be32(compat);
 	sb->s_feature_ro_compat |= cpu_to_be32(ro);
@@ -1951,14 +1943,21 @@ int jbd2_journal_flush(journal_t *journal)
 		return -EIO;
 
 	mutex_lock(&journal->j_checkpoint_mutex);
-	jbd2_cleanup_journal_tail(journal);
+	if (!err) {
+		err = jbd2_cleanup_journal_tail(journal);
+		if (err < 0) {
+			mutex_unlock(&journal->j_checkpoint_mutex);
+			goto out;
+		}
+		err = 0;
+	}
 
 	/* Finally, mark the journal as really needing no recovery.
 	 * This sets s_start==0 in the underlying superblock, which is
 	 * the magic code for a fully-recovered superblock.  Any future
 	 * commits of data to the journal will restore the current
 	 * s_start value. */
-	jbd2_mark_journal_empty(journal);
+	jbd2_mark_journal_empty(journal, WRITE_FUA);
 	mutex_unlock(&journal->j_checkpoint_mutex);
 	write_lock(&journal->j_state_lock);
 	J_ASSERT(!journal->j_running_transaction);
@@ -1967,7 +1966,8 @@ int jbd2_journal_flush(journal_t *journal)
 	J_ASSERT(journal->j_head == journal->j_tail);
 	J_ASSERT(journal->j_tail_sequence == journal->j_transaction_sequence);
 	write_unlock(&journal->j_state_lock);
-	return 0;
+out:
+	return err;
 }
 
 /**
@@ -2003,7 +2003,7 @@ int jbd2_journal_wipe(journal_t *journal, int write)
 	if (write) {
 		/* Lock to make assertions happy... */
 		mutex_lock(&journal->j_checkpoint_mutex);
-		jbd2_mark_journal_empty(journal);
+		jbd2_mark_journal_empty(journal, WRITE_FUA);
 		mutex_unlock(&journal->j_checkpoint_mutex);
 	}
 
@@ -2178,20 +2178,16 @@ int jbd2_journal_blocks_per_page(struct inode *inode)
  */
 size_t journal_tag_bytes(journal_t *journal)
 {
-	size_t sz;
-
-	if (JBD2_HAS_INCOMPAT_FEATURE(journal, JBD2_FEATURE_INCOMPAT_CSUM_V3))
-		return sizeof(journal_block_tag3_t);
-
-	sz = sizeof(journal_block_tag_t);
+	journal_block_tag_t tag;
+	size_t x = 0;
 
 	if (JBD2_HAS_INCOMPAT_FEATURE(journal, JBD2_FEATURE_INCOMPAT_CSUM_V2))
-		sz += sizeof(__u16);
+		x += sizeof(tag.t_checksum);
 
 	if (JBD2_HAS_INCOMPAT_FEATURE(journal, JBD2_FEATURE_INCOMPAT_64BIT))
-		return sz;
+		return x + JBD2_TAG_SIZE64;
 	else
-		return sz - sizeof(__u32);
+		return x + JBD2_TAG_SIZE32;
 }
 
 /*
@@ -2359,13 +2355,13 @@ static struct journal_head *journal_alloc_journal_head(void)
 #ifdef CONFIG_JBD2_DEBUG
 	atomic_inc(&nr_journal_heads);
 #endif
-	ret = kmem_cache_zalloc(jbd2_journal_head_cache, GFP_NOFS);
+	ret = kmem_cache_alloc(jbd2_journal_head_cache, GFP_NOFS);
 	if (!ret) {
 		jbd_debug(1, "out of memory for journal_head\n");
 		pr_notice_ratelimited("ENOMEM in %s, retrying.\n", __func__);
 		while (!ret) {
 			yield();
-			ret = kmem_cache_zalloc(jbd2_journal_head_cache, GFP_NOFS);
+			ret = kmem_cache_alloc(jbd2_journal_head_cache, GFP_NOFS);
 		}
 	}
 	return ret;
@@ -2427,8 +2423,10 @@ struct journal_head *jbd2_journal_add_journal_head(struct buffer_head *bh)
 	struct journal_head *new_jh = NULL;
 
 repeat:
-	if (!buffer_jbd(bh))
+	if (!buffer_jbd(bh)) {
 		new_jh = journal_alloc_journal_head();
+		memset(new_jh, 0, sizeof(*new_jh));
+	}
 
 	jbd_lock_bh_journal_head(bh);
 	if (buffer_jbd(bh)) {
@@ -2660,7 +2658,7 @@ static void __exit journal_exit(void)
 #ifdef CONFIG_JBD2_DEBUG
 	int n = atomic_read(&nr_journal_heads);
 	if (n)
-		printk(KERN_ERR "JBD2: leaked %d journal_heads!\n", n);
+		printk(KERN_EMERG "JBD2: leaked %d journal_heads!\n", n);
 #endif
 	jbd2_remove_jbd_stats_proc_entry();
 	jbd2_journal_destroy_caches();

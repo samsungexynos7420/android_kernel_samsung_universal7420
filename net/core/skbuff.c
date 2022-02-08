@@ -47,6 +47,8 @@
 #include <linux/in.h>
 #include <linux/inet.h>
 #include <linux/slab.h>
+#include <linux/tcp.h>
+#include <linux/udp.h>
 #include <linux/netdevice.h>
 #ifdef CONFIG_NET_CLS_ACT
 #include <net/pkt_sched.h>
@@ -73,36 +75,6 @@
 
 struct kmem_cache *skbuff_head_cache __read_mostly;
 static struct kmem_cache *skbuff_fclone_cache __read_mostly;
-
-static void sock_pipe_buf_release(struct pipe_inode_info *pipe,
-				  struct pipe_buffer *buf)
-{
-	put_page(buf->page);
-}
-
-static void sock_pipe_buf_get(struct pipe_inode_info *pipe,
-				struct pipe_buffer *buf)
-{
-	get_page(buf->page);
-}
-
-static int sock_pipe_buf_steal(struct pipe_inode_info *pipe,
-			       struct pipe_buffer *buf)
-{
-	return 1;
-}
-
-
-/* Pipe buffer operations for a socket. */
-static const struct pipe_buf_operations sock_pipe_buf_ops = {
-	.can_merge = 0,
-	.map = generic_pipe_buf_map,
-	.unmap = generic_pipe_buf_unmap,
-	.confirm = generic_pipe_buf_confirm,
-	.release = sock_pipe_buf_release,
-	.steal = sock_pipe_buf_steal,
-	.get = sock_pipe_buf_get,
-};
 
 /**
  *	skb_panic - private function for out-of-line support
@@ -492,7 +464,10 @@ static inline void skb_drop_fraglist(struct sk_buff *skb)
 	skb_drop_list(&skb_shinfo(skb)->frag_list);
 }
 
-static void skb_clone_fraglist(struct sk_buff *skb)
+#ifndef CONFIG_MPTCP
+static
+#endif
+void skb_clone_fraglist(struct sk_buff *skb)
 {
 	struct sk_buff *list;
 
@@ -584,9 +559,6 @@ static void skb_release_head_state(struct sk_buff *skb)
 	}
 #if IS_ENABLED(CONFIG_NF_CONNTRACK)
 	nf_conntrack_put(skb->nfct);
-#endif
-#ifdef NET_SKBUFF_NF_DEFRAG_NEEDED
-	nf_conntrack_put_reasm(skb->nfct_reasm);
 #endif
 #ifdef CONFIG_BRIDGE_NETFILTER
 	nf_bridge_put(skb->nf_bridge);
@@ -913,7 +885,10 @@ static void skb_headers_offset_update(struct sk_buff *skb, int off)
 	skb->inner_mac_header += off;
 }
 
-static void copy_skb_header(struct sk_buff *new, const struct sk_buff *old)
+#ifndef CONFIG_MPTCP
+static
+#endif
+void copy_skb_header(struct sk_buff *new, const struct sk_buff *old)
 {
 #ifndef NET_SKBUFF_DATA_USES_OFFSET
 	/*
@@ -979,6 +954,7 @@ struct sk_buff *skb_copy(const struct sk_buff *skb, gfp_t gfp_mask)
 }
 EXPORT_SYMBOL(skb_copy);
 
+#ifndef CONFIG_MPTCP
 /**
  *	__pskb_copy	-	create copy of an sk_buff with private head.
  *	@skb: buffer to copy
@@ -1038,6 +1014,70 @@ out:
 	return n;
 }
 EXPORT_SYMBOL(__pskb_copy);
+#else
+/**
+ *	__pskb_copy_fclone	-  create copy of an sk_buff with private head.
+ *	@skb: buffer to copy
+ *	@headroom: headroom of new skb
+ *	@gfp_mask: allocation priority
+ *	@fclone: if true allocate the copy of the skb from the fclone
+ *	cache instead of the head cache; it is recommended to set this
+ *	to true for the cases where the copy will likely be cloned
+ *
+ *	Make a copy of both an &sk_buff and part of its data, located
+ *	in header. Fragmented data remain shared. This is used when
+ *	the caller wishes to modify only header of &sk_buff and needs
+ *	private copy of the header to alter. Returns %NULL on failure
+ *	or the pointer to the buffer on success.
+ *	The returned buffer has a reference count of 1.
+ */
+struct sk_buff *__pskb_copy_fclone(struct sk_buff *skb, int headroom,
+				   gfp_t gfp_mask, bool fclone)
+{
+	unsigned int size = skb_headlen(skb) + headroom;
+	int flags = skb_alloc_rx_flag(skb) | (fclone ? SKB_ALLOC_FCLONE : 0);
+	struct sk_buff *n = __alloc_skb(size, gfp_mask, flags, NUMA_NO_NODE);
+
+	if (!n)
+		goto out;
+
+	/* Set the data pointer */
+	skb_reserve(n, headroom);
+	/* Set the tail pointer and length */
+	skb_put(n, skb_headlen(skb));
+	/* Copy the bytes */
+	skb_copy_from_linear_data(skb, n->data, n->len);
+
+	n->truesize += skb->data_len;
+	n->data_len  = skb->data_len;
+	n->len	     = skb->len;
+
+	if (skb_shinfo(skb)->nr_frags) {
+		int i;
+
+		if (skb_orphan_frags(skb, gfp_mask)) {
+			kfree_skb(n);
+			n = NULL;
+			goto out;
+		}
+		for (i = 0; i < skb_shinfo(skb)->nr_frags; i++) {
+			skb_shinfo(n)->frags[i] = skb_shinfo(skb)->frags[i];
+			skb_frag_ref(skb, i);
+		}
+		skb_shinfo(n)->nr_frags = i;
+	}
+
+	if (skb_has_frag_list(skb)) {
+		skb_shinfo(n)->frag_list = skb_shinfo(skb)->frag_list;
+		skb_clone_fraglist(n);
+	}
+
+	copy_skb_header(n, skb);
+out:
+	return n;
+}
+EXPORT_SYMBOL(__pskb_copy_fclone);
+#endif
 
 /**
  *	pskb_expand_head - reallocate header of &sk_buff
@@ -1814,7 +1854,7 @@ int skb_splice_bits(struct sk_buff *skb, unsigned int offset,
 		.partial = partial,
 		.nr_pages_max = MAX_SKB_FRAGS,
 		.flags = flags,
-		.ops = &sock_pipe_buf_ops,
+		.ops = &nosteal_pipe_buf_ops,
 		.spd_release = sock_spd_release,
 	};
 	struct sk_buff *frag_iter;
@@ -2742,11 +2782,12 @@ EXPORT_SYMBOL(skb_append_datato_frags);
  */
 unsigned char *skb_pull_rcsum(struct sk_buff *skb, unsigned int len)
 {
+	unsigned char *data = skb->data;
+
 	BUG_ON(len > skb->len);
-	skb->len -= len;
-	BUG_ON(skb->len < skb->data_len);
-	skb_postpull_rcsum(skb, skb->data, len);
-	return skb->data += len;
+	__skb_pull(skb, len);
+	skb_postpull_rcsum(skb, data, len);
+	return skb->data;
 }
 EXPORT_SYMBOL_GPL(skb_pull_rcsum);
 
@@ -2841,7 +2882,6 @@ struct sk_buff *skb_segment(struct sk_buff *skb, netdev_features_t features)
 		tail = nskb;
 
 		__copy_skb_header(nskb, skb);
-		nskb->mac_len = skb->mac_len;
 
 		/* nskb and skb might have different headroom */
 		if (nskb->ip_summed == CHECKSUM_PARTIAL)
@@ -2851,13 +2891,14 @@ struct sk_buff *skb_segment(struct sk_buff *skb, netdev_features_t features)
 		skb_set_network_header(nskb, skb->mac_len);
 		nskb->transport_header = (nskb->network_header +
 					  skb_network_header_len(skb));
+		skb_reset_mac_len(nskb);
 
 		skb_copy_from_linear_data_offset(skb, -tnl_hlen,
 						 nskb->data - tnl_hlen,
 						 doffset + tnl_hlen);
 
 		if (fskb != skb_shinfo(skb)->frag_list)
-			continue;
+			goto perform_csum_check;
 
 		if (!sg) {
 			nskb->ip_summed = CHECKSUM_NONE;
@@ -2875,6 +2916,8 @@ struct sk_buff *skb_segment(struct sk_buff *skb, netdev_features_t features)
 		skb_shinfo(nskb)->tx_flags = skb_shinfo(skb)->tx_flags & SKBTX_SHARED_FRAG;
 
 		while (pos < offset + len && i < nfrags) {
+			if (unlikely(skb_orphan_frags(skb, GFP_ATOMIC)))
+				goto err;
 			*frag = skb_shinfo(skb)->frags[i];
 			__skb_frag_ref(frag);
 			size = skb_frag_size(frag);
@@ -2921,6 +2964,7 @@ skip_fraglist:
 		nskb->len += nskb->data_len;
 		nskb->truesize += nskb->data_len;
 
+perform_csum_check:
 		if (!csum) {
 			nskb->csum = skb_checksum(nskb, doffset,
 						  nskb->len - doffset, 0);
@@ -3503,3 +3547,28 @@ bool skb_try_coalesce(struct sk_buff *to, struct sk_buff *from,
 	return true;
 }
 EXPORT_SYMBOL(skb_try_coalesce);
+
+/**
+ * skb_gso_transport_seglen - Return length of individual segments of a gso packet
+ *
+ * @skb: GSO skb
+ *
+ * skb_gso_transport_seglen is used to determine the real size of the
+ * individual segments, including Layer4 headers (TCP/UDP).
+ *
+ * The MAC/L2 or network (IP, IPv6) headers are not accounted for.
+ */
+unsigned int skb_gso_transport_seglen(const struct sk_buff *skb)
+{
+	const struct skb_shared_info *shinfo = skb_shinfo(skb);
+
+	if (likely(shinfo->gso_type & (SKB_GSO_TCPV4 | SKB_GSO_TCPV6)))
+		return tcp_hdrlen(skb) + shinfo->gso_size;
+
+	/* UFO sets gso_size to the size of the fragmentation
+	 * payload, i.e. the size of the L4 (UDP) header is already
+	 * accounted for.
+	 */
+	return shinfo->gso_size;
+}
+EXPORT_SYMBOL_GPL(skb_gso_transport_seglen);

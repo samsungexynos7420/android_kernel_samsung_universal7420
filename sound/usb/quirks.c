@@ -136,7 +136,6 @@ static int create_fixed_stream_quirk(struct snd_usb_audio *chip,
 		snd_printk(KERN_ERR "cannot memdup\n");
 		return -ENOMEM;
 	}
-	INIT_LIST_HEAD(&fp->list);
 	if (fp->nr_rates > MAX_NR_RATES) {
 		kfree(fp);
 		return -EINVAL;
@@ -154,12 +153,16 @@ static int create_fixed_stream_quirk(struct snd_usb_audio *chip,
 	stream = (fp->endpoint & USB_DIR_IN)
 		? SNDRV_PCM_STREAM_CAPTURE : SNDRV_PCM_STREAM_PLAYBACK;
 	err = snd_usb_add_audio_stream(chip, stream, fp);
-	if (err < 0)
-		goto error;
+	if (err < 0) {
+		kfree(fp);
+		kfree(rate_table);
+		return err;
+	}
 	if (fp->iface != get_iface_desc(&iface->altsetting[0])->bInterfaceNumber ||
 	    fp->altset_idx >= iface->num_altsetting) {
-		err = -EINVAL;
-		goto error;
+		kfree(fp);
+		kfree(rate_table);
+		return -EINVAL;
 	}
 	alts = &iface->altsetting[fp->altset_idx];
 	if (fp->datainterval == 0)
@@ -170,12 +173,6 @@ static int create_fixed_stream_quirk(struct snd_usb_audio *chip,
 	snd_usb_init_pitch(chip, fp->iface, alts, fp);
 	snd_usb_init_sample_rate(chip, fp->iface, alts, fp, fp->rate_max);
 	return 0;
-
- error:
-	list_del(&fp->list); /* unlink for avoiding double-free */
-	kfree(fp);
-	kfree(rate_table);
-	return err;
 }
 
 /*
@@ -242,7 +239,6 @@ static int create_uaxx_quirk(struct snd_usb_audio *chip,
 	fp->ep_attr = get_endpoint(alts, 0)->bmAttributes;
 	fp->datainterval = 0;
 	fp->maxpacksize = le16_to_cpu(get_endpoint(alts, 0)->wMaxPacketSize);
-	INIT_LIST_HEAD(&fp->list);
 
 	switch (fp->maxpacksize) {
 	case 0x120:
@@ -266,7 +262,6 @@ static int create_uaxx_quirk(struct snd_usb_audio *chip,
 		? SNDRV_PCM_STREAM_CAPTURE : SNDRV_PCM_STREAM_PLAYBACK;
 	err = snd_usb_add_audio_stream(chip, stream, fp);
 	if (err < 0) {
-		list_del(&fp->list); /* unlink for avoiding double-free */
 		kfree(fp);
 		return err;
 	}
@@ -318,6 +313,7 @@ int snd_usb_create_quirk(struct snd_usb_audio *chip,
 		[QUIRK_MIDI_CME] = create_any_midi_quirk,
 		[QUIRK_MIDI_AKAI] = create_any_midi_quirk,
 		[QUIRK_MIDI_FTDI] = create_any_midi_quirk,
+		[QUIRK_MIDI_CH345] = create_any_midi_quirk,
 		[QUIRK_AUDIO_STANDARD_INTERFACE] = create_standard_audio_quirk,
 		[QUIRK_AUDIO_FIXED_ENDPOINT] = create_fixed_stream_quirk,
 		[QUIRK_AUDIO_EDIROL_UAXX] = create_uaxx_quirk,
@@ -904,8 +900,12 @@ void snd_usb_set_interface_quirk(struct usb_device *dev)
 	 * "Playback Design" products need a 50ms delay after setting the
 	 * USB interface.
 	 */
-	if (le16_to_cpu(dev->descriptor.idVendor) == 0x23ba)
+	switch (le16_to_cpu(dev->descriptor.idVendor)) {
+	case 0x23ba: /* Playback Design */
+	case 0x0644: /* TEAC Corp. */
 		mdelay(50);
+		break;
+	}
 }
 
 void snd_usb_ctl_msg_quirk(struct usb_device *dev, unsigned int pipe,
@@ -919,6 +919,28 @@ void snd_usb_ctl_msg_quirk(struct usb_device *dev, unsigned int pipe,
 	if ((le16_to_cpu(dev->descriptor.idVendor) == 0x23ba) &&
 	    (requesttype & USB_TYPE_MASK) == USB_TYPE_CLASS)
 		mdelay(20);
+
+	/*
+	 * "TEAC Corp." products need a 20ms delay after each
+	 * class compliant request
+	 */
+	if ((le16_to_cpu(dev->descriptor.idVendor) == 0x0644) &&
+	    (requesttype & USB_TYPE_MASK) == USB_TYPE_CLASS)
+		mdelay(20);
+
+	/* Marantz/Denon devices with USB DAC functionality need a delay
+	 * after each class compliant request
+	 */
+	if ((le16_to_cpu(dev->descriptor.idVendor) == 0x154e) &&
+	    (requesttype & USB_TYPE_MASK) == USB_TYPE_CLASS) {
+
+		switch (le16_to_cpu(dev->descriptor.idProduct)) {
+		case 0x3005: /* Marantz HD-DAC1 */
+		case 0x3006: /* Marantz SA-14S1 */
+			mdelay(20);
+			break;
+		}
+	}
 }
 
 /*

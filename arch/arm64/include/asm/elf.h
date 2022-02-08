@@ -90,11 +90,24 @@ typedef struct user_fpsimd_state elf_fpregset_t;
  * These are used to set parameters in the core dumps.
  */
 #define ELF_CLASS	ELFCLASS64
+#ifdef __AARCH64EB__
+#define ELF_DATA	ELFDATA2MSB
+#else
 #define ELF_DATA	ELFDATA2LSB
+#endif
 #define ELF_ARCH	EM_AARCH64
 
+/*
+ * This yields a string that ld.so will use to load implementation
+ * specific libraries for optimization.  This is more specific in
+ * intent than poking at uname or /proc/cpuinfo.
+ */
 #define ELF_PLATFORM_SIZE	16
+#ifdef __AARCH64EB__
+#define ELF_PLATFORM		("aarch64_be")
+#else
 #define ELF_PLATFORM		("aarch64")
+#endif
 
 /*
  * This is used to ensure we don't load something for the wrong architecture.
@@ -124,6 +137,7 @@ extern unsigned long randomize_et_dyn(unsigned long base);
 
 #define SET_PERSONALITY(ex)		clear_thread_flag(TIF_32BIT);
 
+/* update AT_VECTOR_SIZE_ARCH if the number of NEW_AUX_ENT entries changes */
 #define ARCH_DLINFO							\
 do {									\
 	NEW_AUX_ENT(AT_SYSINFO_EHDR,					\
@@ -149,7 +163,12 @@ extern unsigned long arch_randomize_brk(struct mm_struct *mm);
 #define arch_randomize_brk arch_randomize_brk
 
 #ifdef CONFIG_COMPAT
+
+#ifdef __AARCH64EB__
+#define COMPAT_ELF_PLATFORM		("v8b")
+#else
 #define COMPAT_ELF_PLATFORM		("v8l")
+#endif
 
 #define COMPAT_ELF_ET_DYN_BASE		(randomize_et_dyn(2 * TASK_SIZE_32 / 3))
 

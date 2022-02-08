@@ -293,12 +293,12 @@ static ssize_t state_show(struct kobject *kobj, struct kobj_attribute *attr,
 {
 	char *s = buf;
 #ifdef CONFIG_SUSPEND
-	int i;
+	suspend_state_t i;
 
-	for (i = 0; i < PM_SUSPEND_MAX; i++) {
-		if (pm_states[i] && valid_state(i))
-			s += sprintf(s,"%s ", pm_states[i]);
-	}
+	for (i = PM_SUSPEND_MIN; i < PM_SUSPEND_MAX; i++)
+		if (pm_states[i].state)
+			s += sprintf(s,"%s ", pm_states[i].label);
+
 #endif
 #ifdef CONFIG_HIBERNATION
 	s += sprintf(s, "%s\n", "disk");
@@ -314,7 +314,7 @@ static suspend_state_t decode_state(const char *buf, size_t n)
 {
 #ifdef CONFIG_SUSPEND
 	suspend_state_t state = PM_SUSPEND_MIN;
-	const char * const *s;
+	struct pm_sleep_state *s;
 #endif
 	char *p;
 	int len;
@@ -328,8 +328,9 @@ static suspend_state_t decode_state(const char *buf, size_t n)
 
 #ifdef CONFIG_SUSPEND
 	for (s = &pm_states[state]; state < PM_SUSPEND_MAX; s++, state++)
-		if (*s && len == strlen(*s) && !strncmp(buf, *s, len))
-			return state;
+		if (s->state && len == strlen(s->label)
+		    && !strncmp(buf, s->label, len))
+			return s->state;
 #endif
 
 	return PM_SUSPEND_ON;
@@ -445,8 +446,8 @@ static ssize_t autosleep_show(struct kobject *kobj,
 
 #ifdef CONFIG_SUSPEND
 	if (state < PM_SUSPEND_MAX)
-		return sprintf(buf, "%s\n", valid_state(state) ?
-						pm_states[state] : "error");
+		return sprintf(buf, "%s\n", pm_states[state].state ?
+					pm_states[state].label : "error");
 #endif
 #ifdef CONFIG_HIBERNATION
 	return sprintf(buf, "disk\n");
@@ -577,6 +578,62 @@ power_attr(pm_freeze_timeout);
 
 #endif	/* CONFIG_FREEZER*/
 
+#ifdef CONFIG_SW_SELF_DISCHARGING
+static char selfdischg_usage_str[] =
+	"[START]\n"
+	"/sys/power/cpufreq_self_discharging 1\n"
+	//"/sys/power/enable_dm_hotplug 0\n"
+	"[STOP]\n"
+	//"/sys/power/enable_dm_hotplug 1\n"
+	"/sys/power/cpufreq_self_discharging 0\n"
+	"[END]\n";
+
+static ssize_t selfdischg_usage_show(struct kobject *kobj,
+					struct kobj_attribute *attr,
+					char *buf)
+{
+	pr_info("%s\n", __func__);
+	return sprintf(buf, "%s", selfdischg_usage_str);
+}
+
+static struct kobj_attribute selfdischg_usage_attr = {
+	.attr	= {
+		.name = __stringify(selfdischg_usage),
+		.mode = 0440,
+	},
+	.show	= selfdischg_usage_show,
+};
+#endif /* CONFIG_SW_SELF_DISCHARGING */
+
+#if defined(CONFIG_FOTA_LIMIT)
+static char fota_limit_str[] =
+#if defined(CONFIG_ARCH_EXYNOS7)
+	"[START]\n"
+	"/sys/power/cpufreq_max_limit 1500000\n"
+	"[STOP]\n"
+	"/sys/power/cpufreq_max_limit -1\n"
+	"[END]\n";
+#else
+	"[NOT_SUPPORT]\n";
+#endif
+
+static ssize_t fota_limit_show(struct kobject *kobj,
+					struct kobj_attribute *attr,
+					char *buf)
+{
+	pr_info("%s\n", __func__);
+	return sprintf(buf, "%s", fota_limit_str);
+}
+
+static struct kobj_attribute fota_limit_attr = {
+	.attr	= {
+		.name = __stringify(fota_limit),
+		.mode = 0440,
+	},
+	.show	= fota_limit_show,
+};
+#endif /* CONFIG_FOTA_LIMIT */
+
 static struct attribute * g[] = {
 	&state_attr.attr,
 #ifdef CONFIG_PM_TRACE
@@ -603,6 +660,12 @@ static struct attribute * g[] = {
 #ifdef CONFIG_FREEZER
 	&pm_freeze_timeout_attr.attr,
 #endif
+#ifdef CONFIG_SW_SELF_DISCHARGING
+	&selfdischg_usage_attr.attr,
+#endif
+#if defined(CONFIG_FOTA_LIMIT)
+	&fota_limit_attr.attr,
+#endif /* CONFIG_FOTA_LIMIT */
 	NULL,
 };
 
@@ -638,6 +701,7 @@ static int __init pm_init(void)
 	if (error)
 		return error;
 	pm_print_times_init();
+
 	return pm_autosleep_init();
 }
 

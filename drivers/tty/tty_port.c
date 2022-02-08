@@ -140,6 +140,10 @@ EXPORT_SYMBOL(tty_port_destroy);
 static void tty_port_destructor(struct kref *kref)
 {
 	struct tty_port *port = container_of(kref, struct tty_port, kref);
+
+	/* check if last port ref was dropped before tty release */
+	if (WARN_ON(port->itty))
+		return;
 	if (port->xmit_buf)
 		free_page((unsigned long)port->xmit_buf);
 	tty_port_destroy(port);
@@ -256,10 +260,9 @@ void tty_port_tty_hangup(struct tty_port *port, bool check_clocal)
 {
 	struct tty_struct *tty = tty_port_tty_get(port);
 
-	if (tty && (!check_clocal || !C_CLOCAL(tty))) {
+	if (tty && (!check_clocal || !C_CLOCAL(tty)))
 		tty_hangup(tty);
-		tty_kref_put(tty);
-	}
+	tty_kref_put(tty);
 }
 EXPORT_SYMBOL_GPL(tty_port_tty_hangup);
 
