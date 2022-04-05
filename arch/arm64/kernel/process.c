@@ -34,8 +34,6 @@
 #include <linux/kallsyms.h>
 #include <linux/init.h>
 #include <linux/cpu.h>
-#include <linux/cpuidle.h>
-#include <linux/leds.h>
 #include <linux/elfcore.h>
 #include <linux/pm.h>
 #include <linux/tick.h>
@@ -61,14 +59,6 @@ __visible unsigned long __stack_chk_guard __read_mostly;
 EXPORT_SYMBOL(__stack_chk_guard);
 #endif
 
-void soft_restart(unsigned long addr)
-{
-	setup_mm_for_reboot();
-	cpu_soft_restart(virt_to_phys(cpu_reset), addr);
-	/* Should never get here */
-	BUG();
-}
-
 /*
  * Function pointers to optional machine specific functions
  */
@@ -87,22 +77,8 @@ void arch_cpu_idle(void)
 	 * This should do all the clock switching and wait for interrupt
 	 * tricks
 	 */
-	if (cpuidle_idle_call()) {
-		cpu_do_idle();
-		local_irq_enable();
-	}
-}
-
-void arch_cpu_idle_enter(void)
-{
-	idle_notifier_call_chain(IDLE_START);
-	ledtrig_cpu(CPU_LED_IDLE_START);
-}
-
-void arch_cpu_idle_exit(void)
-{
-	ledtrig_cpu(CPU_LED_IDLE_END);
-	idle_notifier_call_chain(IDLE_END);
+	cpu_do_idle();
+	local_irq_enable();
 }
 
 #ifdef CONFIG_HOTPLUG_CPU
@@ -154,9 +130,7 @@ void machine_power_off(void)
 
 /*
  * Restart requires that the secondary CPUs stop performing any activity
- * while the primary CPU resets the system. Systems with a single CPU can
- * use soft_restart() as their machine descriptor's .restart hook, since that
- * will cause the only available CPU to reset. Systems with multiple CPUs must
+ * while the primary CPU resets the system. Systems with multiple CPUs must
  * provide a HW restart implementation, to ensure that all CPUs reset at once.
  * This is required so that any code running after reset on the primary CPU
  * doesn't have to co-ordinate with other CPUs to ensure they aren't still
@@ -230,19 +204,17 @@ static void show_data(unsigned long addr, int nbytes, const char *name)
 
 static void show_extra_register_data(struct pt_regs *regs, int nbytes)
 {
-	int i;
-	char name[4];
 	mm_segment_t fs;
+	unsigned int i;
 
 	fs = get_fs();
 	set_fs(KERNEL_DS);
-
 	show_data(regs->pc - nbytes, nbytes * 2, "PC");
 	show_data(regs->regs[30] - nbytes, nbytes * 2, "LR");
 	show_data(regs->sp - nbytes, nbytes * 2, "SP");
-
-	for (i = 0; i < ARRAY_SIZE(regs->regs) - 1; i++) {
-		snprintf(name,ARRAY_SIZE(name), "X%d", i);
+	for (i = 0; i < 30; i++) {
+		char name[4];
+		snprintf(name, sizeof(name), "X%u", i);
 		show_data(regs->regs[i] - nbytes, nbytes * 2, name);
 	}
 	set_fs(fs);
@@ -261,7 +233,6 @@ void __show_regs(struct pt_regs *regs)
 		lr = regs->regs[30];
 		sp = regs->sp;
 		top_reg = 29;
-
 	}
 	if (!user_mode(regs)) {
 		exynos_ss_save_context(regs);
@@ -284,7 +255,6 @@ void __show_regs(struct pt_regs *regs)
 		if (i % 2 == 0)
 			printk("\n");
 	}
-
 	if (!user_mode(regs))
 		show_extra_register_data(regs, 128);
 	printk("\n");
