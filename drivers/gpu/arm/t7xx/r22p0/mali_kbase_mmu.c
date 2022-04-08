@@ -30,6 +30,7 @@
 /* #define DEBUG    1 */
 #include <linux/kernel.h>
 #include <linux/dma-mapping.h>
+#include <linux/swap.h>
 #include <mali_kbase.h>
 #include <mali_midg_regmap.h>
 #if defined(CONFIG_MALI_GATOR_SUPPORT)
@@ -982,7 +983,17 @@ int kbase_mmu_insert_pages_no_flush(struct kbase_context *kctx,
 	if (nr == 0)
 		return 0;
 
-	mutex_lock(&kctx->mmu_lock);
+	if (!mutex_trylock(&kctx->mmu_lock)) {
+		/*
+		 * Sometimes, mmu_lock takes long time to be released.
+		 * In that case, kswapd is stuck until it can hold
+		 * the lock. Instead, just bail out here so kswapd
+		 * could reclaim other pages.
+		 */
+		if (current_is_kswapd())
+			return -EBUSY;
+		mutex_lock(&kctx->mmu_lock);
+	}
 
 	while (remain) {
 		unsigned int i;
