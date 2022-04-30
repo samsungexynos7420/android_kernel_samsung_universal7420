@@ -372,6 +372,7 @@ struct fts_ts_info {
 	unsigned char tsp_keystatus;
 	int touchkey_threshold;
 	struct device *fac_dev_tk;
+	bool touchkeys_enabled;
 #endif
 
 	int digital_rev;

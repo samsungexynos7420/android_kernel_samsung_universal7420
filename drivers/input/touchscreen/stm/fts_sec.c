@@ -4212,12 +4212,46 @@ out:
 	return size;
 }
 
+static ssize_t fts_touchkey_enabled_show(struct device *dev,
+					 struct device_attribute *attr, char *buf)
+{
+	struct fts_ts_info *info = dev_get_drvdata(dev);
+
+	return sprintf(buf, "%d\n", info->touchkeys_enabled);
+}
+
+static ssize_t fts_touchkey_enabled_store(struct device *dev,
+					  struct device_attribute *attr, const char *buf,
+					  size_t size)
+{
+	struct fts_ts_info *info = dev_get_drvdata(dev);
+	int data, ret;
+
+	ret = sscanf(buf, "%d", &data);
+	if (ret != 1) {
+		input_err(true, &info->client->dev, "%s: %d err\n",
+			  __func__, __LINE__);
+		return size;
+	}
+
+	if (data != 0 && data != 1) {
+		input_err(true, &info->client->dev, "%s: invalid cmd %x\n",
+			  __func__, data);
+		return size;
+	}
+
+	info->touchkeys_enabled = (bool)data;
+
+	return size;
+}
+
 static DEVICE_ATTR(brightness, S_IRUGO | S_IWUSR | S_IWGRP, NULL, fts_touchkey_led_control);
 static DEVICE_ATTR(touchkey_recent, S_IRUGO, touchkey_recent_strength, NULL);
 static DEVICE_ATTR(touchkey_back, S_IRUGO, touchkey_back_strength, NULL);
 static DEVICE_ATTR(touchkey_recent_raw, S_IRUGO, touchkey_recent_raw, NULL);
 static DEVICE_ATTR(touchkey_back_raw, S_IRUGO, touchkey_back_raw, NULL);
 static DEVICE_ATTR(touchkey_threshold, S_IRUGO, touchkey_threshold, NULL);
+static DEVICE_ATTR(touchkeys_enabled, 0644, fts_touchkey_enabled_show, fts_touchkey_enabled_store);
 
 static struct attribute *sec_touchkey_factory_attributes[] = {
 	&dev_attr_touchkey_recent.attr,
@@ -4226,6 +4260,7 @@ static struct attribute *sec_touchkey_factory_attributes[] = {
 	&dev_attr_touchkey_back_raw.attr,
 	&dev_attr_touchkey_threshold.attr,
 	&dev_attr_brightness.attr,
+	&dev_attr_touchkeys_enabled.attr,
 	NULL,
 };
 
