@@ -128,22 +128,6 @@
 #define F_GETOWNER_UIDS	17
 #endif
 
-/*
- * fd "private" POSIX locks.
- *
- * Usually POSIX locks held by a process are released on *any* close and are
- * not inherited across a fork().
- *
- * These cmd values will set locks that conflict with normal POSIX locks, but
- * are "owned" by the opened file, not the process. This means that they are
- * inherited across fork() like BSD (flock) locks, and they are only released
- * automatically when the last reference to the the open file against which
- * they were acquired is put.
- */
-#define F_OFD_GETLK	36
-#define F_OFD_SETLK	37
-#define F_OFD_SETLKW	38
-
 #define F_OWNER_TID	0
 #define F_OWNER_PID	1
 #define F_OWNER_PGRP	2
