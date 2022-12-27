@@ -91,21 +91,13 @@
 					compatible = "android,system";
 					dev = "/dev/block/platform/15570000.ufs/by-name/SYSTEM";
 					type = "ext4";
-					mnt_flags = "ro,noatime,noauto_da_alloc,discard,data=ordered,errors=panic";
+					mnt_flags = "ro,errors=panic,noload";
 					fsmgr_flags = "wait";
 					status = "ok";
 				};
-                efs {
-                compatible = "android,efs";
-                dev = "/dev/block/platform/15570000.ufs/by-name/EFS";
-                type = "ext4";
-                mnt_flags = "noatime,nosuid,nodev,noauto_da_alloc,discard,journal_checksum,data=ordered,errors=panic";
-                fsmgr_flags = "wait,check";
-
-              };
 			};
 		};
-	};
+	};	
 
 	cpus {
 		#address-cells = <2>;
