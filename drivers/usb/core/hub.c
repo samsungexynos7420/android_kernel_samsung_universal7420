@@ -743,8 +743,6 @@ static void hub_tt_work(struct work_struct *work)
  *
  * call this function to control port's power via setting or
  * clearing the port's PORT_POWER feature.
- *
- * Return: 0 if successful. A negative error code otherwise.
  */
 int usb_hub_set_port_power(struct usb_device *hdev, struct usb_hub *hub,
 			   int port1, bool set)
@@ -773,8 +771,6 @@ int usb_hub_set_port_power(struct usb_device *hdev, struct usb_hub *hub,
  *
  * It may not be possible for that hub to handle additional full (or low)
  * speed transactions until that state is fully cleared out.
- *
- * Return: 0 if successful. A negative error code otherwise.
  */
 int usb_hub_clear_tt_buffer(struct urb *urb)
 {
@@ -1007,8 +1003,6 @@ static void hub_port_logical_disconnect(struct usb_hub *hub, int port1)
  * see that the device has been disconnected.  When the device is
  * physically unplugged and something is plugged in, the events will
  * be received and processed normally.
- *
- * Return: 0 if successful. A negative error code otherwise.
  */
 int usb_remove_device(struct usb_device *udev)
 {
@@ -2222,8 +2216,6 @@ static inline void announce_device(struct usb_device *udev) { }
  * @udev: newly addressed device (in ADDRESS state)
  *
  * Finish enumeration for On-The-Go devices
- *
- * Return: 0 if successful. A negative error code otherwise.
  */
 static int usb_enumerate_device_otg(struct usb_device *udev)
 {
@@ -2306,8 +2298,6 @@ fail:
  * If the device is WUSB and not authorized, we don't attempt to read
  * the string descriptors, as they will be errored out by the device
  * until it has been authorized.
- *
- * Return: 0 if successful. A negative error code otherwise.
  */
 static int usb_enumerate_device(struct usb_device *udev)
 {
@@ -2383,14 +2373,13 @@ static void set_usb_port_removable(struct usb_device *udev)
  * udev has already been installed, but udev is not yet visible through
  * sysfs or other filesystem code.
  *
+ * It will return if the device is configured properly or not.  Zero if
+ * the interface was registered with the driver core; else a negative
+ * errno value.
+ *
  * This call is synchronous, and may not be used in an interrupt context.
  *
  * Only the hub driver or root-hub registrar should ever call this.
- *
- * Return: Whether the device is configured properly or not. Zero if the
- * interface was registered with the driver core; else a negative errno
- * value.
- *
  */
 int usb_new_device(struct usb_device *udev)
 {
@@ -2498,8 +2487,6 @@ fail:
  *
  * We share a lock (that we have) with device_del(), so we need to
  * defer its call.
- *
- * Return: 0.
  */
 int usb_deauthorize_device(struct usb_device *usb_dev)
 {
@@ -2588,7 +2575,7 @@ static unsigned hub_is_wusb(struct usb_hub *hub)
 static int hub_port_reset(struct usb_hub *hub, int port1,
 			struct usb_device *udev, unsigned int delay, bool warm);
 
-/* Is a USB 3.0 port in the Inactive or Compliance Mode state?
+/* Is a USB 3.0 port in the Inactive or Complinance Mode state?
  * Port worm reset is required to recover
  */
 static bool hub_port_warm_reset_required(struct usb_hub *hub, u16 portstatus)
@@ -3473,8 +3460,7 @@ static int hub_suspend(struct usb_interface *intf, pm_message_t msg)
 
 		udev = hub->ports[port1 - 1]->child;
 		if (udev && udev->can_submit) {
-			dev_warn(&intf->dev, "port %d not suspended yet\n",
-					port1);
+			dev_warn(&intf->dev, "port %d nyet suspended\n", port1);
 			if (PMSG_IS_AUTO(msg))
 				return -EBUSY;
 		}
@@ -5043,7 +5029,7 @@ static void hub_events(void)
 
 static int hub_thread(void *__unused)
 {
-	/* khubd needs to be freezable to avoid interfering with USB-PERSIST
+	/* khubd needs to be freezable to avoid intefering with USB-PERSIST
 	 * port handover.  Otherwise it might see that a full-speed device
 	 * was gone before the EHCI controller had handed its port over to
 	 * the companion full-speed controller.
@@ -5213,11 +5199,10 @@ static int descriptors_changed(struct usb_device *udev,
  * re-connected.  All drivers will be unbound, and the device will be
  * re-enumerated and probed all over again.
  *
- * Return: 0 if the reset succeeded, -ENODEV if the device has been
+ * Returns 0 if the reset succeeded, -ENODEV if the device has been
  * flagged for logical disconnection, or some other negative error code
  * if the reset wasn't even attempted.
  *
- * Note:
  * The caller must own the device lock.  For example, it's safe to use
  * this from a driver probe() routine after downloading new firmware.
  * For calls that might not occur during probe(), drivers should lock
@@ -5373,9 +5358,8 @@ re_enumerate:
  * method), performs the port reset, and then lets the drivers know that
  * the reset is over (using their post_reset method).
  *
- * Return: The same as for usb_reset_and_verify_device().
+ * Return value is the same as for usb_reset_and_verify_device().
  *
- * Note:
  * The caller must own the device lock.  For example, it's safe to use
  * this from a driver probe() routine after downloading new firmware.
  * For calls that might not occur during probe(), drivers should lock
@@ -5514,7 +5498,7 @@ EXPORT_SYMBOL_GPL(usb_queue_reset_device);
  * USB drivers call this function to get hub's child device
  * pointer.
  *
- * Return: %NULL if input param is invalid and
+ * Return NULL if input param is invalid and
  * child's usb_device pointer if non-NULL.
  */
 struct usb_device *usb_hub_find_child(struct usb_device *hdev,
@@ -5548,8 +5532,8 @@ void usb_set_hub_port_connect_type(struct usb_device *hdev, int port1,
  * @hdev: USB device belonging to the usb hub
  * @port1: port num of the port
  *
- * Return: The connect type of the port if successful. Or
- * USB_PORT_CONNECT_TYPE_UNKNOWN if input params are invalid.
+ * Return connect type of the port and if input params are
+ * invalid, return USB_PORT_CONNECT_TYPE_UNKNOWN.
  */
 enum usb_port_connect_type
 usb_get_hub_port_connect_type(struct usb_device *hdev, int port1)
@@ -5609,8 +5593,8 @@ void usb_hub_adjust_deviceremovable(struct usb_device *hdev,
  * @hdev: USB device belonging to the usb hub
  * @port1: port num of the port
  *
- * Return: Port's acpi handle if successful, %NULL if params are
- * invalid.
+ * Return port's acpi handle if successful, NULL if params are
+ * invaild.
  */
 acpi_handle usb_get_hub_port_acpi_handle(struct usb_device *hdev,
 	int port1)

@@ -117,8 +117,6 @@ static DRIVER_ATTR(new_id, S_IRUGO | S_IWUSR, show_dynids, store_new_id);
  * @count: input size
  *
  * Removes a dynamic usb device ID from this driver.
- *
- * Return: @count on success. A negative error code otherwise.
  */
 static ssize_t
 store_remove_id(struct device_driver *driver, const char *buf, size_t count)
@@ -429,6 +427,11 @@ static int usb_unbind_interface(struct device *dev)
 		pm_runtime_disable(dev);
 	pm_runtime_set_suspended(dev);
 
+	/* Undo any residual pm_autopm_get_interface_* calls */
+	for (r = atomic_read(&intf->pm_usage_cnt); r > 0; --r)
+		usb_autopm_put_interface_no_suspend(intf);
+	atomic_set(&intf->pm_usage_cnt, 0);
+
 	if (!error)
 		usb_autosuspend_device(udev);
 
@@ -454,8 +457,6 @@ static int usb_unbind_interface(struct device *dev)
  * Callers must own the device lock, so driver probe() entries don't need
  * extra locking, but other call contexts may need to explicitly claim that
  * lock.
- *
- * Return: 0 on success.
  */
 int usb_driver_claim_interface(struct usb_driver *driver,
 				struct usb_interface *iface, void *priv)
@@ -661,8 +662,6 @@ EXPORT_SYMBOL_GPL(usb_match_one_id);
  * These device tables are exported with MODULE_DEVICE_TABLE, through
  * modutils, to support the driver loading functionality of USB hotplugging.
  *
- * Return: The first matching usb_device_id, or %NULL.
- *
  * What Matches:
  *
  * The "match_flags" element in a usb_device_id controls which
@@ -828,8 +827,7 @@ static int usb_uevent(struct device *dev, struct kobj_uevent_env *env)
  * Registers a USB device driver with the USB core.  The list of
  * unattached devices will be rescanned whenever a new driver is
  * added, allowing the new driver to attach to any recognized devices.
- *
- * Return: A negative error code on failure and 0 on success.
+ * Returns a negative error code on failure and 0 on success.
  */
 int usb_register_device_driver(struct usb_device_driver *new_udriver,
 		struct module *owner)
@@ -885,8 +883,7 @@ EXPORT_SYMBOL_GPL(usb_deregister_device_driver);
  * Registers a USB interface driver with the USB core.  The list of
  * unattached interfaces will be rescanned whenever a new driver is
  * added, allowing the new driver to attach to any recognized interfaces.
- *
- * Return: A negative error code on failure and 0 on success.
+ * Returns a negative error code on failure and 0 on success.
  *
  * NOTE: if you want your driver to use the USB major number, you must call
  * usb_register_dev() to enable that functionality.  This function no longer
@@ -1238,8 +1235,6 @@ done:
  * unpredictable times.
  *
  * This routine can run only in process context.
- *
- * Return: 0 if the suspend succeeded.
  */
 static int usb_suspend_both(struct usb_device *udev, pm_message_t msg)
 {
@@ -1321,8 +1316,6 @@ static int usb_suspend_both(struct usb_device *udev, pm_message_t msg)
  * unpredictable times.
  *
  * This routine can run only in process context.
- *
- * Return: 0 on success.
  */
 static int usb_resume_both(struct usb_device *udev, pm_message_t msg)
 {
@@ -1520,8 +1513,6 @@ void usb_autosuspend_device(struct usb_device *udev)
  * The caller must hold @udev's device lock.
  *
  * This routine can run only in process context.
- *
- * Return: 0 on success. A negative error code otherwise.
  */
 int usb_autoresume_device(struct usb_device *udev)
 {
@@ -1559,6 +1550,7 @@ void usb_autopm_put_interface(struct usb_interface *intf)
 	int			status;
 
 	usb_mark_last_busy(udev);
+	atomic_dec(&intf->pm_usage_cnt);
 	status = pm_runtime_put_sync(&intf->dev);
 	dev_vdbg(&intf->dev, "%s: cnt %d -> %d\n",
 			__func__, atomic_read(&intf->dev.power.usage_count),
@@ -1587,6 +1579,7 @@ void usb_autopm_put_interface_async(struct usb_interface *intf)
 	int			status;
 
 	usb_mark_last_busy(udev);
+	atomic_dec(&intf->pm_usage_cnt);
 	status = pm_runtime_put(&intf->dev);
 	dev_vdbg(&intf->dev, "%s: cnt %d -> %d\n",
 			__func__, atomic_read(&intf->dev.power.usage_count),
@@ -1608,6 +1601,7 @@ void usb_autopm_put_interface_no_suspend(struct usb_interface *intf)
 	struct usb_device	*udev = interface_to_usbdev(intf);
 
 	usb_mark_last_busy(udev);
+	atomic_dec(&intf->pm_usage_cnt);
 	pm_runtime_put_noidle(&intf->dev);
 }
 EXPORT_SYMBOL_GPL(usb_autopm_put_interface_no_suspend);
@@ -1628,8 +1622,6 @@ EXPORT_SYMBOL_GPL(usb_autopm_put_interface_no_suspend);
  * However if the autoresume fails then the counter is re-decremented.
  *
  * This routine can run only in process context.
- *
- * Return: 0 on success.
  */
 int usb_autopm_get_interface(struct usb_interface *intf)
 {
@@ -1638,6 +1630,8 @@ int usb_autopm_get_interface(struct usb_interface *intf)
 	status = pm_runtime_get_sync(&intf->dev);
 	if (status < 0)
 		pm_runtime_put_sync(&intf->dev);
+	else
+		atomic_inc(&intf->pm_usage_cnt);
 	dev_vdbg(&intf->dev, "%s: cnt %d -> %d\n",
 			__func__, atomic_read(&intf->dev.power.usage_count),
 			status);
@@ -1661,8 +1655,6 @@ EXPORT_SYMBOL_GPL(usb_autopm_get_interface);
  * resumed.
  *
  * This routine can run in atomic context.
- *
- * Return: 0 on success. A negative error code otherwise.
  */
 int usb_autopm_get_interface_async(struct usb_interface *intf)
 {
@@ -1671,6 +1663,8 @@ int usb_autopm_get_interface_async(struct usb_interface *intf)
 	status = pm_runtime_get(&intf->dev);
 	if (status < 0 && status != -EINPROGRESS)
 		pm_runtime_put_noidle(&intf->dev);
+	else
+		atomic_inc(&intf->pm_usage_cnt);
 	dev_vdbg(&intf->dev, "%s: cnt %d -> %d\n",
 			__func__, atomic_read(&intf->dev.power.usage_count),
 			status);
@@ -1694,6 +1688,7 @@ void usb_autopm_get_interface_no_resume(struct usb_interface *intf)
 	struct usb_device	*udev = interface_to_usbdev(intf);
 
 	usb_mark_last_busy(udev);
+	atomic_inc(&intf->pm_usage_cnt);
 	pm_runtime_get_noresume(&intf->dev);
 }
 EXPORT_SYMBOL_GPL(usb_autopm_get_interface_no_resume);
