@@ -4291,8 +4291,8 @@ static int tcp_try_rmem_schedule(struct sock *sk, struct sk_buff *skb,
 		sk = mptcp_meta_sk(sk);
 #endif
 
-	if (atomic_read(&sk->sk_rmem_alloc) > sk->sk_rcvbuf ||
-					> ((sk->sk_rcvbuf + sk->sk_sndbuf) * 4) ||
+	if (atomic_read(&sk->sk_rmem_alloc)
+				     > ((sk->sk_rcvbuf + sk->sk_sndbuf) * 4) ||
 	    !sk_rmem_schedule(sk, skb, size)) {
 
 		if (tcp_prune_queue(sk) < 0)
