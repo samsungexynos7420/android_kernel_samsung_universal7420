@@ -72,6 +72,11 @@
 #include <linux/input/mt.h>
 #include "fts_ts.h"
 
+#ifdef CONFIG_FB
+#include <linux/notifier.h>
+#include <linux/fb.h>
+#endif
+
 static struct i2c_driver fts_i2c_driver;
 
 #ifdef FTS_SUPPORT_TOUCH_KEY
@@ -1868,6 +1873,12 @@ static int fts_setup_drv_data(struct i2c_client *client)
 #ifdef CONFIG_BATTERY_SAMSUNG
 extern unsigned int lpcharge;
 #endif
+
+#ifdef CONFIG_FB
+static int fb_notifier_callback(struct notifier_block *self,
+	unsigned long event, void *data);
+#endif
+
 static int fts_probe(struct i2c_client *client, const struct i2c_device_id *idp)
 {
 	int retval;
@@ -2114,6 +2125,11 @@ static int fts_probe(struct i2c_client *client, const struct i2c_device_id *idp)
 #endif
 #endif
 
+#ifdef CONFIG_FB
+	info->fb_notif.notifier_call = fb_notifier_callback;
+	if (fb_register_client(&info->fb_notif))
+		pr_err("%s: could not create fb notifier\n", __func__);
+#endif
 	device_init_wakeup(&client->dev, true);
 
 	return 0;
@@ -2196,6 +2212,10 @@ static int fts_remove(struct i2c_client *client)
 	info->board->power(info, false);
 
 	pm_qos_remove_request(&info->pm_qos_req);
+
+#ifdef CONFIG_FB
+	fb_unregister_client(&info->fb_notif);
+#endif
 
 	kfree(info);
 
@@ -2758,6 +2778,35 @@ static void fts_shutdown(struct i2c_client *client)
 		 info->board->led_power(info, false);
 #endif
 }
+
+#ifdef CONFIG_FB
+static int fb_notifier_callback(struct notifier_block *self,
+				unsigned long event, void *data)
+{
+	struct fb_event *evdata = data;
+	struct fts_ts_info *tc_data = container_of(self, struct fts_ts_info, fb_notif);
+
+	if (evdata && evdata->data && event == FB_EVENT_BLANK) {
+		int *blank = evdata->data;
+		switch (*blank) {
+		case FB_BLANK_UNBLANK:
+		case FB_BLANK_NORMAL:
+		case FB_BLANK_VSYNC_SUSPEND:
+		case FB_BLANK_HSYNC_SUSPEND:
+		        fts_input_open(tc_data->input_dev);
+			break;
+		case FB_BLANK_POWERDOWN:
+		        fts_input_close(tc_data->input_dev);
+			break;
+		default:
+			/* Don't handle what we don't understand */
+			break;
+		}
+	}
+
+	return 0;
+}
+#endif
 
 void fts_recovery_cx(struct fts_ts_info *info)
 {
