@@ -14,8 +14,9 @@
 #include <linux/delay.h>
 #include <linux/wakelock.h>
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-#include <linux/earlysuspend.h>
+#ifdef CONFIG_FB
+#include <linux/notifier.h>
+#include <linux/fb.h>
 #endif
 
 #ifdef CONFIG_SEC_DEBUG_TSP_LOG
@@ -254,6 +255,10 @@ struct touchkey_i2c {
 	struct mode_change_data mc_data;
 	int ic_mode;
 	int tsk_enable_glove_mode;
+#ifdef CONFIG_FB
+	struct notifier_block fb_notif;
+	bool fb_suspended;
+#endif
 };
 
 extern struct class *sec_class;
