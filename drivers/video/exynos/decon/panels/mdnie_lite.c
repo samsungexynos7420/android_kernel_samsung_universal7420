@@ -743,7 +743,7 @@ static struct device_attribute mdnie_attributes[] = {
 	__ATTR(accessibility, 0664, accessibility_show, accessibility_store),
 	__ATTR(color_correct, 0444, color_correct_show, NULL),
 	__ATTR(bypass, 0664, bypass_show, bypass_store),
-	__ATTR(lux, 0000, lux_show, lux_store),
+	__ATTR(lux, 0664, lux_show, lux_store),
 	__ATTR(mdnie, 0444, mdnie_show, NULL),
 	__ATTR(sensorRGB, 0664, sensorRGB_show, sensorRGB_store),
 	__ATTR(night_mode, 0664, night_mode_show, night_mode_store),
