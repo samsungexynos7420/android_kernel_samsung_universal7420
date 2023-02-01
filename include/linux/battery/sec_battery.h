@@ -104,6 +104,7 @@ struct sec_battery_info {
 	int current_isys_now;	/* isys current (mA) */
 	int current_isys_avg;	/* isys avg current (mA) */
 
+	unsigned int input_voltage;
 	unsigned int capacity;			/* SOC (%) */
 
 
