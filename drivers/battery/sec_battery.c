@@ -5715,10 +5715,6 @@ static int sec_bat_get_property(struct power_supply *psy,
 	struct sec_battery_info *battery =
 		container_of(psy, struct sec_battery_info, psy_bat);
 	union power_supply_propval value;
-#if defined(CONFIG_STORE_MODE)
-	union power_supply_propval value_ac;
-	union power_supply_propval value_usb;
-#endif
 
 	switch (psp) {
 	case POWER_SUPPLY_PROP_STATUS:
@@ -7952,19 +7948,6 @@ static int __devinit sec_battery_probe(struct platform_device *pdev)
 	psy_do_property(battery->pdata->charger_name, set,
 			POWER_SUPPLY_PROP_AFC_CHARGER_MODE,
 			value);
-#endif
-#if defined(CONFIG_STORE_MODE) && !defined(CONFIG_SEC_FACTORY)
-		battery->store_mode = true;
-		value.intval = 0;
-		psy_do_property(battery->pdata->fuelgauge_name, get,
-			POWER_SUPPLY_PROP_CAPACITY, value);
-		if (value.intval <= 5) {
-			battery->ignore_store_mode = true;
-		} else {	
-			value.intval = battery->store_mode;
-			psy_do_property(battery->pdata->charger_name, set,
-					POWER_SUPPLY_PROP_CONSTANT_CHARGE_CURRENT_MAX, value);
-		}
 #endif
 	if (pdata->initial_check)
 		pdata->initial_check();
