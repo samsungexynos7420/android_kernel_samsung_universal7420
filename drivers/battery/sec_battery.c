@@ -23,6 +23,14 @@ bool slate_mode_state;
 #define SEC_INPUT_VOLTAGE_5V	5
 #define SEC_INPUT_VOLTAGE_9V	9
 
+static unsigned int STORE_MODE_CHARGING_MAX = 75;
+static unsigned int STORE_MODE_CHARGING_MIN = 25;
+
+module_param_named(store_mode_max, STORE_MODE_CHARGING_MAX, uint, S_IWUSR | S_IRUGO);
+module_param_named(store_mode_min, STORE_MODE_CHARGING_MIN, uint, S_IWUSR | S_IRUGO);
+
+const char *charger_chip_name;
+
 /**************************************************************/
 #ifdef CONFIG_BATTERY_SWELLING_SELF_DISCHARGING
 #ifdef CONFIG_BATTERY_SWELLING_SELF_DISCHARGING_ZERO_ONLY
@@ -32,13 +40,6 @@ static int __init zero_sdchg_ic_exist_setup(char *str)
 	zero_sdchg_ic_exist = simple_strtol(str, NULL, 0);
 	return 1;
 }
-static unsigned int STORE_MODE_CHARGING_MAX = 75;
-static unsigned int STORE_MODE_CHARGING_MIN = 25;
-
-module_param_named(store_mode_max, STORE_MODE_CHARGING_MAX, uint, S_IWUSR | S_IRUGO);
-module_param_named(store_mode_min, STORE_MODE_CHARGING_MIN, uint, S_IWUSR | S_IRUGO);
-
-const char *charger_chip_name;
 
 __setup("zero_sdchg_ic=", zero_sdchg_ic_exist_setup);
 #endif
@@ -7704,7 +7705,7 @@ static int __devinit sec_battery_probe(struct platform_device *pdev)
 	psy_do_property(battery->pdata->charger_name, set,
 			POWER_SUPPLY_PROP_CONSTANT_CHARGE_CURRENT_MAX, value);
 #else
-	battery->store_mode = STORE_MODE_NONE;
+	battery->store_mode = false;
 #endif
 	battery->slate_mode = false;
 	slate_mode_state = battery->slate_mode;
