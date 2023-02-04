@@ -7689,7 +7689,7 @@ static int __devinit sec_battery_probe(struct platform_device *pdev)
 	psy_do_property(battery->pdata->charger_name, set,
 			POWER_SUPPLY_PROP_CONSTANT_CHARGE_CURRENT_MAX, value);
 #else
-	battery->store_mode = STORE_MODE_NONE;
+	battery->store_mode = false;
 #endif
 	battery->slate_mode = false;
 	slate_mode_state = battery->slate_mode;
