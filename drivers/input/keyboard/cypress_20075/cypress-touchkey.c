@@ -26,12 +26,6 @@
 #include <linux/miscdevice.h>
 #include <linux/uaccess.h>
 
-#ifndef USE_OPEN_CLOSE
-#define USE_OPEN_CLOSE
-#undef CONFIG_HAS_EARLYSUSPEND
-#undef CONFIG_PM
-#endif
-
 #ifdef CONFIG_HAS_EARLYSUSPEND
 #include <linux/earlysuspend.h>
 #endif
@@ -1294,64 +1288,7 @@ static void touchkey_input_close(struct input_dev *dev)
 }
 #endif
 
-#ifdef CONFIG_FB
-static int fb_notifier_callback(struct notifier_block *self,
-				unsigned long event, void *data)
-{
-	struct fb_event *evdata = data;
-	struct touchkey_i2c *tc_info = container_of(self, struct touchkey_i2c, fb_notif);
-
-	if (evdata && evdata->data && event == FB_EVENT_BLANK) {
-		int *blank = evdata->data;
-		switch (*blank) {
-		case FB_BLANK_UNBLANK:
-		case FB_BLANK_NORMAL:
-		case FB_BLANK_VSYNC_SUSPEND:
-		case FB_BLANK_HSYNC_SUSPEND:
-			touchkey_resume(&tc_info->client->dev);
-			break;
-		case FB_BLANK_POWERDOWN:
-			abov_tk_suspend(&tc_info->client->dev);
-			break;
-		default:
-			/* Don't handle what we don't understand */
-			break;
-		}
-	}
-
-	return 0;
-}
-#endif
-
 #ifdef CONFIG_PM
-#ifdef CONFIG_HAS_EARLYSUSPEND
-#define touchkey_suspend	NULL
-#define touchkey_resume	NULL
-
-static int sec_touchkey_early_suspend(struct early_suspend *h)
-{
-	struct touchkey_i2c *tkey_i2c =
-		container_of(h, struct touchkey_i2c, early_suspend);
-
-	touchkey_stop(tkey_i2c);
-
-	tk_debug_dbg(true, &tkey_i2c->client->dev, "%s\n", __func__);
-
-	return 0;
-}
-
-static int sec_touchkey_late_resume(struct early_suspend *h)
-{
-	struct touchkey_i2c *tkey_i2c =
-		container_of(h, struct touchkey_i2c, early_suspend);
-
-	tk_debug_dbg(true, &tkey_i2c->client->dev, "%s\n", __func__);
-
-	touchkey_start(tkey_i2c);
-
-	return 0;
-}
-#else
 static int touchkey_suspend(struct device *dev)
 {
 	struct touchkey_i2c *tkey_i2c = dev_get_drvdata(dev);
@@ -1393,8 +1330,35 @@ static int touchkey_resume(struct device *dev)
 
 	return 0;
 }
-#endif
+
 static SIMPLE_DEV_PM_OPS(touchkey_pm_ops, touchkey_suspend, touchkey_resume);
+
+#endif
+
+#ifdef CONFIG_HAS_EARLYSUSPEND
+static int sec_touchkey_early_suspend(struct early_suspend *h)
+{
+	struct touchkey_i2c *tkey_i2c =
+		container_of(h, struct touchkey_i2c, early_suspend);
+
+	touchkey_stop(tkey_i2c);
+
+	tk_debug_dbg(true, &tkey_i2c->client->dev, "%s\n", __func__);
+
+	return 0;
+}
+
+static int sec_touchkey_late_resume(struct early_suspend *h)
+{
+	struct touchkey_i2c *tkey_i2c =
+		container_of(h, struct touchkey_i2c, early_suspend);
+
+	tk_debug_dbg(true, &tkey_i2c->client->dev, "%s\n", __func__);
+
+	touchkey_start(tkey_i2c);
+
+	return 0;
+}
 #endif
 
 static ssize_t touchkey_led_control(struct device *dev,
@@ -2482,9 +2446,11 @@ static struct touchkey_platform_data *cypress_parse_dt(struct i2c_client *client
 }
 #endif
 
+#ifdef CONFIG_PM
 #ifdef CONFIG_FB
 static int fb_notifier_callback(struct notifier_block *self,
 	unsigned long event, void *data);
+#endif
 #endif
 
 static int i2c_touchkey_probe(struct i2c_client *client,
@@ -2752,6 +2718,38 @@ void touchkey_shutdown(struct i2c_client *client)
 
 	tk_debug_err(true, &tkey_i2c->client->dev, "%s\n", __func__);
 }
+
+#ifdef CONFIG_PM
+#ifdef CONFIG_FB
+static int fb_notifier_callback(struct notifier_block *self,
+				unsigned long event, void *data)
+{
+	struct fb_event *evdata = data;
+	struct touchkey_i2c *tc_info = container_of(self, struct touchkey_i2c, fb_notif);
+
+	if (evdata && evdata->data && event == FB_EVENT_BLANK) {
+		int *blank = evdata->data;
+		switch (*blank) {
+		case FB_BLANK_UNBLANK:
+		case FB_BLANK_NORMAL:
+		case FB_BLANK_VSYNC_SUSPEND:
+		case FB_BLANK_HSYNC_SUSPEND:
+			touchkey_resume(&tc_info->client->dev);
+			break;
+		case FB_BLANK_POWERDOWN:
+			touchkey_suspend(&tc_info->client->dev);
+			break;
+		default:
+			/* Don't handle what we don't understand */
+			break;
+		}
+	}
+
+	return 0;
+}
+#endif
+#endif
+
 #ifdef CONFIG_OF
 static struct of_device_id cypress_touchkey_dt_ids[] = {
 	{ .compatible = "cypress,cypress_touchkey" },
