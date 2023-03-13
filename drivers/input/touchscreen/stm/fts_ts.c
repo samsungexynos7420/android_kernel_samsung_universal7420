@@ -2777,18 +2777,18 @@ static int fb_notifier_callback(struct notifier_block *self,
 	if (evdata && evdata->data && event == FB_EVENT_BLANK) {
 		int *blank = evdata->data;
 		switch (*blank) {
-		case FB_BLANK_UNBLANK:
-		case FB_BLANK_NORMAL:
-		case FB_BLANK_VSYNC_SUSPEND:
-		case FB_BLANK_HSYNC_SUSPEND:
-		        fts_input_open(tc_data->input_dev);
-			break;
-		case FB_BLANK_POWERDOWN:
-		        fts_input_close(tc_data->input_dev);
-			break;
-		default:
-			/* Don't handle what we don't understand */
-			break;
+			case FB_BLANK_POWERDOWN:
+			case FB_BLANK_NORMAL:
+			case FB_BLANK_VSYNC_SUSPEND:
+			case FB_BLANK_HSYNC_SUSPEND:
+				fts_input_close(tc_data->input_dev);    
+				break;
+			case FB_BLANK_UNBLANK:
+		    	fts_input_open(tc_data->input_dev);
+				break;
+			default:
+				/* Don't handle what we don't understand */
+				break;
 		}
 	}
 
