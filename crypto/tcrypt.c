@@ -86,7 +86,7 @@ static char *drbg_cores[] = {
 	"hmac_sha512",
 	"hmac_sha256",
 #endif /* CONFIG_CRYPTO_DRBG_HMAC */
-};=
+};
 
 #endif /* CONFIG_CRYPTO_DRBG && CONFIG_CRYPTO_FIPS */
 
