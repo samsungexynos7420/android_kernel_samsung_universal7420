@@ -16,6 +16,7 @@ void show_mem(unsigned int filter)
 		nonshared = 0, highmem = 0;
 
 	printk("Mem-Info:\n");
+	show_mem_extra_call_notifiers();
 	show_free_areas(filter);
 
 	if (filter & SHOW_MEM_FILTER_PAGE_COUNT)
