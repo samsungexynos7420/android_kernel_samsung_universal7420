@@ -263,9 +263,6 @@
 # include <linux/irq.h>
 #endif
 
-#include <linux/syscalls.h>
-#include <linux/completion.h>
-
 #include <asm/processor.h>
 #include <asm/uaccess.h>
 #include <asm/irq.h>
@@ -617,13 +614,10 @@ retry:
 		goto retry;
 
 	r->entropy_total += nbits;
-	if (!r->initialized && r->entropy_total > 128) {
-		r->initialized = 1;
-		r->entropy_total = 0;
-		if (r == &nonblocking_pool) {
-			prandom_reseed_late();
-			wake_up_all(&urandom_init_wait);
-			pr_notice("random: %s pool is initialized\n", r->name);
+	if (!r->initialized && nbits > 0) {
+		if (r->entropy_total > 128) {
+			r->initialized = 1;
+			r->entropy_total = 0;
 		}
 	}
 
@@ -1236,50 +1230,26 @@ _random_read(int nonblock, char __user *buf, size_t nbytes)
 	if (nbytes == 0)
 		return 0;
 
-	while (nbytes > 0) {
-		n = nbytes;
-		if (n > SEC_XFER_SIZE)
-			n = SEC_XFER_SIZE;
+	nbytes = min_t(size_t, nbytes, SEC_XFER_SIZE);
+	while (1) {
+		n = extract_entropy_user(&blocking_pool, buf, nbytes);
+		if (n < 0)
+			return n;
+		trace_random_read(n*8, (nbytes-n)*8,
+				  ENTROPY_BITS(&blocking_pool),
+				  ENTROPY_BITS(&input_pool));
+		if (n > 0)
+			return n;
+		/* Pool is (near) empty.  Maybe wait and retry. */
 
-		DEBUG_ENT("reading %zu bits\n", n*8);
+		if (nonblock)
+			return -EAGAIN;
 
-		n = extract_entropy_user(&blocking_pool, buf, n);
-
-		if (n < 0) {
-			retval = n;
-			break;
-		}
-
-		DEBUG_ENT("read got %zd bits (%zd still needed)\n",
-			  n*8, (nbytes-n)*8);
-
-		if (n == 0) {
-			if (nonblock) {
-				retval = -EAGAIN;
-				break;
-			}
-
-			DEBUG_ENT("sleeping?\n");
-
-			wait_event_interruptible(random_read_wait,
-				input_pool.entropy_count >=
-						 random_read_wakeup_thresh);
-
-			DEBUG_ENT("awake\n");
-
-			if (signal_pending(current)) {
-				retval = -ERESTARTSYS;
-				break;
-			}
-
-			continue;
-		}
-
-		count += n;
-		buf += n;
-		nbytes -= n;
-		break;		/* This break makes the device work */
-				/* like a named pipe */
+		wait_event_interruptible(random_read_wait,
+			ENTROPY_BITS(&input_pool) >=
+			random_read_wakeup_bits);
+		if (signal_pending(current))
+			return -ERESTARTSYS;
 	}
 }
 
@@ -1420,6 +1390,29 @@ const struct file_operations urandom_fops = {
 	.llseek = noop_llseek,
 };
 
+SYSCALL_DEFINE3(getrandom, char __user *, buf, size_t, count,
+		unsigned int, flags)
+{
+	if (flags & ~(GRND_NONBLOCK|GRND_RANDOM))
+		return -EINVAL;
+
+	if (count > INT_MAX)
+		count = INT_MAX;
+
+	if (flags & GRND_RANDOM)
+		return _random_read(flags & GRND_NONBLOCK, buf, count);
+
+	if (unlikely(nonblocking_pool.initialized == 0)) {
+		if (flags & GRND_NONBLOCK)
+			return -EAGAIN;
+		wait_event_interruptible(urandom_init_wait,
+					 nonblocking_pool.initialized);
+		if (signal_pending(current))
+			return -ERESTARTSYS;
+	}
+	return urandom_read(NULL, buf, count, NULL);
+}
+
 /***************************************************************
  * Random UUID interface
  *
@@ -1430,25 +1423,15 @@ const struct file_operations urandom_fops = {
 /*
  * Generate random UUID
  */
-SYSCALL_DEFINE3(getrandom, char __user *, buf, size_t, count,
-		unsigned int, flags)
+void generate_random_uuid(unsigned char uuid_out[16])
 {
-	if (flags & ~(GRND_NONBLOCK|GRND_RANDOM))
-		return -EINVAL;
- 	if (count > INT_MAX)
-		count = INT_MAX;
- 	if (flags & GRND_RANDOM)
-		return _random_read(flags & GRND_NONBLOCK, buf, count);
- 	if (unlikely(nonblocking_pool.initialized == 0)) {
-		if (flags & GRND_NONBLOCK)
-			return -EAGAIN;
-		wait_event_interruptible(urandom_init_wait,
-					 nonblocking_pool.initialized);
-		if (signal_pending(current))
-			return -ERESTARTSYS;
-	}
-	return urandom_read(NULL, buf, count, NULL);
+	get_random_bytes(uuid_out, 16);
+	/* Set UUID version to 4 --- truly random generation */
+	uuid_out[6] = (uuid_out[6] & 0x0F) | 0x40;
+	/* Set the UUID variant to DCE */
+	uuid_out[8] = (uuid_out[8] & 0x3F) | 0x80;
 }
+EXPORT_SYMBOL(generate_random_uuid);
 
 /********************************************************************
  *
