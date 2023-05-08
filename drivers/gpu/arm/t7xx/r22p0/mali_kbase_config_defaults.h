@@ -204,13 +204,13 @@ enum {
 /*
  * Default minimum number of scheduling ticks before jobs are hard-stopped
  */
-#define DEFAULT_JS_HARD_STOP_TICKS_SS    (7) /* 5s -> 350ms */
-#define DEFAULT_JS_HARD_STOP_TICKS_SS_8408  (300) /* 30s -> 15s */
+#define DEFAULT_JS_HARD_STOP_TICKS_SS    (100) /* 5s */
+#define DEFAULT_JS_HARD_STOP_TICKS_SS_8408  (600) /* 30s */
 
 /*
  * Default minimum number of scheduling ticks before CL jobs are hard-stopped.
  */
-#define DEFAULT_JS_HARD_STOP_TICKS_CL    (7) /* 5s -> 350ms */
+#define DEFAULT_JS_HARD_STOP_TICKS_CL    (100) /* 5s */
 
 /*
  * Default minimum number of scheduling ticks before jobs are hard-stopped
@@ -228,14 +228,14 @@ enum {
  * Default minimum number of scheduling ticks before the GPU is reset to clear a
  * "stuck" job
  */
-#define DEFAULT_JS_RESET_TICKS_SS           (8) /* 5.5s -> 400ms */
+#define DEFAULT_JS_RESET_TICKS_SS           (110) /* 5.5s */
 #define DEFAULT_JS_RESET_TICKS_SS_8408     (450) /* 45s -> 22.5s */
 
 /*
  * Default minimum number of scheduling ticks before the GPU is reset to clear a
  * "stuck" CL job.
  */
-#define DEFAULT_JS_RESET_TICKS_CL        (8) /* 5.5s -> 400ms */
+#define DEFAULT_JS_RESET_TICKS_CL        (110) /* 5.5s */
 
 /*
  * Default minimum number of scheduling ticks before the GPU is reset to clear a
