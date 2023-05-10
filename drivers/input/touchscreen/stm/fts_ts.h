@@ -4,6 +4,7 @@
 #include <linux/device.h>
 #include <linux/hrtimer.h>
 #include <linux/i2c/fts.h>
+#include <linux/pm_qos.h>
 #ifdef CONFIG_HAS_EARLYSUSPEND
 #include <linux/earlysuspend.h>
 #endif
@@ -296,12 +297,12 @@ enum fts_customer_feature {
 	FTS_FEATURE_ORIENTATION_GESTURE = 1,
 	FTS_FEATURE_STYLUS,
 	FTS_FEATURE_QUICK_SHORT_CAMERA_ACCESS,
-	FTS_FEATURE_SIDE_GUSTURE,
+	FTS_FEATURE_SIDE_GESTURE,
 	FTS_FEATURE_COVER_GLASS,
 	FTS_FEATURE_COVER_WALLET,
 	FTS_FEATURE_COVER_LED,
 	FTS_FEATURE_COVER_CLEAR_FLIP,
-	FTS_FEATURE_DUAL_SIDE_GUSTURE,
+	FTS_FEATURE_DUAL_SIDE_GESTURE,
 	FTS_FEATURE_CUSTOM_COVER_GLASS_ON,
 };
 
@@ -416,6 +417,7 @@ struct fts_ts_info {
 
 	struct mutex i2c_mutex;
 	struct mutex device_mutex;
+	struct pm_qos_request pm_qos_req;
 	bool touch_stopped;
 	bool reinit_done;
 

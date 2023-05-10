@@ -367,15 +367,8 @@ static ssize_t store_cmd(struct device *dev, struct device_attribute *devattr,
 		return -EINVAL;
 	}
 
-	if (strlen(buf) >= CMD_STR_LEN) {
-		pr_err("%s %s: cmd length(strlen(buf)) is over (%d,%s)!!\n",
-				SECLOG, __func__, (int)strlen(buf), buf);
-		return -EINVAL;
-	}
-
-	if (count >= (unsigned int)CMD_STR_LEN) {
-		pr_err("%s %s: cmd length(count) is over (%d,%s)!!\n",
-				SECLOG, __func__, (unsigned int)count, buf);
+	if (strlen(buf) >= CMD_STR_LEN) {		
+		printk(KERN_ERR "%s: cmd length is over (%s,%d)!!\n", __func__, buf, (int)strlen(buf));
 		return -EINVAL;
 	}
 
@@ -3624,9 +3617,9 @@ static void set_rotation_status(void *device_data)
 		int status = info->cmd_param[0] % 2;
 
 		if (status)
-			fts_enable_feature(info, FTS_FEATURE_DUAL_SIDE_GUSTURE, true);
+			fts_enable_feature(info, FTS_FEATURE_DUAL_SIDE_GESTURE, true);
 		else
-			fts_enable_feature(info, FTS_FEATURE_DUAL_SIDE_GUSTURE, false);
+			fts_enable_feature(info, FTS_FEATURE_DUAL_SIDE_GESTURE, false);
 
 		snprintf(buff, sizeof(buff), "%s", "OK");
 		info->cmd_state = CMD_STATUS_OK;
