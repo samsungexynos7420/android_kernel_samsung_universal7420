@@ -14,8 +14,9 @@
 #include <linux/delay.h>
 #include <linux/wakelock.h>
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-#include <linux/earlysuspend.h>
+#ifdef CONFIG_FB
+#include <linux/notifier.h>
+#include <linux/fb.h>
 #endif
 
 #ifdef CONFIG_SEC_DEBUG_TSP_LOG
@@ -27,11 +28,6 @@
 #endif
 
 #include <linux/i2c/touchkey_i2c.h>
-
-#ifdef CONFIG_FB
-#include <linux/notifier.h>
-#include <linux/fb.h>
-#endif
 
 #ifdef SEC_DEBUG_TK_LOG
 #define tk_debug_dbg(mode, dev, fmt, ...)	\
@@ -261,6 +257,7 @@ struct touchkey_i2c {
 	int tsk_enable_glove_mode;
 #ifdef CONFIG_FB
 	struct notifier_block fb_notif;
+	bool fb_suspended;
 #endif
 };
 
