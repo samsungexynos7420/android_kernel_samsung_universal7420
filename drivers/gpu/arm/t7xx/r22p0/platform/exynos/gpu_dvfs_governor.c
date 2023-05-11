@@ -117,8 +117,7 @@ static int gpu_dvfs_governor_interactive(struct exynos_context *platform, int ut
 	DVFS_ASSERT(platform);
 
 	if ((platform->step > gpu_dvfs_get_level(platform->gpu_max_clock))
-			&& (utilization > platform->table[platform->step].max_threshold||
-			     utilization > platform->interactive.highspeed_load)) {
+			&& (utilization > platform->table[platform->step].max_threshold)) {
 		int highspeed_level = gpu_dvfs_get_level(platform->interactive.highspeed_clock);
 		if ((highspeed_level > 0) && (platform->step > highspeed_level)
 				&& (utilization > platform->interactive.highspeed_load)) {
@@ -128,7 +127,7 @@ static int gpu_dvfs_governor_interactive(struct exynos_context *platform, int ut
 			} else {
 				platform->interactive.delay_count++;
 			}
-		} else if (utilization > platform->table[platform->step].max_threshold) {
+		} else {
 			platform->step--;
 			platform->interactive.delay_count = 0;
 		}
@@ -139,16 +138,7 @@ static int gpu_dvfs_governor_interactive(struct exynos_context *platform, int ut
 		if (platform->table[platform->step].clock > platform->gpu_max_clock_limit)
 			platform->step = gpu_dvfs_get_level(platform->gpu_max_clock_limit);
 #endif
-		/*
-		 * Allow hispeed_freq to scale down slower
-		 * Time taken for scaling down is down_staycount * platform->polling_speed
-		 * by default
-		 */
-		if (platform->step == highspeed_level &&
-			platform->table[platform->step].down_staycount < 3)
-			platform->down_requirement = 3;
-		else
-			platform->down_requirement = platform->table[platform->step].down_staycount;
+		platform->down_requirement = platform->table[platform->step].down_staycount;
 	} else if ((platform->step < gpu_dvfs_get_level(platform->gpu_min_clock))
 			&& (utilization < platform->table[platform->step].min_threshold)) {
 		platform->interactive.delay_count = 0;
