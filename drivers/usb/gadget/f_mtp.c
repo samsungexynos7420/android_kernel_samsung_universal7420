@@ -36,7 +36,7 @@
 #include <linux/usb/ch9.h>
 #include <linux/usb/f_mtp.h>
 
-#define MTP_BULK_BUFFER_SIZE       16384
+#define MTP_BULK_BUFFER_SIZE       131072
 #define INTR_BUFFER_SIZE           28
 
 /* String IDs */
@@ -50,7 +50,7 @@
 #define STATE_ERROR                 4   /* error from completion routine */
 
 /* number of tx and rx requests to allocate */
-#define MTP_TX_REQ_MAX 8
+#define TX_REQ_MAX 4
 #define RX_REQ_MAX 2
 #define INTR_REQ_MAX 5
 
@@ -66,15 +66,6 @@
 /* constants for device status */
 #define MTP_RESPONSE_OK             0x2001
 #define MTP_RESPONSE_DEVICE_BUSY    0x2019
-
-unsigned int mtp_rx_req_len = MTP_BULK_BUFFER_SIZE;
-module_param(mtp_rx_req_len, uint, S_IRUGO | S_IWUSR);
-
-unsigned int mtp_tx_req_len = MTP_BULK_BUFFER_SIZE;
-module_param(mtp_tx_req_len, uint, S_IRUGO | S_IWUSR);
-
-unsigned int mtp_tx_reqs = MTP_TX_REQ_MAX;
-module_param(mtp_tx_reqs, uint, S_IRUGO | S_IWUSR);
 
 static const char mtp_shortname[] = "mtp_usb";
 
@@ -505,46 +496,18 @@ static int mtp_create_bulk_endpoints(struct mtp_dev *dev,
 	ep->driver_data = dev;		/* claim the endpoint */
 	dev->ep_intr = ep;
 
-retry_tx_alloc:
-	if (mtp_tx_req_len > MTP_BULK_BUFFER_SIZE)
-		mtp_tx_reqs = 4;
-
 	/* now allocate requests for our endpoints */
-	for (i = 0; i < mtp_tx_reqs; i++) {
-		req = mtp_request_new(dev->ep_in, mtp_tx_req_len);
-		if (!req) {
-			if (mtp_tx_req_len <= MTP_BULK_BUFFER_SIZE)
-				goto fail;
-			while ((req = mtp_req_get(dev, &dev->tx_idle)))
-				mtp_request_free(req, dev->ep_in);
-			mtp_tx_req_len = MTP_BULK_BUFFER_SIZE;
-			mtp_tx_reqs = MTP_TX_REQ_MAX;
-			goto retry_tx_alloc;
-		}
+	for (i = 0; i < TX_REQ_MAX; i++) {
+		req = mtp_request_new(dev->ep_in, MTP_BULK_BUFFER_SIZE);
+		if (!req)
+			goto fail;
 		req->complete = mtp_complete_in;
 		mtp_req_put(dev, &dev->tx_idle, req);
 	}
-
-	/*
-	 * The RX buffer should be aligned to EP max packet for
-	 * some controllers.  At bind time, we don't know the
-	 * operational speed.  Hence assuming super speed max
-	 * packet size.
-	 */
-	if (mtp_rx_req_len % 1024)
-		mtp_rx_req_len = MTP_BULK_BUFFER_SIZE;
-
-retry_rx_alloc:
 	for (i = 0; i < RX_REQ_MAX; i++) {
-		req = mtp_request_new(dev->ep_out, mtp_rx_req_len);
-		if (!req) {
-			if (mtp_rx_req_len <= MTP_BULK_BUFFER_SIZE)
-				goto fail;
-			for (; i > 0; i--)
-				mtp_request_free(dev->rx_req[i], dev->ep_out);
-			mtp_rx_req_len = MTP_BULK_BUFFER_SIZE;
-			goto retry_rx_alloc;
-		}
+		req = mtp_request_new(dev->ep_out, MTP_BULK_BUFFER_SIZE);
+		if (!req)
+			goto fail;
 		req->complete = mtp_complete_out;
 		dev->rx_req[i] = req;
 	}
@@ -572,9 +535,11 @@ static ssize_t mtp_read(struct file *fp, char __user *buf,
 	ssize_t r = count;
 	unsigned xfer;
 	int ret = 0;
-	size_t len = 0;
 
 	DBG(cdev, "mtp_read(%zu)\n", count);
+
+	if (count > MTP_BULK_BUFFER_SIZE)
+		return -EINVAL;
 
 	/* we will block until we're online */
 	DBG(cdev, "mtp_read: waiting for online state\n");
@@ -585,14 +550,6 @@ static ssize_t mtp_read(struct file *fp, char __user *buf,
 		goto done;
 	}
 	spin_lock_irq(&dev->lock);
-	if (dev->ep_out->desc) {
-		len = usb_ep_align_maybe(cdev->gadget, dev->ep_out, count);
-		if (len > mtp_rx_req_len) {
-			spin_unlock_irq(&dev->lock);
-			return -EINVAL;
-		}
-	}
-
 	if (dev->state == STATE_CANCELED) {
 		/* report cancelation to userspace */
 		dev->state = STATE_READY;
@@ -605,7 +562,7 @@ static ssize_t mtp_read(struct file *fp, char __user *buf,
 requeue_req:
 	/* queue a request */
 	req = dev->rx_req[0];
-	req->length = len;
+	req->length = count;
 	dev->rx_done = 0;
 	set_read_req_length(req);
 	ret = usb_ep_queue(dev->ep_out, req, GFP_KERNEL);
@@ -702,8 +659,8 @@ static ssize_t mtp_write(struct file *fp, const char __user *buf,
 			break;
 		}
 
-		if (count > mtp_tx_req_len)
-			xfer = mtp_tx_req_len;
+		if (count > MTP_BULK_BUFFER_SIZE)
+			xfer = MTP_BULK_BUFFER_SIZE;
 		else
 			xfer = count;
 		if (xfer && copy_from_user(req->buf, buf, xfer)) {
@@ -795,8 +752,8 @@ static void send_file_work(struct work_struct *data)
 			break;
 		}
 
-		if (count > mtp_tx_req_len)
-			xfer = mtp_tx_req_len;
+		if (count > MTP_BULK_BUFFER_SIZE)
+			xfer = MTP_BULK_BUFFER_SIZE;
 		else
 			xfer = count;
 
@@ -870,8 +827,8 @@ static void receive_file_work(struct work_struct *data)
 			read_req = dev->rx_req[cur_buf];
 			cur_buf = (cur_buf + 1) % RX_REQ_MAX;
 
-			read_req->length = (count > mtp_rx_req_len
-					? mtp_rx_req_len : count);
+			read_req->length = (count > MTP_BULK_BUFFER_SIZE
+					? MTP_BULK_BUFFER_SIZE : count);
 			dev->rx_done = 0;
 
 			set_read_req_length(read_req);
@@ -1322,21 +1279,6 @@ static int mtp_bind_config(struct usb_configuration *c, bool ptp_config)
 	int ret = 0;
 
 	printk(KERN_INFO "mtp_bind_config\n");
-
-	/*
-	 * PTP piggybacks on MTP function so make sure we have
-	 * created MTP function before we associate this PTP
-	 * function with a gadget configuration.
-	 */
-	if (dev == NULL) {
-		pr_err("Error: Create MTP function before linking"
-				" PTP function with a gadget configuration\n");
-		pr_err("\t1: Delete existing PTP function if any\n");
-		pr_err("\t2: Create MTP function\n");
-		pr_err("\t3: Create and symlink PTP function"
-				" with a gadget configuration\n");
-		return -EINVAL; /* Invalid Configuration */
-	}
 
 	/* allocate a string ID for our interface */
 	if (mtp_string_defs[INTERFACE_STRING_INDEX].id == 0) {
