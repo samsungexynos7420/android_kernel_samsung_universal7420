@@ -239,7 +239,6 @@ int gpu_vendor_dispatch(struct kbase_context *kctx, u32 flags)
 		}
 #endif  /* MUST BE CHECK for each feature */
 #endif
-#if 0
 	case KBASE_FUNC_SET_MIN_LOCK :
 		{
 #ifdef CONFIG_MALI_DVFS
@@ -311,7 +310,7 @@ int gpu_vendor_dispatch(struct kbase_context *kctx, u32 flags)
 			}
 			break;
 		}
-#endif
+
 #if 0 /* Unused code */
 	/* MALI_SEC_INTEGRATION */
 #ifdef CONFIG_MALI_SEC_HWCNT
