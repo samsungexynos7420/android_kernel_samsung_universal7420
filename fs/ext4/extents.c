@@ -470,7 +470,7 @@ ext4_ext_show_eh(struct inode *inode, struct ext4_extent_header *eh)
 
 static int __ext4_ext_check(const char *function, unsigned int line,
 			    struct inode *inode, struct ext4_extent_header *eh,
-			    int depth, ext4_fsblk_t pblk)
+			    int depth, ext4_fsblk_t pblk, struct buffer_head *bh)
 {
 	const char *error_msg;
 	int max = 0;
@@ -531,7 +531,7 @@ corrupted:
 }
 
 #define ext4_ext_check(inode, eh, depth, pblk)			\
-	__ext4_ext_check(__func__, __LINE__, (inode), (eh), (depth), (pblk))
+	__ext4_ext_check(__func__, __LINE__, (inode), (eh), (depth), (pblk), (NULL))
 
 int ext4_ext_check_inode(struct inode *inode)
 {
@@ -558,7 +558,7 @@ __read_extent_tree_block(const char *function, unsigned int line,
 	if (buffer_verified(bh))
 		return bh;
 	err = __ext4_ext_check(function, line, inode,
-			       ext_block_hdr(bh), depth, pblk);
+			       ext_block_hdr(bh), depth, pblk, bh);
 	if (err)
 		goto errout;
 	set_buffer_verified(bh);
