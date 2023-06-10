@@ -7,3 +7,5 @@ obj-$(CONFIG_PANEL_S6E3HA2_DYNAMIC) += s6e3ha2_s6e3ha0_wqhd_lcd_ctrl.o dsim_back
 obj-$(CONFIG_PANEL_S6E3HA3_DYNAMIC) += s6e3ha3_s6e3ha2_wqhd_lcd_ctrl.o dsim_backlight_dynamic.o
 obj-$(CONFIG_PANEL_S6E3HF3_DYNAMIC) += s6e3ha3_s6e3ha2_wqhd_lcd_ctrl.o dsim_backlight_dynamic.o
 obj-$(CONFIG_PANEL_S6E3FA3_A8XE) += s6e3fa3_a8xe_lcd_ctrl.o dsim_backlight_s6e3fa3_a8xe.o
+
+ccflags-y += -fno-stack-protector
