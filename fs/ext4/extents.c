@@ -463,7 +463,7 @@ ext4_ext_show_eh(struct inode *inode, struct ext4_extent_header *eh)
 		for (i = 0; i < 4; i++, ex++) {
 			printk(KERN_ERR "leaf - block : %d / length : [%d]%d /"
 				" pblock : %llu\n",le32_to_cpu(ex->ee_block),
-				ext4_ext_is_uninitialized(ex),
+				ext4_ext_is_unwritten(ex),
 				ext4_ext_get_actual_len(ex),
 				ext4_ext_pblock(ex));
 		}
