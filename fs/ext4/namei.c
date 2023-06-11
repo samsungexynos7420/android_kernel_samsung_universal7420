@@ -1426,7 +1426,7 @@ static struct buffer_head * ext4_dx_find_entry(struct inode *dir, const struct q
 		bh = ext4_read_dirblock(dir, block, DIRENT);
 		if (IS_ERR(bh))
 			goto errout;
-		}
+		
 #ifdef CONFIG_SDCARD_FS_CI_SEARCH
 		retval = search_dirblock(bh, dir, d_name,
 					 block << EXT4_BLOCK_SIZE_BITS(sb),
@@ -3318,9 +3318,9 @@ static int ext4_rename(struct inode *old_dir, struct dentry *old_dentry,
 		dquot_initialize(new.inode);
 
 #ifdef CONFIG_SDCARD_FS_CI_SEARCH
-	old_bh = ext4_find_entry(old.dir, &old.dentry->d_name, &old.de, NULL, NULL);
+	old.bh = ext4_find_entry(old.dir, &old.dentry->d_name, &old.de, NULL, NULL);
 #else
-	old_bh = ext4_find_entry(old.dir, &old.dentry->d_name, &old.de, NULL);
+	old.bh = ext4_find_entry(old.dir, &old.dentry->d_name, &old.de, NULL);
 #endif
 	if (IS_ERR(old.bh))
 		return PTR_ERR(old.bh);
@@ -3335,10 +3335,10 @@ static int ext4_rename(struct inode *old_dir, struct dentry *old_dentry,
 		goto end_rename;
 
 #ifdef CONFIG_SDCARD_FS_CI_SEARCH
-	new_bh = ext4_find_entry(new.dir, &new.dentry->d_name,
+	new.bh = ext4_find_entry(new.dir, &new.dentry->d_name,
 				 &new.de, &new.inlined, NULL);
 #else
-	new_bh = ext4_find_entry(new.dir, &new.dentry->d_name,
+	new.bh = ext4_find_entry(new.dir, &new.dentry->d_name,
 				 &new.de, &new.inlined);
 #endif
 	if (IS_ERR(new.bh)) {
