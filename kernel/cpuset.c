@@ -2219,7 +2219,7 @@ retry:
 	 * the tasks in it will be migrated to an ancestor.
 	 */
 	if ((sane && cpumask_empty(cs->cpus_allowed)) ||
-	    (!cpumask_empty(&off_cpus) && !cpumask_empty(cs->cpus_allowed)))
+	    (!cpumask_empty(&new_allowed) && !cpumask_empty(cs->cpus_allowed)))
 		update_tasks_cpumask(cs, NULL);
 
 	mutex_lock(&callback_mutex);
