@@ -5575,7 +5575,11 @@ static int mem_cgroup_swappiness_write(struct cgroup *cgrp, struct cftype *cft,
 	struct mem_cgroup *memcg = mem_cgroup_from_cont(cgrp);
 	struct mem_cgroup *parent;
 
+#ifdef CONFIG_INCREASE_MAXIMUM_SWAPPINESS
+	if (val > 200)
+#else
 	if (val > 100)
+#endif
 		return -EINVAL;
 
 	if (cgrp->parent == NULL)
