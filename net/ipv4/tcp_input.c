@@ -2314,7 +2314,6 @@ static void tcp_mark_head_lost(struct sock *sk, int packets, int mark_head)
 				break;
 
 			mss = skb_shinfo(skb)->gso_size;
-			if (err < 0)
 			/* If needed, chop off the prefix to mark as lost. */
 			lost = (packets - oldcnt) * mss;
 			if (lost < skb->len &&
