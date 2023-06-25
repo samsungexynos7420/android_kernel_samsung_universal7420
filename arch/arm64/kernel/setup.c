@@ -462,14 +462,12 @@ static int __init arm64_device_init(void)
 }
 arch_initcall_sync(arm64_device_init);
 
-static DEFINE_PER_CPU(struct cpu, cpu_data);
-
 static int __init topology_init(void)
 {
 	int i;
 
 	for_each_possible_cpu(i) {
-		struct cpu *cpu = &per_cpu(cpu_data, i);
+		struct cpu *cpu = &per_cpu(cpu_data.cpu, i);
 		cpu->hotpluggable = 1;
 		register_cpu(cpu, i);
 	}
