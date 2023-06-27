@@ -383,8 +383,25 @@ CONFIG_PCIEAER=y
 CONFIG_PCIE_PME=y
 
 #
+# ARM errata workarounds via the alternatives framework
+#
+CONFIG_ARM64_ERRATUM_826319=y
+CONFIG_ARM64_ERRATUM_827319=y
+CONFIG_ARM64_ERRATUM_824069=y
+CONFIG_ARM64_ERRATUM_819472=y
+# CONFIG_ARM64_ERRATUM_832075 is not set
+CONFIG_ARM64_ERRATUM_845719=y
+
+
+# ARMv8.1 architectural features
+#
+# CONFIG_ARM64_PAN is not set
+# CONFIG_ARM64_UAO is not set
+
+#
 # Kernel Features
 #
+
 # CONFIG_ARM64_64K_PAGES is not set
 # CONFIG_CPU_BIG_ENDIAN is not set
 CONFIG_SMP=y
