@@ -184,9 +184,9 @@ extern unsigned int arizona_v2_mixer_values[ARIZONA_V2_NUM_MIXER_INPUTS];
 
 #define ARIZONA_MUX(wname, wctrl) \
 {	.id = snd_soc_dapm_value_mux, .name = wname, .reg = SND_SOC_NOPM, \
-	.shift = 0, .invert = 0, .kcontrol_news = wctrl, \
+	.shift = 0, .kcontrol_news = wctrl, \
 	.num_kcontrols = 1, .event = arizona_mux_event, \
-	.event_flags = SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_PRE_PMD }
+	.event_flags = SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_PRE_PMD}
 
 #define ARIZONA_MUX_WIDGETS(name, name_str) \
 	ARIZONA_MUX(name_str " Input", &name##_mux)
