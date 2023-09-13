@@ -118,6 +118,13 @@ static u8 led_lowpower_mode = 0x0;
 
 unsigned int octa_color = 0x0;
 
+#ifdef MAX77843_DEBUG
+	#define max77843_dbg(format, ...) \
+		info(format, ##__VA_ARGS__)
+#else
+	#define max77843_dbg(format, ...)
+#endif // MAX77705_DEBUG
+
 enum max77843_led_color {
 	WHITE,
 	RED,
@@ -158,7 +165,7 @@ static int max77843_rgb_number(struct led_classdev *led_cdev,
 
 	for (i = 0; i < 4; i++) {
 		if (led_cdev == &max77843_rgb->led[i]) {
-			pr_info("leds-max77843-rgb: %s, %d\n", __func__, i);
+			max77843_dbg("leds-max77843-rgb: %s, %d\n", __func__, i);
 			return i;
 		}
 	}
@@ -220,7 +227,7 @@ static void max77843_rgb_set_state(struct led_classdev *led_cdev,
 	int n;
 	int ret;
 
-	pr_info("leds-max77843-rgb: %s\n", __func__);
+	max77843_dbg("leds-max77843-rgb: %s\n", __func__);
 
 	ret = max77843_rgb_number(led_cdev, &max77843_rgb);
 
@@ -260,7 +267,7 @@ static void max77843_rgb_set_state(struct led_classdev *led_cdev,
 
 	max77843_rgb_set(led_cdev, brightness);
 
-	pr_info("leds-max77843-rgb: %s, led_num = %d, brightness = %d\n", __func__, ret, brightness);
+	max77843_dbg("leds-max77843-rgb: %s, led_num = %d, brightness = %d\n", __func__, ret, brightness);
 
 	ret = max77843_update_reg(max77843_rgb->i2c,
 			MAX77843_RGBLED_REG_LEDEN, led_state << (2*n), 0x3 << 2*n);
@@ -279,7 +286,7 @@ static unsigned int max77843_rgb_get(struct led_classdev *led_cdev)
 	int ret;
 	u8 value;
 
-	pr_info("leds-max77843-rgb: %s\n", __func__);
+	max77843_dbg("leds-max77843-rgb: %s\n", __func__);
 
 	ret = max77843_rgb_number(led_cdev, &max77843_rgb);
 	if (IS_ERR_VALUE(ret)) {
@@ -318,7 +325,7 @@ static int max77843_rgb_ramp(struct device *dev, int ramp_up, int ramp_down)
 	int value;
 	int ret;
 
-	pr_info("leds-max77843-rgb: %s\n", __func__);
+	max77843_dbg("leds-max77843-rgb: %s\n", __func__);
 
 	if (ramp_up <= 800) {
 		ramp_up /= 100;
@@ -352,7 +359,7 @@ static int max77843_rgb_blink(struct device *dev,
 	int value;
 	int ret = 0;
 
-	pr_info("leds-max77843-rgb: %s\n", __func__);
+	max77843_dbg("leds-max77843-rgb: %s\n", __func__);
 
 	value = (LEDBLNK_ON(delay_on) << 4) | LEDBLNK_OFF(delay_off);
 	ret = max77843_write_reg(max77843_rgb->i2c,
@@ -382,7 +389,7 @@ static struct max77843_rgb_platform_data
 	char normal_po_cur[29] = "normal_powermode_current";
 	char low_po_cur[26] = "low_powermode_current";
 
-	pr_info("leds-max77843-rgb: %s\n", __func__);
+	max77843_dbg("leds-max77843-rgb: %s\n", __func__);
 
 	pdata = devm_kzalloc(dev, sizeof(*pdata), GFP_KERNEL);
 	if (unlikely(pdata == NULL))
@@ -399,7 +406,7 @@ static struct max77843_rgb_platform_data
 		ret = of_property_read_string_index(np, "rgb-name", i,
 						(const char **)&pdata->name[i]);
 
-		pr_info("leds-max77843-rgb: %s, %s\n", __func__,pdata->name[i]);
+		max77843_dbg("leds-max77843-rgb: %s, %s\n", __func__,pdata->name[i]);
 
 		if (IS_ERR_VALUE(ret)) {
 			devm_kfree(dev, pdata);
@@ -410,16 +417,16 @@ static struct max77843_rgb_platform_data
 	/* get device_type value in dt */
 	ret = of_property_read_u32(np, "device_type", &temp);
 	if (IS_ERR_VALUE(ret)) {
-		pr_info("leds-max77843-rgb: %s, can't parsing device_type in dt\n", __func__);
+		max77843_dbg("leds-max77843-rgb: %s, can't parsing device_type in dt\n", __func__);
 	}
 	else {
 		device_type = (u8)temp;
 	}
-	pr_info("leds-max77843-rgb: %s, device_type = %x\n", __func__, device_type);
+	max77843_dbg("leds-max77843-rgb: %s, device_type = %x\n", __func__, device_type);
 
 	/* ZERO */
 	if(device_type == 0) {
-		pr_info("here0\n");
+		max77843_dbg("here0\n");
 
 		switch(octa_color) {
 		case 0:
@@ -443,7 +450,7 @@ static struct max77843_rgb_platform_data
 	}
 	/* ZEROF */
 	else if(device_type == 1) {
-		pr_info("here1\n");
+		max77843_dbg("here1\n");
 
 		switch(octa_color) {
 		case 0:
@@ -474,51 +481,51 @@ static struct max77843_rgb_platform_data
 	/* get normal_powermode_current value in dt */
 	ret = of_property_read_u32(np, normal_po_cur, &temp);
 	if (IS_ERR_VALUE(ret)) {
-		pr_info("leds-max77843-rgb: %s, can't parsing normal_powermode_current in dt\n", __func__);
+		max77843_dbg("leds-max77843-rgb: %s, can't parsing normal_powermode_current in dt\n", __func__);
 	}
 	else {
 		normal_powermode_current = (u8)temp;
 	}
-	pr_info("leds-max77843-rgb: %s, normal_powermode_current = %x\n", __func__, normal_powermode_current);
+	max77843_dbg("leds-max77843-rgb: %s, normal_powermode_current = %x\n", __func__, normal_powermode_current);
 
 	/* get low_powermode_current value in dt */
 	ret = of_property_read_u32(np, low_po_cur, &temp);
 	if (IS_ERR_VALUE(ret)) {
-		pr_info("leds-max77843-rgb: %s, can't parsing low_powermode_current in dt\n", __func__);
+		max77843_dbg("leds-max77843-rgb: %s, can't parsing low_powermode_current in dt\n", __func__);
 	}
 	else
 		low_powermode_current = (u8)temp;
-	pr_info("leds-max77843-rgb: %s, low_powermode_current = %x\n", __func__, low_powermode_current);
+	max77843_dbg("leds-max77843-rgb: %s, low_powermode_current = %x\n", __func__, low_powermode_current);
 
 	/* get led red brightness ratio */
 	ret = of_property_read_u32(np, br_ratio_r, &temp);
 	if (IS_ERR_VALUE(ret)) {
-		pr_info("leds-max77843-rgb: %s, can't parsing brightness_ratio_r in dt\n", __func__);
+		max77843_dbg("leds-max77843-rgb: %s, can't parsing brightness_ratio_r in dt\n", __func__);
 	}
 	else {
 		brightness_ratio_r = (int)temp;
 	}
-	pr_info("leds-max77843-rgb: %s, brightness_ratio_r = %x\n", __func__, brightness_ratio_r);
+	max77843_dbg("leds-max77843-rgb: %s, brightness_ratio_r = %x\n", __func__, brightness_ratio_r);
 
 	/* get led green brightness ratio */
 	ret = of_property_read_u32(np, br_ratio_g, &temp);
 	if (IS_ERR_VALUE(ret)) {
-		pr_info("leds-max77843-rgb: %s, can't parsing brightness_ratio_g in dt\n", __func__);
+		max77843_dbg("leds-max77843-rgb: %s, can't parsing brightness_ratio_g in dt\n", __func__);
 	}
 	else {
 		brightness_ratio_g = (int)temp;
 	}
-	pr_info("leds-max77843-rgb: %s, brightness_ratio_g = %x\n", __func__, brightness_ratio_g);
+	max77843_dbg("leds-max77843-rgb: %s, brightness_ratio_g = %x\n", __func__, brightness_ratio_g);
 
 	/* get led blue brightness ratio */
 	ret = of_property_read_u32(np, br_ratio_b, &temp);
 	if (IS_ERR_VALUE(ret)) {
-		pr_info("leds-max77843-rgb: %s, can't parsing brightness_ratio_b in dt\n", __func__);
+		max77843_dbg("leds-max77843-rgb: %s, can't parsing brightness_ratio_b in dt\n", __func__);
 	}
 	else {
 		brightness_ratio_b = (int)temp;
 	}
-	pr_info("leds-max77843-rgb: %s, brightness_ratio_b = %x\n", __func__, brightness_ratio_b);
+	max77843_dbg("leds-max77843-rgb: %s, brightness_ratio_b = %x\n", __func__, brightness_ratio_b);
 
 	return pdata;
 }
@@ -559,7 +566,7 @@ static ssize_t store_max77843_rgb_brightness(struct device *dev,
 	int ret;
 	u8 brightness;
 
-	pr_info("leds-max77843-rgb: %s\n", __func__);
+	max77843_dbg("leds-max77843-rgb: %s\n", __func__);
 
 	ret = kstrtou8(buf, 0, &brightness);
 	if (ret != 0) {
@@ -586,7 +593,7 @@ static ssize_t store_max77843_rgb_pattern(struct device *dev,
 	struct max77843_rgb *max77843_rgb = dev_get_drvdata(dev);
 	unsigned int mode = 0;
 	int ret;
-	pr_info("leds-max77843-rgb: %s\n", __func__);
+	max77843_dbg("leds-max77843-rgb: %s\n", __func__);
 
 	ret = sscanf(buf, "%1d", &mode);
 	if (ret == 0) {
@@ -758,7 +765,7 @@ static ssize_t store_max77843_rgb_blink(struct device *dev,
 	/*Set LED blink mode*/
 	max77843_rgb_blink(dev, delay_on_time, delay_off_time);
 
-	pr_info("leds-max77843-rgb: %s, delay_on_time= %x, delay_off_time= %x\n", __func__, delay_on_time, delay_off_time);
+	max77843_dbg("leds-max77843-rgb: %s, delay_on_time= %x, delay_off_time= %x\n", __func__, delay_on_time, delay_off_time);
 	dev_dbg(dev, "led_blink is called, Color:0x%X Brightness:%i\n",
 			led_brightness, led_dynamic_current);
 	return count;
@@ -783,7 +790,7 @@ static ssize_t store_led_r(struct device *dev,
 		max77843_rgb_set_state(&max77843_rgb->led[RED], LED_OFF, LED_DISABLE);
 	}
 out:
-	pr_info("leds-max77843-rgb: %s\n", __func__);
+	max77843_dbg("leds-max77843-rgb: %s\n", __func__);
 	return count;
 }
 static ssize_t store_led_g(struct device *dev,
@@ -805,7 +812,7 @@ static ssize_t store_led_g(struct device *dev,
 		max77843_rgb_set_state(&max77843_rgb->led[GREEN], LED_OFF, LED_DISABLE);
 	}
 out:
-	pr_info("leds-max77843-rgb: %s\n", __func__);
+	max77843_dbg("leds-max77843-rgb: %s\n", __func__);
 	return count;
 }
 static ssize_t store_led_b(struct device *dev,
@@ -827,7 +834,7 @@ static ssize_t store_led_b(struct device *dev,
 		max77843_rgb_set_state(&max77843_rgb->led[BLUE], LED_OFF, LED_DISABLE);
 	}
 out:
-	pr_info("leds-max77843-rgb: %s\n", __func__);
+	max77843_dbg("leds-max77843-rgb: %s\n", __func__);
 	return count;
 }
 
@@ -912,7 +919,7 @@ static ssize_t led_blink_store(struct device *dev,
 		max77843_rgb->delay_off_times_ms);
 	max77843_rgb_set_state(&max77843_rgb_num->led[n], led_dynamic_current, LED_BLINK);
 
-	pr_info("leds-max77843-rgb: %s\n", __func__);
+	max77843_dbg("leds-max77843-rgb: %s\n", __func__);
 	return count;
 }
 
@@ -970,7 +977,7 @@ static int max77843_rgb_probe(struct platform_device *pdev)
 	char temp_name[4][40] = {{0,},}, name[40] = {0,}, *p;
 	int i, ret;
 
-	pr_info("leds-max77843-rgb: %s\n", __func__);
+	max77843_dbg("leds-max77843-rgb: %s\n", __func__);
 
 	octa_color = (lcdtype >> 16) & 0x0000000f;
 
@@ -984,13 +991,13 @@ static int max77843_rgb_probe(struct platform_device *pdev)
 	pdata = dev_get_platdata(dev);
 #endif
 
-	pr_info("leds-max77843-rgb: %s : lcdtype=%d, octa_color=%x device_type=%x \n",
+	max77843_dbg("leds-max77843-rgb: %s : lcdtype=%d, octa_color=%x device_type=%x \n",
 		__func__, lcdtype, octa_color, device_type);
 
 	max77843_rgb = devm_kzalloc(dev, sizeof(struct max77843_rgb), GFP_KERNEL);
 	if (unlikely(!max77843_rgb))
 		return -ENOMEM;
-	pr_info("leds-max77843-rgb: %s 1 \n", __func__);
+	max77843_dbg("leds-max77843-rgb: %s 1 \n", __func__);
 
 	max77843_rgb->i2c = max77843_dev->i2c;
 
@@ -1042,7 +1049,7 @@ static int max77843_rgb_probe(struct platform_device *pdev)
 		max77843_rgb_set_state(&max77843_rgb->led[RED], led_dynamic_current, LED_ALWAYS_ON);
 	}
 #endif
-	pr_info("leds-max77843-rgb: %s done\n", __func__);
+	max77843_dbg("leds-max77843-rgb: %s done\n", __func__);
 
 	return 0;
 
@@ -1105,7 +1112,7 @@ static struct platform_driver max77843_fled_driver = {
 
 static int __init max77843_rgb_init(void)
 {
-	pr_info("leds-max77843-rgb: %s\n", __func__);
+	max77843_dbg("leds-max77843-rgb: %s\n", __func__);
 	return platform_driver_register(&max77843_fled_driver);
 }
 module_init(max77843_rgb_init);
