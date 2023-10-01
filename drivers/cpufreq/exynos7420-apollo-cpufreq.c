@@ -46,6 +46,12 @@ static unsigned int exynos7420_abb_table_CA53[CPUFREQ_LEVEL_END_CA53];
  	#define EXYNOS7420_CPU_MIN_FREQ_LITTLE L16 		/* 400MHz */
 #endif
 
+#ifdef CONFIG_EXYNOS7420_CPU_OVERCLOCK
+	#define EXYNOS7420_CPU_MAX_FREQ_LITTLE L2		/* 1800MHz */
+#else
+ 	#define EXYNOS7420_CPU_MAX_FREQ_LITTLE L5		/* 1500MHz */
+#endif
+
 static struct cpufreq_frequency_table exynos7420_freq_table_CA53[] = {
 	{L0,  2000 * 1000},
 	{L1,  1900 * 1000},
@@ -307,7 +313,7 @@ static void __init set_volt_table_CA53(void)
 	case 12 :
 		max_support_idx_CA53 = L7; break;	/* 1.3GHz */
 	default :
-		max_support_idx_CA53 = L5;	/* 1.5GHz */
+		max_support_idx_CA53 = EXYNOS7420_CPU_MAX_FREQ_LITTLE;	/* 1.5GHz */
 	}
 
 	min_support_idx_CA53 = EXYNOS7420_CPU_MIN_FREQ_LITTLE;	/* 400MHz */

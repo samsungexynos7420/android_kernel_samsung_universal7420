@@ -47,6 +47,12 @@ static unsigned int exynos7420_abb_table_CA57[CPUFREQ_LEVEL_END_CA57];
 	#define EXYNOS7420_CPU_MIN_FREQ_BIG L17		/* 800MHz */
 #endif
 
+#ifdef CONFIG_EXYNOS7420_CPU_OVERCLOCK
+	#define EXYNOS7420_CPU_MAX_FREQ_BIG L1		/* 2400MHz */
+#else
+	#define EXYNOS7420_CPU_MAX_FREQ_BIG L4		/* 2100MHz */
+#endif
+
 static int en_smpl_warn = 0;
 static BLOCKING_NOTIFIER_HEAD(exynos_cpufreq_smpl_warn_notifier_list);
 int exynos_cpufreq_smpl_warn_register_notifier(struct notifier_block *nb)
@@ -390,7 +396,7 @@ static void __init set_volt_table_CA57(void)
 	case 5 :
 		max_support_idx_CA57 = L10; break;	/* 1.5GHz */
 	default :
-		max_support_idx_CA57 = L4;		/* 2.1GHz */
+		max_support_idx_CA57 = EXYNOS7420_CPU_MAX_FREQ_BIG;		/* 2.1GHz */
 	}
 #else
 	max_support_idx_CA57 = L13;	/* 1.2 GHz */
