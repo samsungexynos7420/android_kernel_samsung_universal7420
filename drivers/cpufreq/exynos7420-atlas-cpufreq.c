@@ -41,6 +41,12 @@ static struct clk *mout_bus0_pll_atlas;
 static unsigned int exynos7420_volt_table_CA57[CPUFREQ_LEVEL_END_CA57];
 static unsigned int exynos7420_abb_table_CA57[CPUFREQ_LEVEL_END_CA57];
 
+#ifdef CONFIG_EXYNOS7420_CPU_UNDERCLOCK
+	#define EXYNOS7420_CPU_MIN_FREQ_BIG L23 		/* 200MHz */
+#else
+	#define EXYNOS7420_CPU_MIN_FREQ_BIG L17		/* 800MHz */
+#endif
+
 static int en_smpl_warn = 0;
 static BLOCKING_NOTIFIER_HEAD(exynos_cpufreq_smpl_warn_notifier_list);
 int exynos_cpufreq_smpl_warn_register_notifier(struct notifier_block *nb)
@@ -390,7 +396,7 @@ static void __init set_volt_table_CA57(void)
 	max_support_idx_CA57 = L13;	/* 1.2 GHz */
 #endif
 
-	min_support_idx_CA57 = L17;	/* 800 MHz */
+	min_support_idx_CA57 = EXYNOS7420_CPU_MIN_FREQ_BIG;
 
 	pr_info("CPUFREQ of CA57 max_freq : L%d %u khz\n", max_support_idx_CA57,
 		exynos7420_freq_table_CA57[max_support_idx_CA57].frequency);

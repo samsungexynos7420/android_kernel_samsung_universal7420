@@ -40,6 +40,12 @@ static struct clk *mout_bus0_pll_apollo;
 static unsigned int exynos7420_volt_table_CA53[CPUFREQ_LEVEL_END_CA53];
 static unsigned int exynos7420_abb_table_CA53[CPUFREQ_LEVEL_END_CA53];
 
+#ifdef CONFIG_EXYNOS7420_CPU_UNDERCLOCK
+	#define EXYNOS7420_CPU_MIN_FREQ_LITTLE L18 		/* 200MHz */
+#else
+ 	#define EXYNOS7420_CPU_MIN_FREQ_LITTLE L16 		/* 400MHz */
+#endif
+
 static struct cpufreq_frequency_table exynos7420_freq_table_CA53[] = {
 	{L0,  2000 * 1000},
 	{L1,  1900 * 1000},
@@ -304,7 +310,7 @@ static void __init set_volt_table_CA53(void)
 		max_support_idx_CA53 = L5;	/* 1.5GHz */
 	}
 
-	min_support_idx_CA53 = L16;	/* 400MHz */
+	min_support_idx_CA53 = EXYNOS7420_CPU_MIN_FREQ_LITTLE;	/* 400MHz */
 	pr_info("CPUFREQ of CA53 max_freq : L%d %u khz\n", max_support_idx_CA53,
 		exynos7420_freq_table_CA53[max_support_idx_CA53].frequency);
 	pr_info("CPUFREQ of CA53 min_freq : L%d %u khz\n", min_support_idx_CA53,
