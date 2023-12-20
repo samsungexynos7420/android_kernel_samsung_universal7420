@@ -386,3 +386,23 @@ config SEC_BAT_AUT
 	help
 	  Samsung TN Bat Automation Test
 
+config BOARD_ZEROFLTE
+	bool "Samsung Galaxy S6"
+	depends on SOC_EXYNOS7420
+	default n
+	
+config BOARD_ZEROLTE
+	bool "Samsung Galaxy S6 Edge"
+	depends on SOC_EXYNOS7420
+	default n
+	
+config BOARD_ZENLTE
+	bool "Samsung Galaxy S6 Edge+"
+	depends on SOC_EXYNOS7420
+	default n
+	
+config BOARD_NOBLELTE
+	bool "Samsung Galaxy Note5"
+	depends on SOC_EXYNOS7420
+	default n
+	
