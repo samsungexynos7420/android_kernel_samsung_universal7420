@@ -817,12 +817,6 @@ unsigned int tcp_xmit_size_goal(struct sock *sk, u32 mss_now, int large_allowed)
 	xmit_size_goal = mss_now;
 
 	if (large_allowed && sk_can_gso(sk)) {
-#ifdef CONFIG_MPTCP
-		xmit_size_goal = ((sk->sk_gso_max_size - 1) -
-				  inet_csk(sk)->icsk_af_ops->net_header_len -
-				  inet_csk(sk)->icsk_ext_hdr_len -
-				  tp->tcp_header_len);
-#else
 		u32 gso_size, hlen;
 
 		/* Maybe we should/could use sk->sk_prot->max_header here ? */
@@ -838,17 +832,11 @@ unsigned int tcp_xmit_size_goal(struct sock *sk, u32 mss_now, int large_allowed)
 		gso_size = sk->sk_pacing_rate / (2 * MSEC_PER_SEC);
 		gso_size = max_t(u32, gso_size,
 				 sysctl_tcp_min_tso_segs * mss_now);
-#endif
 
 		/* TSQ : try to have two TSO segments in flight */
 
-#ifdef CONFIG_MPTCP
-		xmit_size_goal = min_t(u32, xmit_size_goal,
-				       sysctl_tcp_limit_output_bytes >> 1);
-#else
 		xmit_size_goal = min_t(u32, gso_size,
 				       sk->sk_gso_max_size - 1 - hlen);
-#endif
 
 		xmit_size_goal = tcp_bound_to_half_wnd(tp, xmit_size_goal);
 
