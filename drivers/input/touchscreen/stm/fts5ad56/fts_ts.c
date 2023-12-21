@@ -2622,13 +2622,6 @@ static void fts_reinit(struct fts_ts_info *info)
 	fts_set_noise_param(info);
 #endif
 
-	if (strncmp(info->board->model_name, "G928", 4) == 0) {
-		unsigned char regAdd[4] = {0xB0, 0x02, 0xC2, 0x02};
-		fts_write_reg(info, &regAdd[0], 4);
-		fts_delay(30);
-		tsp_debug_info(true, &info->client->dev, "FTS sending disable metal plate detect event for Zero2\n");
-	}
-
 	fts_command(info, SLEEPOUT);
 	fts_delay(50);
 
