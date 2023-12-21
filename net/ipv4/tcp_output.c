@@ -2087,17 +2087,9 @@ bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 		unsigned int limit;
 
 		tso_segs = tcp_init_tso_segs(sk, skb, mss_now);
-#ifdef CONFIG_MPTCP
-		if(!tso_segs)
-			tso_segs = 1;
-#endif
 		BUG_ON(!tso_segs);
 
 		if (unlikely(tp->repair) && tp->repair_queue == TCP_SEND_QUEUE) {
-#ifdef CONFIG_MPTCP
-			/* "when" is used as a start point for the retransmit timer */
-			TCP_SKB_CB(skb)->when = tcp_time_stamp;
-#endif
 			goto repair; /* Skip network transmission */
 		}
 
