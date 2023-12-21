@@ -2415,9 +2415,7 @@ void sock_init_data(struct socket *sock, struct sock *sk)
 	sk->sk_stamp = ktime_set(-1L, 0);
 	
 	sk->sk_max_pacing_rate = ~0U;
-#ifndef CONFIG_MPTCP
 	sk->sk_pacing_rate = ~0U;
-#endif
 
 	/*
 	 * Before updating sk_refcnt, we must commit prior changes to memory
