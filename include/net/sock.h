@@ -384,9 +384,7 @@ struct sock {
 	kmemcheck_bitfield_end(flags);
 	int			sk_wmem_queued;
 	gfp_t			sk_allocation;
-#ifndef CONFIG_MPTCP
 	u32			sk_pacing_rate; /* bytes per second */
-#endif
 	u32			sk_max_pacing_rate;
 	netdev_features_t	sk_route_caps;
 	netdev_features_t	sk_route_nocaps;

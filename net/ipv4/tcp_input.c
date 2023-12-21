@@ -786,7 +786,6 @@ static void tcp_rtt_estimator(struct sock *sk, const __u32 mrtt)
 	}
 }
 
-#ifndef CONFIG_MPTCP
 /* Set the sk_pacing_rate to allow proper sizing of TSO packets.
  * Note: TCP stack does not yet implement pacing.
  * FQ packet scheduler can be used to implement cheap but effective
@@ -814,7 +813,6 @@ static void tcp_update_pacing_rate(struct sock *sk)
 
 	sk->sk_pacing_rate = min_t(u64, rate, sk->sk_max_pacing_rate);
 }
-#endif
 
 /* Calculate rto without backoff.  This is the second half of Van Jacobson's
  * routine referred to above.
@@ -3518,9 +3516,7 @@ static int tcp_ack(struct sock *sk,
 	u32 ack = TCP_SKB_CB(skb)->ack_seq;
 	bool is_dupack = false;
 	u32 prior_in_flight;
-#ifndef CONFIG_MPTCP
 	u32 prior_cwnd = tp->snd_cwnd, prior_rtt = tp->srtt;
-#endif
 	u32 prior_fackets;
 	int prior_packets = tp->packets_out;
 	int prior_sacked = tp->sacked_out;
@@ -3637,10 +3633,8 @@ static int tcp_ack(struct sock *sk,
 			dst_confirm(dst);
 	}
 
-#ifndef CONFIG_MPTCP
 	if (tp->srtt != prior_rtt || tp->snd_cwnd != prior_cwnd)
 		tcp_update_pacing_rate(sk);
-#endif
 	return 1;
 
 no_queue:
@@ -6199,10 +6193,8 @@ int tcp_rcv_state_process(struct sock *sk, struct sk_buff *skb,
 				} else
 					tcp_init_metrics(sk);
 
-#ifndef CONFIG_MPTCP
 				tcp_update_pacing_rate(sk);
 
-#endif
 				/* Prevent spurious tcp_cwnd_restart() on
 				 * first data packet.
 				 */
