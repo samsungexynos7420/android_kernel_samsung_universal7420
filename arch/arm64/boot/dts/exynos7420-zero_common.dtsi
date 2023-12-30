@@ -881,6 +881,7 @@
 		gpios = <&gpg0 0 0xf>;
 		gpio_err = <&gpr3 7 0>;
 		gpio_det = <&gpr3 1 0>;
+        gpio_pcd = <&gpa1 2 0>;
 		te_eint {
 			reg = <0x13470A34 0x4>, <0x13470934 0x4>;
 			te_pend_mask = <0x00000001>;
