@@ -2802,8 +2802,12 @@ static int fb_notifier_callback(struct notifier_block *self,
 		        fts_input_open(tc_data->input_dev);
 			break;
 		case FB_BLANK_POWERDOWN:
-		        fts_input_close(tc_data->input_dev);
-			break;
+		#ifdef CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE
+			if(!dt2w_is_enabled()){
+				fts_input_close(tc_data->input_dev);
+				break;
+			}
+		#endif
 		default:
 			/* Don't handle what we don't understand */
 			break;
