@@ -20,6 +20,7 @@
  */
 
 #include <linux/device.h>
+#include <linux/delay.h>
 #include <linux/fb.h>
 #include <linux/init.h>
 #include <linux/input.h>
@@ -111,11 +112,11 @@ static bool dt2w_static_wakelock_enabled;
 /*
  * DT2W Global Stuff
  */
-bool dt2w_is_enabled() {
+bool dt2w_is_enabled(void) {
 	return dt2w_enabled;
 }
 
-bool dt2w_just_enabled() {
+bool dt2w_just_enabled(void) {
 	return dt2w_was_just_enabled;
 }
 
