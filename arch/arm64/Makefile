@@ -66,6 +66,12 @@ core-y		+= $(machdirs) $(platdirs)
 libs-y		:= arch/arm64/lib/ $(libs-y)
 libs-y		+= $(LIBGCC)
 
+#ifdef CONFIG_SOC_EXYNOS7420
+ifeq ($(cc-name),gcc)
+KBUILD_CFLAGS   += -mcpu=cortex-a57.cortex-a53 -mtune=cortex-a57.cortex-a53
+endif
+#endif
+
 # Default target when executing plain make
 ifeq ($(CONFIG_BUILD_ARM64_APPENDED_DTB_IMAGE),y)
 KBUILD_IMAGE	:= Image.gz-dtb
