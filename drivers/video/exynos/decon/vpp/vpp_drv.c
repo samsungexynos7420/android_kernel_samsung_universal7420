@@ -705,6 +705,21 @@ static int vpp_set_read_order(struct vpp_dev *vpp)
 
 	return ret;
 }
+void vpp_split_single_plane(struct vpp_dev *vpp)
+{
+    struct decon_win_config *config = vpp->config;
+    struct vpp_params *vpp_parm = &vpp->config->vpp_parm;
+    
+	switch(config->format) {
+	case DECON_PIXEL_FORMAT_NV12N:
+		vpp_parm->addr[1] = NV12N_CBCR_BASE(vpp_parm->addr[0], config->src.f_w, config->src.f_h);
+		break;
+	case DECON_PIXEL_FORMAT_NV12N_10B:
+		vpp_parm->addr[1] = NV12N_10B_CBCR_BASE(vpp_parm->addr[0], config->src.f_w, config->src.f_h);
+	default:
+		break;
+	}
+}
 
 static int vpp_set_config(struct vpp_dev *vpp)
 {
@@ -761,6 +776,7 @@ static int vpp_set_config(struct vpp_dev *vpp)
 		if (ret)
 			goto err;
 	}
+	vpp_split_single_plane(vpp);
 	vpp_hw_set_in_buf_addr(vpp);
 	vpp_hw_set_smart_if_pix_num(vpp);
 
