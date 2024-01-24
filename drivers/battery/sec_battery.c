@@ -66,6 +66,9 @@ static struct device_attribute sec_battery_attrs[] = {
 	SEC_BATTERY_ATTR(chg_temp_adc),
 	SEC_BATTERY_ATTR(batt_vf_adc),
 	SEC_BATTERY_ATTR(batt_slate_mode),
+#if defined(CONFIG_STORE_MODE)
+	SEC_BATTERY_ATTR(charging_enabled),
+#endif
 
 	SEC_BATTERY_ATTR(batt_lp_charging),
 	SEC_BATTERY_ATTR(siop_activated),
@@ -2150,7 +2153,7 @@ static bool sec_bat_time_management(
 
 	battery->charging_passed_time = charging_time;
 
-	if (!battery->store_mode){
+	if (!battery->store_mode || !battery->charging_enabled ){
 		if (battery->cable_type == POWER_SUPPLY_TYPE_HV_MAINS ||
 		    battery->cable_type == POWER_SUPPLY_TYPE_HV_UNKNOWN ||
 		    battery->cable_type == POWER_SUPPLY_TYPE_HV_ERR) {
@@ -3466,12 +3469,26 @@ continue_monitor:
 		 sec_bat_health_str[battery->health],
 		 battery->cable_type, battery->muic_cable_type, battery->siop_level, battery->batt_cycle);
 #endif
+
+if (!battery->charging_enabled && !lpcharge && (battery->cable_type != POWER_SUPPLY_TYPE_BATTERY)) {
+	sec_bat_set_charging_status(battery,
+					POWER_SUPPLY_STATUS_DISCHARGING);
+			sec_bat_set_charge(battery, false);
+			
+				/* Enable charging on capacity lower than 30%, in case something bad happened */
+		if ((battery->capacity <= 30) && (battery->status == POWER_SUPPLY_STATUS_DISCHARGING)) {
+			sec_bat_set_charging_status(battery,
+						    POWER_SUPPLY_STATUS_CHARGING);
+			sec_bat_set_charge(battery, true);
+		}
+}
+
 #if defined(CONFIG_SAMSUNG_BATTERY_ENG_TEST)
 	dev_info(battery->dev,
 			"%s: battery->stability_test(%d), battery->eng_not_full_status(%d)\n",
 			__func__, battery->stability_test, battery->eng_not_full_status);
 #endif
-	if (battery->store_mode && !lpcharge && (battery->cable_type != POWER_SUPPLY_TYPE_BATTERY)) {
+	if (battery->store_mode  && !lpcharge && (battery->cable_type != POWER_SUPPLY_TYPE_BATTERY)) {
 
 		dev_info(battery->dev,
 			"%s: @battery->capacity = (%d), battery->status= (%d), battery->store_mode=(%d)\n",
@@ -3488,6 +3505,16 @@ continue_monitor:
 			sec_bat_set_charge(battery, true);
 		}
 	}
+	
+	if(!battery->store_mode && battery->charging_enabled && battery->charging_suspended && !lpcharge && (battery->cable_type != POWER_SUPPLY_TYPE_BATTERY)){
+		pr_info("%s: @battery->capacity = (%d), battery->status= (%d), battery->charging_enabled=(%d)\n",
+			 __func__, battery->capacity, battery->status, battery->charging_enabled);
+		sec_bat_set_charging_status(battery,
+				POWER_SUPPLY_STATUS_CHARGING);
+		sec_bat_set_charge(battery, true);
+		battery->charging_suspended = false;
+	}
+	
 	power_supply_changed(&battery->psy_bat);
 
 skip_monitor:
@@ -3921,7 +3948,12 @@ ssize_t sec_bat_show_attrs(struct device *dev,
 		i += scnprintf(buf + i, PAGE_SIZE - i, "%d\n",
 			battery->slate_mode);
 		break;
-
+#if defined(CONFIG_STORE_MODE)
+	case CHARGING_ENABLED:
+		i += scnprintf(buf + i, PAGE_SIZE - i, "%d\n",
+			battery->charging_enabled);
+		break;
+#endif
 	case BATT_LP_CHARGING:
 		if (lpcharge) {
 			i += scnprintf(buf + i, PAGE_SIZE - i, "%d\n",
@@ -4628,7 +4660,26 @@ ssize_t sec_bat_store_attrs(
 			ret = count;
 		}
 		break;
-
+#if defined(CONFIG_STORE_MODE)
+	case CHARGING_ENABLED:
+		if (sscanf(buf, "%d\n", &x) == 1) {
+			union power_supply_propval value;
+			if (x) {
+				battery->charging_enabled = true;
+			} else {
+				battery->charging_enabled = false;
+				battery->charging_suspended = true;
+			}
+						
+			value.intval = battery->store_mode;
+			psy_do_property(battery->pdata->charger_name, set,
+					POWER_SUPPLY_PROP_CONSTANT_CHARGE_CURRENT_MAX, value);
+			queue_delayed_work_on(0, battery->monitor_wqueue,
+					   &battery->cable_work, 0);
+			ret = count;
+		}
+		break;
+#endif
 	case BATT_LP_CHARGING:
 		break;
 	case SIOP_ACTIVATED:
@@ -5044,7 +5095,11 @@ ssize_t sec_bat_store_attrs(
 			union power_supply_propval value;
 			dev_err(battery->dev,
 					"%s: BATT_CAPACITY_MAX(%d), fg_reset(%d)\n", __func__, x, fg_reset);
-			if (!fg_reset && !battery->store_mode) {
+			if (!fg_reset && !battery->store_mode 
+#if defined(CONFIG_STORE_MODE)
+			&& battery->charging_enabled
+#endif
+			) {
 				value.intval = x;
 				psy_do_property(battery->pdata->fuelgauge_name, set,
 						POWER_SUPPLY_PROP_ENERGY_FULL_DESIGN, value);
@@ -7704,6 +7759,7 @@ static int __devinit sec_battery_probe(struct platform_device *pdev)
 	value.intval = battery->store_mode;
 	psy_do_property(battery->pdata->charger_name, set,
 			POWER_SUPPLY_PROP_CONSTANT_CHARGE_CURRENT_MAX, value);
+	battery->charging_enabled = true;
 #else
 	battery->store_mode = false;
 #endif

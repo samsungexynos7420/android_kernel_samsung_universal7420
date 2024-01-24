@@ -236,6 +236,12 @@ struct sec_battery_info {
 	bool store_mode;
 	bool ignore_store_mode;
 	bool slate_mode;
+	
+#if defined(CONFIG_STORE_MODE)
+	/* charging disabler */
+	bool charging_enabled;
+	bool charging_suspended;
+#endif
 
 	/* MTBF test for CMCC */
 	bool is_hc_usb;
@@ -343,6 +349,9 @@ enum {
 	CHG_TEMP_ADC,
 	BATT_VF_ADC,
 	BATT_SLATE_MODE,
+#if defined(CONFIG_STORE_MODE)
+	CHARGING_ENABLED,
+#endif
 
 	BATT_LP_CHARGING,
 	SIOP_ACTIVATED,
