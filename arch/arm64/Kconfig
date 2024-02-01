@@ -481,15 +481,6 @@ config FORCE_MAX_ZONEORDER
 	default "14" if (ARM64_64K_PAGES && TRANSPARENT_HUGEPAGE)
 	default "11"
 
-config ARMV7_COMPAT
-	bool "Kernel support for ARMv7 applications"
-	depends on COMPAT
-	help
-	 This option enables features that allow that ran on an ARMv7 or older
-	 processor to continue functioning.
-
-	 If you want to execute ARMv7 applications, say Y
-
 config SECCOMP
 	bool "Enable seccomp to safely compute untrusted bytecode"
 	---help---
