@@ -4912,6 +4912,15 @@ extern int decon_setcolreg(unsigned regno,
 			    unsigned transp, struct fb_info *info);
 extern int decon_mmap(struct fb_info *info, struct vm_area_struct *vma);
 
+#ifdef CONFIG_COMPAT
+static int decon_compat_ioctl(struct fb_info *info, unsigned int cmd,
+		unsigned long arg)
+{
+	arg = (unsigned long) compat_ptr(arg);
+	return decon_ioctl(info, cmd, arg);
+}
+#endif
+
 /* ---------- FREAMBUFFER INTERFACE ----------- */
 static struct fb_ops decon_fb_ops = {
 	.owner		= THIS_MODULE,
@@ -4922,6 +4931,9 @@ static struct fb_ops decon_fb_ops = {
 	.fb_fillrect    = cfb_fillrect,
 	.fb_copyarea    = cfb_copyarea,
 	.fb_imageblit   = cfb_imageblit,
+#ifdef CONFIG_COMPAT
+	.fb_compat_ioctl = decon_compat_ioctl,
+#endif
 	.fb_ioctl	= decon_ioctl,
 	.fb_read	= decon_fb_read,
 	.fb_write	= decon_fb_write,
