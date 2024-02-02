@@ -146,7 +146,7 @@ TSPFIRMWARE_DIRECTORY = $(srctree)/firmware/tsp_melfas
 ifeq ($(shell test -d $(TSPFIRMWARE_DIRECTORY) && echo yes),yes)
 fw-shipped-$(CONFIG_TOUCHSCREEN_MELFAS_MMS449) += tsp_melfas/mms449_a8x.fw 
 else
-$(warning '$(TSPFIRMWARE_DIRECTORY)' directory dose not exist)
+$(warning '$(TSPFIRMWARE_DIRECTORY)' directory does not exist)
 endif
 
 TSPFIRMWARE_DIRECTORY = $(srctree)/firmware/tsp_synaptics
@@ -156,7 +156,7 @@ fw-shipped-$(CONFIG_TOUCHSCREEN_SYNAPTICS_I2C_RMI) += tsp_synaptics/synaptics_b0
 fw-shipped-$(CONFIG_TOUCHSCREEN_SYNAPTICS_I2C_DSX2) += tsp_synaptics/synaptics_s5300_v.fw \
 					tsp_synaptics/synaptics_s5300_v_ab.fw tsp_synaptics/synaptics_s5300_v_ac.fw
 else
-$(warning '$(TSPFIRMWARE_DIRECTORY)' directory dose not exist)
+$(warning '$(TSPFIRMWARE_DIRECTORY)' directory does not exist)
 endif
 
 TSPFIRMWARE_DIRECTORY = $(srctree)/firmware/tsp_stm
@@ -165,14 +165,14 @@ fw-shipped-$(CONFIG_TOUCHSCREEN_FTS) += tsp_stm/stm_tb_integ.fw tsp_stm/stm_z2a.
 	tsp_stm/stm_z2i.fw tsp_stm/stm_z1.fw tsp_stm/stm_za.fw
 fw-shipped-$(CONFIG_TOUCHSCREEN_FTS5AD56) += tsp_stm/noble.fw \
 else
-$(warning '$(TSPFIRMWARE_DIRECTORY)' directory dose not exist)
+$(warning '$(TSPFIRMWARE_DIRECTORY)' directory does not exist)
 endif
 
 TSPFIRMWARE_DIRECTORY = $(srctree)/firmware/tsp_sec
 ifeq ($(shell test -d $(TSPFIRMWARE_DIRECTORY) && echo yes),yes)
 fw-shipped-$(CONFIG_TOUCHSCREEN_SEC_TS) += tsp_sec/s6smc43_s6_img_REL.bin
 else
-$(warning '$(TSPFIRMWARE_DIRECTORY)' directory dose not exist)
+$(warning '$(TSPFIRMWARE_DIRECTORY)' directory does not exist)
 endif
 
 fw-shipped-$(CONFIG_KEYBOARD_ABOV_TOUCH) += abov/abov_noble.fw abov/abov_zen.fw
