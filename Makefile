@@ -453,6 +453,7 @@ asm-generic:
 	$(Q)$(MAKE) -f $(srctree)/scripts/Makefile.asm-generic \
 	            src=uapi/asm obj=arch/$(SRCARCH)/include/generated/uapi/asm
 
+# This kernel was from A810S source, which was for OREO
 export ANDROID_MAJOR_VERSION=o
 
 ifneq ($(PLATFORM_VERSION), )
