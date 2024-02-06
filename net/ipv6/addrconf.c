@@ -5228,6 +5228,7 @@ static struct addrconf_sysctl_table
 			.mode           = 0644,
 			.proc_handler   = proc_dointvec,
 		},
+		{
 			.procname       = "drop_unicast_in_l2_multicast",
 			.data           = &ipv6_devconf.drop_unicast_in_l2_multicast,
 			.maxlen         = sizeof(int),
