@@ -820,6 +820,7 @@ struct decon_device {
 #endif
 	struct pm_qos_request		int_qos;
 	struct pm_qos_request		disp_qos;
+	struct pm_qos_request		mif_qos;
 	int				frame_done_cnt_cur;
 	int				frame_done_cnt_target;
 	wait_queue_head_t		wait_frmdone;

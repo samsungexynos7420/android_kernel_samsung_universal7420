@@ -1333,6 +1333,7 @@ int decon_tui_protection(struct decon_device *decon, bool tui_en)
 		SYSTRACE_C_BEGIN( "pm_qos_update_request" );
 		pm_qos_update_request(&decon->disp_qos, 167000);
 		pm_qos_update_request(&decon->int_qos, 167000);
+		pm_qos_update_request(&decon->mif_qos, 543000);
 		SYSTRACE_C_FINISH( "pm_qos_update_request" );
 	}
 	else {
@@ -1505,6 +1506,7 @@ int decon_enable(struct decon_device *decon)
 		SYSTRACE_C_BEGIN( "pm_qos_update_request" );
 		pm_qos_update_request(&decon->disp_qos, 167000);
 		pm_qos_update_request(&decon->int_qos, 167000);
+		pm_qos_update_request(&decon->mif_qos, 543000);
 		SYSTRACE_C_FINISH( "pm_qos_update_request" );
 	} else {
 		exynos7_update_media_scenario(TYPE_DECON_EXT,
@@ -1756,6 +1758,7 @@ int decon_disable(struct decon_device *decon)
 		SYSTRACE_C_BEGIN( "pm_qos_update_request" );
 		pm_qos_update_request(&decon->disp_qos, 0);
 		pm_qos_update_request(&decon->int_qos, 0);
+		pm_qos_update_request(&decon->mif_qos, 0);
 		SYSTRACE_C_FINISH( "pm_qos_update_request" );
 		if (decon->prev_frame_has_yuv)
 			exynos7_update_media_scenario(TYPE_YUV, 0, 0);
@@ -6316,6 +6319,8 @@ decon_rest_init:
 						PM_QOS_DEVICE_THROUGHPUT, 0);
 			pm_qos_add_request(&decon->disp_qos,
 						PM_QOS_DISPLAY_THROUGHPUT, 0);
+			pm_qos_add_request(&decon->mif_qos,
+						PM_QOS_BUS_THROUGHPUT, 0);
 		} else {
 			/*PIX_BYTES = 4 */
 			decon->default_bw = vclk_rate * 4;
