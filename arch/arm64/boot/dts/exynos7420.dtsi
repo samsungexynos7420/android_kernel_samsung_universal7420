@@ -1200,6 +1200,7 @@
 		compatible = "samsung,exynos-pd";
 		reg = <0x105c4100 0x20>;
 		pd-option = <0x1101>;
+		bts-status = "enabled";
 	};
 
 	pd_isp0: pd-isp0@105c4140 {

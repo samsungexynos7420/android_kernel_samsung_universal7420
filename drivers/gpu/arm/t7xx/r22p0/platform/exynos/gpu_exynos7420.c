@@ -27,6 +27,9 @@
 #include <mach/asv-exynos_cal.h>
 #include <mach/pm_domains.h>
 #include <mach/regs-pmu.h>
+#ifdef CONFIG_EXYNOS7420_BTS_OPTIMIZATION
+#include <mach/bts.h>
+#endif
 
 #include "mali_kbase_platform.h"
 #include "gpu_dvfs_handler.h"
@@ -376,6 +379,9 @@ static int gpu_enable_clock(struct exynos_context *platform)
 }
 static int gpu_disable_clock(struct exynos_context *platform)
 {
+#ifdef CONFIG_EXYNOS7420_BTS_OPTIMIZATION
+	bts_ext_scenario_set(TYPE_G3D, TYPE_G3D_FREQ, 0);
+#endif
 	clk_disable_unprepare(aclk_lh_g3d0);
 	clk_disable_unprepare(aclk_lh_g3d1);
 

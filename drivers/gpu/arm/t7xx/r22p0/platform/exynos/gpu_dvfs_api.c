@@ -18,6 +18,9 @@
 #include <mali_kbase.h>
 #include <mach/apm-exynos.h>
 #include <mach/asv-exynos.h>
+#ifdef CONFIG_EXYNOS7420_BTS_OPTIMIZATION
+#include <mach/bts.h>
+#endif
 
 #include "mali_kbase_platform.h"
 #include "gpu_control.h"
@@ -153,7 +156,14 @@ int gpu_set_target_clk_vol(int clk, bool pending_is_allowed)
 
 	GPU_SET_CLK_VOL(kbdev, prev_clk, target_clk, target_vol);
 	ret = gpu_update_cur_level(platform);
-
+	
+#ifdef CONFIG_EXYNOS7420_BTS_OPTIMIZATION
+	if (target_clk >= platform->mo_min_clock)
+		bts_ext_scenario_set(TYPE_G3D, TYPE_G3D_FREQ, 1);
+	else
+		bts_ext_scenario_set(TYPE_G3D, TYPE_G3D_FREQ, 0);
+#endif
+	
 #ifdef CONFIG_EXYNOS_CL_DVFS_G3D
 	if (!platform->voltage_margin
 		&& platform->cl_dvfs_start_base && platform->cur_clock >= platform->cl_dvfs_start_base)
