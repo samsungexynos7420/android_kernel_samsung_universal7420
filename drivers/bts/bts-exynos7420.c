@@ -32,6 +32,7 @@
 #define MAX_MIF_IDX 		13
 
 #define update_ud_scen(a)	(pr_state.ud_scen = a)
+#define update_g3d_scen(a)	(pr_state.g3d_scen = a)
 #define BTS_ALL			(BTS_DISP_RO_0 | BTS_DISP_RO_1 | BTS_DISP_RW_0 | BTS_DISP_RW_1 | \
 				BTS_VPP0 | BTS_VPP1 | BTS_VPP2 | BTS_VPP3 \
 				BTS_TREX_FIMC_BNS_A | BTS_TREX_FIMC_BNS_B | BTS_TREX_FIMC_BNS_C | \
@@ -44,6 +45,7 @@
 				BTS_TREX_FIMC_BNS_D | BTS_TREX_3AA0 | BTS_TREX_3AA1 | BTS_TREX_ISPCPU | \
 				BTS_TREX_VRA | BTS_TREX_SCALER | BTS_TREX_ISP1 | BTS_TREX_TPU | BTS_TREX_ISP0)
 #define BTS_MFC			(BTS_MFC_0 | BTS_MFC_1)
+#define BTS_G3D		(BTS_G3D0 | BTS_G3D1)
 
 #define is_bts_scen_ip(a) 	(a & BTS_MFC)
 #ifdef BTS_DBGGEN
@@ -157,6 +159,7 @@ enum bts_index {
 enum exynos_bts_scenario {
 	BS_DISABLE,
 	BS_DEFAULT,
+	BS_G3DFREQ,
 	BS_MFC_UD_ENCODING,
 	BS_MFC_UD_DECODING,
 	BS_DEBUG,
@@ -213,6 +216,7 @@ struct bts_info {
 
 struct bts_scen_status {
 	bool ud_scen;
+	bool g3d_scen;
 };
 
 struct bts_scenario {
@@ -448,7 +452,9 @@ static struct bts_info exynos7_bts[] = {
 		.name = "g3d0",
 		.pa_base = EXYNOS7420_PA_BTS_G3D0,
 		.pd_name = "pd-g3d",
-		.table[BS_DEFAULT].fn = BF_NOP,
+		.table[BS_DEFAULT].fn = BF_SETQOS,
+		.table[BS_G3DFREQ].fn = BF_SETQOS,
+		.table[BS_G3DFREQ].priority = 0x55554444,
 		.cur_scen = BS_DISABLE,
 		.on = false,
 		.enable = false,
@@ -458,7 +464,9 @@ static struct bts_info exynos7_bts[] = {
 		.name = "g3d1",
 		.pa_base = EXYNOS7420_PA_BTS_G3D1,
 		.pd_name = "pd-g3d",
-		.table[BS_DEFAULT].fn = BF_NOP,
+		.table[BS_DEFAULT].fn = BF_SETQOS,
+		.table[BS_G3DFREQ].fn = BF_SETQOS,
+		.table[BS_G3DFREQ].priority = 0x55554444,
 		.cur_scen = BS_DISABLE,
 		.on = false,
 		.enable = false,
@@ -1031,6 +1039,13 @@ void bts_scen_update(enum bts_scen_type type, unsigned int val)
 	spin_lock(&bts_lock);
 
 	switch (type) {
+	case TYPE_G3D_FREQ:
+		on = val ? true : false;
+		scen = BS_G3DFREQ;
+		bts = &exynos7_bts[BTS_IDX_G3D0];
+		BTS_DBG("[BTS] G3D FREQ: %s\n", bts_scen[scen].name);
+		update_g3d_scen(val);
+		break;
 	case TYPE_MFC_UD_ENCODING:
 		on = val ? true : false;
 		scen = BS_MFC_UD_ENCODING;
@@ -1058,7 +1073,28 @@ void bts_scen_update(enum bts_scen_type type, unsigned int val)
 
 	spin_unlock(&bts_lock);
 }
+#if defined(CONFIG_EXYNOS7420_BTS_OPTIMIZATION)
+void bts_ext_scenario_set(enum bts_media_type ip_type,
+				enum bts_scen_type scen_type, bool on)
+{
+	int i = 0;
+	unsigned int cur_mo;
 
+	switch (ip_type) {
+		case TYPE_G3D:
+			if (scen_type == TYPE_G3D_FREQ) {
+				if (on)
+					bts_scen_update(scen_type, 1);
+				else
+					bts_scen_update(scen_type, 0);
+			}
+			break;
+		default:
+			pr_err("BTS : unsupported rotation ip - %u", ip_type);
+			break;
+	}
+}
+#endif /*BTS_OPTIMIZATION*/
 void bts_initialize(const char *pd_name, bool on)
 {
 	struct bts_info *bts;

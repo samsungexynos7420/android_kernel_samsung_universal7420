@@ -106,6 +106,14 @@ extern int decon_log_level;
 #define decon_win_update_dbg(fmt, ...) while (0)
 #endif
 
+#ifndef KHZ
+#define KHZ (1000)
+#endif
+
+#ifndef MHZ
+#define MHZ (1000*1000)
+#endif
+	
 #define decon_err(fmt, ...)							\
 	do {									\
 		if (decon_log_level >= 3) {					\
@@ -133,6 +141,24 @@ extern int decon_log_level;
 		if (decon_log_level >= 7)					\
 			pr_info(pr_fmt(fmt), ##__VA_ARGS__);			\
 	} while (0)
+
+#define decon_bts(fmt, ...)							\
+	do {									\
+		if (decon_log_level >= 7)					\
+			pr_info("[BTS]"pr_fmt(fmt), ##__VA_ARGS__);			\
+	} while (0)
+
+#define decon_cfw_dbg(fmt, ...)							\
+	do {									\
+		if (decon_log_level >= 7)					\
+			pr_info(pr_fmt(fmt), ##__VA_ARGS__);			\
+	} while (0)
+
+#define call_bts_ops(q, op, args...)				\
+	(((q)->bts_ops->op) ? ((q)->bts_ops->op(args)) : 0)
+
+#define call_init_ops(q, op, args...)				\
+		(((q)->bts_init_ops->op) ? ((q)->bts_init_ops->op(args)) : 0)
 
 /*
  * DECON_STATE_ON : disp power on, decon/dsim clock on & lcd on

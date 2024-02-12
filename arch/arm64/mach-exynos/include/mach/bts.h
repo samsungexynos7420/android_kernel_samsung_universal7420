@@ -36,6 +36,7 @@ enum bts_media_type {
 	TYPE_YUV,
 	TYPE_UD_ENC,
 	TYPE_UD_DEC,
+	TYPE_G3D,
 	TYPE_SPDMA,
 };
 
@@ -96,8 +97,11 @@ enum bts_scen_type {
 };
 
 void bts_scen_update(enum bts_scen_type type, unsigned int val);
+void bts_ext_scenario_set(enum bts_media_type ip_type,
+				enum bts_scen_type scen_type, bool on);
 #else
 #define bts_scen_update(a, b) do {} while(0)
+#define bts_ext_scenario_set(a, b, c) do {} while (0)
 #endif
 
 #endif
