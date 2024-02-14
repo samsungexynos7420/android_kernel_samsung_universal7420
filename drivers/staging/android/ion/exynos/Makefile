@@ -1,2 +1,1 @@
-#obj-y += exynos_ion.o exynos_ion_reserve.o
-obj-y += exynos_ion_v2.o
+obj-$(CONFIG_ION_EXYNOS) += exynos_ion_v2.o
