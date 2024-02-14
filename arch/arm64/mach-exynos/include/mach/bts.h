@@ -51,11 +51,13 @@ void exynos7_update_media_scenario(enum bts_media_type media_type,
 int exynos7_update_bts_param(int target_idx, int work);
 int exynos7_bts_register_notifier(struct notifier_block *nb);
 int exynos7_bts_unregister_notifier(struct notifier_block *nb);
+int bts_update_gpu_mif(unsigned int freq);
 #else
 #define exynos7_update_media_scenario(a, b, c) do {} while (0)
 #define exynos7_update_bts_param(a, b) do {} while (0)
 #define exynos7_bts_register_notifier(a) do {} while (0)
 #define exynos7_bts_unregister_notifier(a) do {} while (0)
+#define bts_update_gpu_mif(a) do {} while (0)
 #endif
 
 #if defined(CONFIG_EXYNOS5430_BTS) || defined(CONFIG_EXYNOS5422_BTS)	\

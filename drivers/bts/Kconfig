@@ -24,4 +24,11 @@ config EXYNOS7420_BTS
 	help
 	  Enable BTS (Bus traffic shaper) support
 
+config EXYNOS7420_BTS_OPTIMIZATION
+	bool "Bus traffic shaper optimization mode"
+	default y
+	depends on EXYNOS7420_BTS
+	help
+	  Enable BTS (Bus traffic shaper) optimized set
+	  
 endif

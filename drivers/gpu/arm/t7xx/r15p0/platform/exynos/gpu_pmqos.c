@@ -18,6 +18,9 @@
 #include <mali_kbase.h>
 
 #include <linux/pm_qos.h>
+#ifdef CONFIG_EXYNOS7420_BTS_OPTIMIZATION
+#include <mach/bts.h>
+#endif
 
 #include "mali_kbase_platform.h"
 #include "gpu_dvfs_handler.h"
@@ -70,8 +73,15 @@ int gpu_pm_qos_command(struct exynos_context *platform, gpu_pmqos_state state)
 		KBASE_DEBUG_ASSERT(platform->step >= 0);
 		if (platform->perf_gathering_status) {
 			gpu_mif_pmqos(platform, platform->table[platform->step].mem_freq);
+#ifdef CONFIG_EXYNOS7420_BTS_OPTIMIZATION
+			bts_update_gpu_mif(platform->table[platform->step].mem_freq);
+#endif
+			
 		} else {
 			pm_qos_update_request(&exynos5_g3d_mif_min_qos, platform->table[platform->step].mem_freq);
+#ifdef CONFIG_EXYNOS7420_BTS_OPTIMIZATION
+			bts_update_gpu_mif(platform->table[platform->step].mem_freq);
+#endif
 			if (platform->pmqos_mif_max_clock &&
 				(platform->table[platform->step].clock >= platform->pmqos_mif_max_clock_base))
 				pm_qos_update_request(&exynos5_g3d_mif_max_qos, platform->pmqos_mif_max_clock);
@@ -84,6 +94,9 @@ int gpu_pm_qos_command(struct exynos_context *platform, gpu_pmqos_state state)
 		break;
 	case GPU_CONTROL_PM_QOS_RESET:
 		pm_qos_update_request(&exynos5_g3d_mif_min_qos, 0);
+#ifdef CONFIG_EXYNOS7420_BTS_OPTIMIZATION
+		bts_update_gpu_mif(0);
+#endif
 		if (platform->pmqos_mif_max_clock)
 			pm_qos_update_request(&exynos5_g3d_mif_max_qos, PM_QOS_BUS_THROUGHPUT_MAX_DEFAULT_VALUE);
 		if (!platform->pmqos_int_disable)
