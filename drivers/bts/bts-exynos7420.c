@@ -234,6 +234,7 @@ struct clk_info {
 
 static struct pm_qos_request exynos7_mif_bts_qos;
 static struct pm_qos_request exynos7_int_bts_qos;
+static struct pm_qos_request exynos7_gpu_mif_bts_qos;
 static struct srcu_notifier_head exynos_media_notifier;
 
 static DEFINE_MUTEX(media_mutex);
@@ -1617,6 +1618,16 @@ static struct notifier_block exynos_bts_notifier = {
 	.notifier_call = exynos_bts_notifier_event,
 };
 
+int bts_update_gpu_mif(unsigned int freq)
+{
+	int ret = 0;
+
+	if (pm_qos_request_active(&exynos7_gpu_mif_bts_qos))
+		pm_qos_update_request(&exynos7_gpu_mif_bts_qos, freq);
+
+	return ret;
+}
+
 void exynos7_rot_param(int target_idx)
 {
 	int rot = sum_rot_bw ? 1 : 0;
@@ -1691,6 +1702,7 @@ void exynos7_init_bts_ioremap(void)
 
 	pm_qos_add_request(&exynos7_mif_bts_qos, PM_QOS_BUS_THROUGHPUT, 0);
 	pm_qos_add_request(&exynos7_int_bts_qos, PM_QOS_DEVICE_THROUGHPUT, 0);
+	pm_qos_add_request(&exynos7_gpu_mif_bts_qos, PM_QOS_BUS_THROUGHPUT, 0);
 }
 
 void exynos7_update_media_scenario(enum bts_media_type media_type,
