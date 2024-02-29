@@ -50,13 +50,13 @@
 		mfc_fw {
 			compatible = "exynos5433-ion,mfc_fw";
 			secure;
-			reg = <0xF1400000 0x200000>;
+			reg = <0xE2800000 0x200000>;
 			id = <8>;
 		};
 
 		mfc_nfw {
 			compatible = "exynos5433-ion,mfc_nfw";
-			reg = <0xF1600000 0x110000>;
+			reg = <0xE2600000 0x110000>;
 			id = <12>;
 		};
 
