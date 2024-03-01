@@ -2198,6 +2198,17 @@
 				300 1896000 0 1586000 0 845000 400000 1 1 1
 				>;
 		};
+		
+		boot_device@9 {
+			net_boost,label="SWLAN";
+			net_boost,node="swlan0";
+			net_boost,table_size = <3>;
+			net_boost,table= <
+				20 1456000 0 1170000 0 0 0 0 0 0
+				60 1664000 0 1586000 0 0 0 0 0 0
+				180 1896000 0 1586000 0 845000 400000 1 1 1
+				>;
+		};
 	};
 
 	input_booster {
