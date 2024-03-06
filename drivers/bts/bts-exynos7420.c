@@ -1073,7 +1073,28 @@ void bts_scen_update(enum bts_scen_type type, unsigned int val)
 
 	spin_unlock(&bts_lock);
 }
+#if defined(CONFIG_EXYNOS7420_BTS_OPTIMIZATION)
+void bts_ext_scenario_set(enum bts_media_type ip_type,
+				enum bts_scen_type scen_type, bool on)
+{
+	int i = 0;
+	unsigned int cur_mo;
 
+	switch (ip_type) {
+		case TYPE_G3D:
+			if (scen_type == TYPE_G3D_FREQ) {
+				if (on)
+					bts_scen_update(scen_type, 1);
+				else
+					bts_scen_update(scen_type, 0);
+			}
+			break;
+		default:
+			pr_err("BTS : unsupported rotation ip - %u", ip_type);
+			break;
+	}
+}
+#endif /*BTS_OPTIMIZATION*/
 void bts_initialize(const char *pd_name, bool on)
 {
 	struct bts_info *bts;
