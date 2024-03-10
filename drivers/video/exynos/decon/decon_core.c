@@ -702,6 +702,8 @@ static inline bool is_decon_opaque_format(int format)
 	case DECON_PIXEL_FORMAT_RGBA_8888:
 	case DECON_PIXEL_FORMAT_BGRA_8888:
 	case DECON_PIXEL_FORMAT_RGBA_5551:
+	case DECON_PIXEL_FORMAT_ARGB_8888:
+	case DECON_PIXEL_FORMAT_ABGR_8888:
 		return false;
 
 	default:
