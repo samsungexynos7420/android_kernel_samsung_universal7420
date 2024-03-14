@@ -136,7 +136,7 @@ static int s2m_tm_to_data(struct rtc_time *tm, u8 *data)
 static int s2m_rtc_update(struct s2m_rtc_info *info,
 				 enum S2M_RTC_OP op)
 {
-	u8 data, rtc_update_reg;
+	u8 data;
 	int ret;
 
 	if (!info || !info->iodev) {
@@ -174,14 +174,6 @@ static int s2m_rtc_update(struct s2m_rtc_info *info,
 				__func__, ret, data);
 	else
 		usleep_range(1000, 1000);
-
-	ret = sec_rtc_read(info->iodev, S2M_RTC_UPDATE, &rtc_update_reg);
-
-	if (ret < 0) {
-		dev_err(info->dev, "%s: fail to read update reg(%d)\n", __func__, ret);
-	}
-
-	pr_info("%s: RTC_UPDATE_REGISTER check : 0x%02x\n", __func__, rtc_update_reg);
 
 	return ret;
 }
