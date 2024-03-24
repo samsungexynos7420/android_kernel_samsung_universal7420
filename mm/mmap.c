@@ -44,6 +44,9 @@
 #include <asm/mmu_context.h>
 
 #include "internal.h"
+#ifdef CONFIG_SDCARD_FS
+#include "../fs/sdcardfs/sdcardfs.h"
+#endif
 
 #ifndef arch_mmap_check
 #define arch_mmap_check(addr, len, flags)	(0)
@@ -1736,7 +1739,7 @@ check_current:
 		if (gap_start > high_limit)
 			return -ENOMEM;
 		if (gap_end >= low_limit &&
-			gap_end > gap_start && gap_end - gap_start >= length)
+		    gap_end > gap_start && gap_end - gap_start >= length)
 			goto found;
 
 		/* Visit right subtree if it looks promising */
@@ -1840,7 +1843,7 @@ check_current:
 		if (gap_end < low_limit)
 			return -ENOMEM;
 		if (gap_start <= high_limit &&
-			gap_end > gap_start && gap_end - gap_start >= length)
+		    gap_end > gap_start && gap_end - gap_start >= length)
 			goto found;
 
 		/* Visit left subtree if it looks promising */

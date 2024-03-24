@@ -662,7 +662,7 @@ static int zswap_frontswap_store(unsigned type, pgoff_t offset,
 			ret = -ENOMEM;
 			goto reject;
 		}
-
+		
 		/* A second zswap_is_full() check after
 		 * zswap_shrink() to make sure it's now
 		 * under the max_pool_percent
@@ -681,7 +681,6 @@ static int zswap_frontswap_store(unsigned type, pgoff_t offset,
 		goto reject;
 	}
 
-	/* compress */
 	dst = get_cpu_var(zswap_dstmem);
 	src = kmap_atomic(page);
 	ret = zswap_comp_op(ZSWAP_COMPOP_COMPRESS, src, PAGE_SIZE, dst, &dlen);
@@ -741,19 +740,6 @@ reject:
 	return ret;
 }
 
-static void hexdump(char *title, u8 *data, int len)
-{
-	int i;
-
-	printk("%s: length = %d\n", title, len);
-	for (i = 0; i < len; i++) {
-		printk("%02x ", data[i]);
-		if ((i & 0xf) == 0xf)
-			printk("\n");
-	}
-	printk("\n");
-}
-
 /*
  * returns 0 if the page was successfully decompressed
  * return -1 on entry not found or error
@@ -784,14 +770,6 @@ static int zswap_frontswap_load(unsigned type, pgoff_t offset,
 	dst = kmap_atomic(page);
 	ret = zswap_comp_op(ZSWAP_COMPOP_DECOMPRESS, src, entry->length,
 		dst, &dlen);
-
-	if (ret) {
-		hexdump("src buffer", src, entry->length);
-		if (dlen)
-			hexdump("dest buffer", dst, dlen);
-		printk("zswap_comp_op returned %d\n", ret);
-	}
-
 	kunmap_atomic(dst);
 	zpool_unmap_handle(zswap_pool, entry->handle);
 	BUG_ON(ret);
@@ -943,7 +921,7 @@ static int __init init_zswap(void)
 		pr_info("%s zpool not available\n", zswap_zpool_type);
 		zswap_zpool_type = ZSWAP_ZPOOL_DEFAULT;
 		zswap_pool = zpool_create_pool(zswap_zpool_type, "zswap", gfp,
-					&zswap_zpool_ops);
+			&zswap_zpool_ops);
 	}
 	if (!zswap_pool) {
 		pr_err("%s zpool not available\n", zswap_zpool_type);

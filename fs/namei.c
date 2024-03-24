@@ -3328,11 +3328,11 @@ retry:
 		goto out;
 	switch (mode & S_IFMT) {
 		case 0: case S_IFREG:
-			error = vfs_create2(path.mnt, path.dentry->d_inode, dentry, mode, true);
+			error = vfs_create2(path.mnt, path.dentry->d_inode,dentry,mode,true);
 			break;
 		case S_IFCHR: case S_IFBLK:
-			error = vfs_mknod2(path.mnt, path.dentry->d_inode, dentry, mode,
- 					new_decode_dev(dev));
+			error = vfs_mknod2(path.mnt, path.dentry->d_inode,dentry,mode,
+					new_decode_dev(dev));
 			break;
 		case S_IFIFO: case S_IFSOCK:
 			error = vfs_mknod(path.dentry->d_inode,dentry,mode,0);
@@ -3916,9 +3916,9 @@ SYSCALL_DEFINE2(link, const char __user *, oldname, const char __user *, newname
  *	   ->i_mutex on parents, which works but leads to some truly excessive
  *	   locking].
  */
-static int vfs_rename_dir(struct vfsmount *mnt, 
-			  struct inode *old_dir, struct dentry *old_dentry,
-			  struct inode *new_dir, struct dentry *new_dentry)
+static int vfs_rename_dir(struct vfsmount *mnt,
+	       struct inode *old_dir, struct dentry *old_dentry,
+	       struct inode *new_dir, struct dentry *new_dentry)
 {
 	int error = 0;
 	struct inode *target = new_dentry->d_inode;

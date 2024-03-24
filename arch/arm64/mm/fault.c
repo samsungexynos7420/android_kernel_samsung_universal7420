@@ -208,7 +208,7 @@ static int __kprobes do_page_fault(unsigned long addr, unsigned int esr,
 	if (!virt_addr_valid(current_thread_info()) || !virt_addr_valid(current)) {
 		sec_debug_disable_printk_process();
 		pr_emerg("sec_debug: safe panic handler due to invalid 'current' \n");
-		sec_debug_panic_handler("sec_debug: safe panic handler", false);
+		sec_debug_panic_handler(NULL, false);
 	}
 #endif
 
@@ -473,11 +473,8 @@ asmlinkage void __exception do_mem_abort(unsigned long addr, unsigned int esr,
 	if (!inf->fn(addr, esr, regs))
 		return;
 
-	if (show_unhandled_signals && unhandled_signal(current, inf->sig) &&
-	    printk_ratelimit()) {
-		pr_alert("Unhandled fault: %s (0x%08x) at 0x%016lx\n",
-			 inf->name, esr, addr);
-	}
+	pr_alert("Unhandled fault: %s (0x%08x) at 0x%016lx\n",
+		 inf->name, esr, addr);
 
 	info.si_signo = inf->sig;
 	info.si_errno = 0;
@@ -535,11 +532,8 @@ asmlinkage int __exception do_debug_exception(unsigned long addr,
 	if (!inf->fn(addr, esr, regs))
 		return 1;
 
-	if (show_unhandled_signals && unhandled_signal(current, inf->sig) &&
-	    printk_ratelimit()) {
-		pr_alert("Unhandled debug exception: %s (0x%08x) at 0x%016lx\n",
-			 inf->name, esr, addr);
-	}
+	pr_alert("Unhandled debug exception: %s (0x%08x) at 0x%016lx\n",
+		 inf->name, esr, addr);
 
 	info.si_signo = inf->sig;
 	info.si_errno = 0;
