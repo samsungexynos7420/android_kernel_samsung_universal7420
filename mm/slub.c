@@ -41,11 +41,11 @@ spinlock_t ro_pages_lock = __SPIN_LOCK_UNLOCKED();
 
 #define check_cred_cache(s,r)			\
 do {							\
-	if ((s->name) && (!strcmp(s->name,CRED_JAR_RO) || !strcmp(s->name,TSEC_JAR) || !strcmp(s->name,VFSMNT_JAR) ))	\
+	if ((s->name) && !strcmp(s->name,"cred_jar_ro"))	\
 		return r;		\
 } while (0)
 #else
-#define check_cred_cache(s,r)
+#define check_cred_cache(s,r)   
 #endif  /* CONFIG_RKP_KDP */
 
 #ifdef CONFIG_SLUB_DEBUG
@@ -289,9 +289,7 @@ static inline void *get_freepointer_safe(struct kmem_cache *s, void *object)
 static inline void set_freepointer(struct kmem_cache *s, void *object, void *fp)
 {
 #ifdef CONFIG_RKP_KDP
-	if (rkp_cred_enable && s->name && 
-		(!strcmp(s->name, CRED_JAR_RO)|| !strcmp(s->name, TSEC_JAR) ||
-									!strcmp(s->name, VFSMNT_JAR))) {
+	if (rkp_cred_enable && s->name && !strcmp(s->name, "cred_jar_ro")) {
 		rkp_call(RKP_CMDID(0x44),(unsigned long long) object, (unsigned long long) s->offset,
 			(unsigned long long) fp,0,0);
 	}
@@ -726,7 +724,6 @@ static int check_bytes_and_report(struct kmem_cache *s, struct page *page,
 	printk(KERN_ERR "INFO: 0x%p-0x%p. First byte 0x%x instead of 0x%x\n",
 					fault, end - 1, fault[0], value);
 	print_trailer(s, page, object);
-	SLUB_BUG();
 
 	restore_bytes(s, what, value, fault, end);
 	return 0;
@@ -819,7 +816,6 @@ static int slab_pad_check(struct kmem_cache *s, struct page *page)
 
 	slab_err(s, page, "Padding overwritten. 0x%p-0x%p", fault, end - 1);
 	print_section("Padding ", end - remainder, remainder);
-	SLUB_BUG();
 
 	restore_bytes(s, "slab padding", POISON_INUSE, end - remainder, end);
 	return 0;
@@ -865,7 +861,6 @@ static int check_object(struct kmem_cache *s, struct page *page,
 	/* Check free pointer validity */
 	if (!check_valid_pointer(s, page, get_freepointer(s, p))) {
 		object_err(s, page, p, "Freepointer corrupt");
-		SLUB_BUG();
 		/*
 		 * No choice but to zap it and thus lose the remainder
 		 * of the free objects in this slab. May cause
@@ -891,9 +886,7 @@ static int check_slab(struct kmem_cache *s, struct page *page)
 	/*
 	 * Skip this function for now
          */
-	if (s->name && (!strcmp(s->name, CRED_JAR_RO) || 
-		!strcmp(s->name, TSEC_JAR) ||
-		!strcmp(s->name, VFSMNT_JAR))) 
+	if (s->name && !strcmp(s->name, "cred_jar_ro")) 
 		return 1;
 #endif /*CONFIG_RKP_KDP*/
 	maxobj = order_objects(compound_order(page), s->size, s->reserved);
@@ -934,12 +927,10 @@ static int on_freelist(struct kmem_cache *s, struct page *page, void *search)
 			if (object) {
 				object_err(s, page, object,
 					"Freechain corrupt");
-				SLUB_BUG();
 				set_freepointer(s, object, NULL);
 				break;
 			} else {
 				slab_err(s, page, "Freepointer corrupt");
-				SLUB_BUG();
 				page->freelist = NULL;
 				page->inuse = page->objects;
 				slab_fix(s, "Freelist cleared");
@@ -959,14 +950,12 @@ static int on_freelist(struct kmem_cache *s, struct page *page, void *search)
 	if (page->objects != max_objects) {
 		slab_err(s, page, "Wrong number of objects. Found %d but "
 			"should be %d", page->objects, max_objects);
-		SLUB_BUG();
 		page->objects = max_objects;
 		slab_fix(s, "Number of objects adjusted.");
 	}
 	if (page->inuse != page->objects - nr) {
 		slab_err(s, page, "Wrong object count. Counter is %d but "
 			"counted were %d", page->inuse, page->objects - nr);
-		SLUB_BUG();
 		page->inuse = page->objects - nr;
 		slab_fix(s, "Object count adjusted.");
 	}
@@ -1136,7 +1125,6 @@ static noinline int alloc_debug_processing(struct kmem_cache *s, struct page *pa
 	return 1;
 
 bad:
-	SLUB_BUG();
 	if (PageSlab(page)) {
 		/*
 		 * If this is a slab page then lets do the best we can
@@ -1208,7 +1196,6 @@ out:
 fail:
 	slab_unlock(page);
 	spin_unlock_irqrestore(&n->list_lock, *flags);
-	SLUB_BUG();
 	slab_fix(s, "Object at 0x%p not freed", object);
 	return NULL;
 }
@@ -1386,10 +1373,7 @@ static struct page *allocate_slab(struct kmem_cache *s, gfp_t flags, int node)
 	alloc_gfp = (flags | __GFP_NOWARN | __GFP_NORETRY) & ~__GFP_NOFAIL;
 
 #ifdef CONFIG_RKP_KDP
-	if (s->name && 
-		(!strcmp(s->name, CRED_JAR_RO) ||
-		!strcmp(s->name, TSEC_JAR)|| 
-		!strcmp(s->name, VFSMNT_JAR))) {
+	if (s->name && !strcmp(s->name, "cred_jar_ro")) {
 	
 		virt_page = rkp_ro_alloc();
 		if(!virt_page)
@@ -1447,29 +1431,16 @@ def_alloc:
 	 * We modify the following so that slab alloc for protected data
 	 * types are allocated from our own pool.
 	 */
-	if (s->name)  {
-		u64	sc,va_page;
-		va_page = (u64)__va(page_to_phys(page));
+	if (s->name && !strcmp(s->name, "cred_jar_ro")) {
+		unsigned long long sc = 0;
+		unsigned long long va_page = (unsigned long long)__va(page_to_phys(page));
+
+		for(; sc < (1 << oo_order(oo)) ; sc++) {
+			rkp_call(RKP_CMDID(0x50),va_page,0,0,0,0);
+			va_page += PAGE_SIZE;
+		}
 		
-		if(!strcmp(s->name, CRED_JAR_RO)){
-			for(sc = 0; sc < (1 << oo_order(oo)) ; sc++) {
-				rkp_call(RKP_CMDID(0x50),va_page,0,0,0,0);
-				va_page += PAGE_SIZE;
-			}
-		} 
-		if(!strcmp(s->name, TSEC_JAR)){
-			for(sc = 0; sc < (1 << oo_order(oo)) ; sc++) {
-				rkp_call(RKP_CMDID(0x4e),va_page,0,0,0,0);
-				va_page += PAGE_SIZE;
-			}
-		}
-		if(!strcmp(s->name, VFSMNT_JAR)){
-			for(sc = 0; sc < (1 << oo_order(oo)) ; sc++) {
-				rkp_call(RKP_CMDID(0x4f),va_page,0,0,0,0);
-				va_page += PAGE_SIZE;
-			}
-		}
-	}
+	} 
 #endif
 	return page;
 }
@@ -1542,16 +1513,13 @@ void free_ro_pages(struct page *page, int order)
 	sc = 0;
 	va_page = (unsigned long long)__va(page_to_phys(page));
 	if(is_rkp_ro_page(va_page)){
-		for(sc = 0; sc < (1 << order); sc++) {
-			rkp_call(RKP_CMDID(0x48),va_page,0,0,0,0);
-			rkp_ro_free((void *)va_page);
-			va_page += PAGE_SIZE;
-		}
+		rkp_call(RKP_CMDID(0x48),va_page,0,0,0,0);
+		rkp_ro_free((void *)va_page);
 		return;
 	}
 
 	spin_lock_irqsave(&ro_pages_lock,flags);
-	for(sc = 0; sc < (1 << order); sc++) {
+	for(; sc < (1 << order); sc++) {
 		rkp_call(RKP_CMDID(0x48),va_page,0,0,0,0);
 		va_page += PAGE_SIZE;
 	}
@@ -1597,9 +1565,7 @@ static void __free_slab(struct kmem_cache *s, struct page *page)
 	
 #ifdef CONFIG_RKP_KDP
 	/* We free the protected pages here. */
-	if (s->name && (!strcmp(s->name, CRED_JAR_RO) || 
-		!strcmp(s->name, TSEC_JAR) || 
-		!strcmp(s->name, VFSMNT_JAR)))
+	if (s->name && !strcmp(s->name, "cred_jar_ro"))
 		free_ro_pages(page, order);
 	else
 #endif
@@ -3515,7 +3481,6 @@ bool verify_mem_not_deleted(const void *x)
 	slab_lock(page);
 	if (on_freelist(page->slab_cache, page, object)) {
 		object_err(page->slab_cache, page, object, "Object is on free-list");
-		SLUB_BUG();
 		rv = false;
 	} else {
 		rv = true;

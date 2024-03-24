@@ -478,6 +478,16 @@ config FRONTSWAP
 
 	  If unsure, say Y to enable frontswap.
 
+config ZBUD
+	tristate "Low density storage for compressed pages"
+	default n
+	help
+	  A special purpose allocator for storing compressed pages.
+	  It is designed to store up to two compressed pages per physical
+	  page.  While this design limits storage density, it has simple and
+	  deterministic reclaim properties that make it preferable to a higher
+	  density approach when reclaim will be used.
+
 config ZSWAP
 	bool "Compressed cache for swap pages (EXPERIMENTAL)"
 	depends on FRONTSWAP && CRYPTO=y
@@ -501,19 +511,9 @@ config ZSWAP
 config ZPOOL
 	tristate "Common API for compressed memory storage"
 	default n
- 	help
+	help
 	  Compressed memory storage API.  This allows using either zbud or
 	  zsmalloc.
-
-config ZBUD
-	tristate "Low density storage for compressed pages"
-	default n
-	help
-	  A special purpose allocator for storing compressed pages.
-	  It is designed to store up to two compressed pages per physical
-	  page.  While this design limits storage density, it has simple and
-	  deterministic reclaim properties that make it preferable to a higher
-	  density approach when reclaim will be used.
 
 config ZSMALLOC
 	tristate "Memory allocator for compressed pages"
@@ -570,6 +570,14 @@ config SWAP_ENABLE_READAHEAD
 	  This behaviour is good at disk-based system, but not on in-memory
 	  compression (e.g. zram).
 
+config MMAP_READAROUND_LIMIT
+	int "Limit mmap readaround upperbound"
+	default 0
+	help
+	  Inappropriate mmap readaround size can hurt device performance
+	  during the sluggish situation. Add the hard upper-limit for
+	  mmap readaround.
+
 config GENERIC_EARLY_IOREMAP
 	bool
 	default y
@@ -598,23 +606,12 @@ config CMA_DEBUG
 	  processing calls such as dma_alloc_from_contiguous().
 	  This option does not affect warning and error messages.
 
-config MIN_DIRTY_THRESH_PAGES
-	int "The lower bound of VM dirty_thresh value in number of pages"
-	default 2560
+config CMA_PINPAGE_MIGRATION
+	bool "CMA pinned page migration (EXPERIMENTAL)"
+	depends on CMA
+	default n
 	help
-	  Setting this to certain positive number guaranttees
-	  the VM Dirty-Thresh valus is always larger than that value.
-	  It is only effective when dirty_ratio is used. (Setting dirty_bytes
-	  disables this option.)
-	  Do not use it if you unsure.
-
-config MMAP_READAROUND_LIMIT
-	int "Limit mmap readaround upperbound"
-	default 0
-	help
-	  Inappropriate mmap readaround size can hurt device performance
-	  during the sluggish situation. Add the hard upper-limit for
-	  mmap readaround.
+	  Turns on cma page migration for pinned page.
 
 config BALANCE_ANON_FILE_RECLAIM
 	bool "During reclaim treat anon and file backed pages equally"

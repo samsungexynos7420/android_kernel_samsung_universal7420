@@ -402,7 +402,7 @@ struct fuse_conn {
 
 	/** Maximum write size */
 	unsigned max_write;
-
+	
 	/** Free space reserve size */
 	unsigned reserved_space_mb;
 
@@ -490,7 +490,7 @@ struct fuse_conn {
 
 	/** Set if bdi is valid */
 	unsigned bdi_initialized:1;
-
+	
 	/** Shortcircuited IO. */
 	unsigned shortcircuit_io:1;
 
