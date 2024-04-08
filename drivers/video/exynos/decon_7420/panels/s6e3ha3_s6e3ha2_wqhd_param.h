@@ -590,6 +590,7 @@ static const unsigned char S6E3HA3_SEQ_FREQ_CALIBRATION[] = {			// 59.90
 	0xFF, 0x3C, 0x3F, 0x3F, 0x3F, 0x3F, 0x0F, 0xAB
 };
 
+static const unsigned char HF3_A3_IRC_off[2] = {0xB8, 0x00};
 
 static const unsigned char SEQ_SELECT_HLPM[] = {
 	0xBB,
