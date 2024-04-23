@@ -396,6 +396,16 @@ config BOARD_ZEROLTE
 	depends on SOC_EXYNOS7420
 	default n
 	
+config BOARD_ZEROFLTECAN
+	bool "Samsung Galaxy S6 (Canadian)"
+	depends on SOC_EXYNOS7420
+	default n
+	
+config BOARD_ZEROLTECAN
+	bool "Samsung Galaxy S6 Edge (Canadian)"
+	depends on SOC_EXYNOS7420
+	default n
+	
 config BOARD_ZENLTE
 	bool "Samsung Galaxy S6 Edge+"
 	depends on SOC_EXYNOS7420
