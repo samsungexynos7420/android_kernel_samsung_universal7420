@@ -20,8 +20,6 @@ bool wpc_temp_mode = false;
 #endif
 bool slate_mode_state;
 
-#define SEC_INPUT_VOLTAGE_5V	5
-#define SEC_INPUT_VOLTAGE_9V	9
 
 static unsigned int STORE_MODE_CHARGING_MAX = 75;
 static unsigned int STORE_MODE_CHARGING_MIN = 25;
@@ -213,15 +211,11 @@ static enum power_supply_property sec_battery_props[] = {
 
 static enum power_supply_property sec_power_props[] = {
 	POWER_SUPPLY_PROP_ONLINE,
-	POWER_SUPPLY_PROP_VOLTAGE_MAX,
-	POWER_SUPPLY_PROP_CURRENT_MAX,
 };
 
 static enum power_supply_property sec_ac_props[] = {
 	POWER_SUPPLY_PROP_ONLINE,
 	POWER_SUPPLY_PROP_TEMP,
-	POWER_SUPPLY_PROP_VOLTAGE_MAX,
-	POWER_SUPPLY_PROP_CURRENT_MAX,
 };
 
 static enum power_supply_property sec_ps_props[] = {
@@ -3731,13 +3725,6 @@ static void sec_bat_cable_work(struct work_struct *work)
 				if (sec_bat_set_charge(battery, true))
 					goto end_of_cable_work;
 			}
-			
-			if (battery->status != POWER_SUPPLY_STATUS_DISCHARGING) {
-				battery->input_voltage =
-					(battery->cable_type == POWER_SUPPLY_TYPE_HV_MAINS ||
-					battery->cable_type == POWER_SUPPLY_TYPE_HV_WIRELESS) ?
-					SEC_INPUT_VOLTAGE_9V : SEC_INPUT_VOLTAGE_5V;
-			}
 		}
 
 #if defined(CONFIG_CALC_TIME_TO_FULL)
@@ -5973,20 +5960,9 @@ static int sec_usb_get_property(struct power_supply *psy,
 	struct sec_battery_info *battery =
 		container_of(psy, struct sec_battery_info, psy_usb);
 
-	switch (psp) {
-	case POWER_SUPPLY_PROP_ONLINE:
-		break;
-	case POWER_SUPPLY_PROP_VOLTAGE_MAX:
-		/* V -> uV */
-		val->intval = battery->input_voltage * 1000000;
-		return 0;
-	case POWER_SUPPLY_PROP_CURRENT_MAX:
-		/* mA -> uA */
-		val->intval = battery->pdata->charging_current[battery->cable_type].input_current_limit * 1000;
-		return 0;
-	default:
+	if (psp != POWER_SUPPLY_PROP_ONLINE)
 		return -EINVAL;
-	}
+
 	if ((battery->health == POWER_SUPPLY_HEALTH_OVERVOLTAGE) ||
 	    (battery->health == POWER_SUPPLY_HEALTH_UNDERVOLTAGE) ||
 	    (battery->pdata->camera_temp_check && battery->camera_limit)){
@@ -6061,14 +6037,6 @@ static int sec_ac_get_property(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_TEMP:
 		val->intval = battery->chg_temp;
 		break;
-	case POWER_SUPPLY_PROP_VOLTAGE_MAX:
-		/* V -> uV */
-		val->intval = battery->input_voltage * 1000000;
-		return 0;
-	case POWER_SUPPLY_PROP_CURRENT_MAX:
-		/* mA -> uA */
-		val->intval = battery->pdata->charging_current[battery->cable_type].input_current_limit * 1000;
-		return 0;
 	default:
 		return -EINVAL;
 	}
@@ -6083,19 +6051,9 @@ static int sec_wireless_get_property(struct power_supply *psy,
 	struct sec_battery_info *battery =
 		container_of(psy, struct sec_battery_info, psy_wireless);
 
-	switch (psp) {
-	case POWER_SUPPLY_PROP_VOLTAGE_MAX:
-		/* V -> uV */
-		val->intval = battery->input_voltage * 1000000;
-		return 0;
-	case POWER_SUPPLY_PROP_CURRENT_MAX:
-		/* mA -> uA */
-		val->intval = battery->pdata->charging_current[battery->cable_type].input_current_limit * 1000;
-		return 0;
-	default:
+	if (psp != POWER_SUPPLY_PROP_ONLINE)
 		return -EINVAL;
-	}
-	
+
 	if (battery->pdata->camera_temp_check && battery->camera_limit) {
 		val->intval = 0;
 		return 0;
