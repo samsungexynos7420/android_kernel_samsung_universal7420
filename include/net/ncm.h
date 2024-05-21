@@ -95,6 +95,7 @@ struct knox_user_socket_metadata {
     char domain_name[255];
 };
 
+#ifdef CONFIG_KNOX_NCM
 /* The list of function which is being referenced by the af_inet.c class */
 extern unsigned int check_ncm_flag(void);
 extern bool kfifo_status(void);
@@ -108,7 +109,7 @@ extern void insert_data_kfifo_kthread(struct knox_socket_metadata* knox_socket_m
 #define NCM_LOGD(...)
 #endif /* NCM_DEBUG */
 #define NCM_LOGE(...) printk("ncm: "__VA_ARGS__)
-
+#endif
 
 
 /* IOCTL definitions*/
