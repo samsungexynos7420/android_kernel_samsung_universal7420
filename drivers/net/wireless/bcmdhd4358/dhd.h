@@ -137,7 +137,11 @@ enum dhd_op_flags {
 #define MAX_CLM_BUF_SIZE	(32 * 1024) /* max clm blob size */
 
 #ifndef CONFIG_BCMDHD_CLM_PATH
-#define CONFIG_BCMDHD_CLM_PATH "/system/etc/wifi/bcmdhd_clm.blob"
+#if defined(CUSTOMER_HW4) && defined(PLATFORM_SLP)
+#define CONFIG_BCMDHD_CLM_PATH "/lib/firmware/bcmdhd_clm.blob"
+#else
+#define CONFIG_BCMDHD_CLM_PATH "/etc/wifi/bcmdhd_clm.blob"
+#endif /* CUSTOMER_HW4 && PLATFORM_SLP */
 #endif /* CONFIG_BCMDHD_CLM_PATH */
 #define WL_CCODE_NULL_COUNTRY  "#n"
 
@@ -1467,6 +1471,19 @@ extern void dhdpcie_stop_runtimepm(dhd_pub_t *pub);
 extern void dhdpcie_start_runtimepm(dhd_pub_t *pub);
 extern int dhdpcie_set_suspend_resume(struct pci_dev *dev, bool state);
 #endif /* DHD_USE_IDLECOUNT && BCMPCIE */
+
+#if defined(ANDROID_PLATFORM_VERSION)
+#if (ANDROID_PLATFORM_VERSION < 7)
+#define DHD_LEGACY_FILE_PATH
+#define VENDOR_PATH "/system"
+#elif (ANDROID_PLATFORM_VERSION == 7)
+#define VENDOR_PATH "/system"
+#elif (ANDROID_PLATFORM_VERSION >= 8)
+#define VENDOR_PATH "/vendor"
+#endif /* ANDROID_PLATFORM_VERSION < 7 */
+#else
+#define VENDOR_PATH ""
+#endif /* ANDROID_PLATFORM_VERSION */
 
 #ifdef DHD_LEGACY_FILE_PATH
 #define PLATFORM_PATH   "/data/"
