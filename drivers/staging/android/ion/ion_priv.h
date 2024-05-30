@@ -40,7 +40,6 @@ struct ion_iovm_map {
 	struct list_head list;
 	unsigned int map_cnt;
 	struct device *dev;
-	struct iommu_domain *domain;
 	dma_addr_t iova;
 	int region_id;
 };
@@ -492,7 +491,7 @@ struct ion_page_pool {
 	int low_count;
 	struct list_head high_items;
 	struct list_head low_items;
-	spinlock_t lock;
+	struct mutex mutex;
 	gfp_t gfp_mask;
 	unsigned int order;
 	bool cached;

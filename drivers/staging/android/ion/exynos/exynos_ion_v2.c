@@ -352,6 +352,7 @@ DECLARE_EXYNOS_ION_RESERVED_REGION(mfc_sh);
 DECLARE_EXYNOS_ION_RESERVED_REGION(g2d_wfd);
 DECLARE_EXYNOS_ION_RESERVED_REGION(video);
 DECLARE_EXYNOS_ION_RESERVED_REGION(video_ext);
+DECLARE_EXYNOS_ION_RESERVED_REGION(video_ext2);
 DECLARE_EXYNOS_ION_RESERVED_REGION(sectbl);
 DECLARE_EXYNOS_ION_RESERVED_REGION(mfc_fw);
 DECLARE_EXYNOS_ION_RESERVED_REGION(mfc_nfw);
@@ -427,6 +428,37 @@ static int exynos_ion_isolate_thread(void *p)
 
 	if (!signal_pending(current))
 		do_exit(0);
+
+	return 0;
+}
+
+int ion_exynos_isolate_async(int region_id)
+{
+	struct sched_param param = { .sched_priority = 0 };
+	struct task_struct *thr;
+	struct exynos_ion_platform_heap *pdata;
+	struct device *dev;
+	int id;
+
+	id = __find_platform_heap_id(region_id + 1);
+	if (id < 0) {
+		pr_err("%s: invalid region id(%d)\n", __func__, region_id);
+		return -EINVAL;
+	}
+
+	pdata = &plat_heaps[id];
+	dev = &pdata->dev;
+
+	mutex_lock(&pdata->cma_lock);
+
+	thr = kthread_run(exynos_ion_isolate_thread,
+			dev, "cma_isolation:%s", dev_name(dev));
+	if (IS_ERR(thr))
+		dev_err(dev, "Failed to create isolation thread\n");
+	else
+		sched_setscheduler(thr, SCHED_NORMAL, &param);
+
+	mutex_unlock(&pdata->cma_lock);
 
 	return 0;
 }
