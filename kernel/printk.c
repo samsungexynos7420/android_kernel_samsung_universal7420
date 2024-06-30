@@ -2240,7 +2240,6 @@ void console_unlock(void)
 	static u64 seen_seq;
 	unsigned long flags;
 	bool wake_klogd = false;
-	bool retry;
 	u64 next_seq_in_this_turn;
 	bool do_cond_resched, retry;
 
