@@ -27,7 +27,7 @@
 #include <linux/suspend.h>
 #include <linux/exynos-ss.h>
 
-#define DM_HOTPLUG_DEBUG
+//#define DM_HOTPLUG_DEBUG
 
 #define NORMALMIN_FREQ	500000
 #define POLLING_MSEC	100
