@@ -4,6 +4,8 @@ dtb-$(CONFIG_BOARD_ZEROFLTECAN) += exynos7420-zeroflte_usa_00.dtb exynos7420-zer
 dtb-$(CONFIG_BOARD_ZEROLTECAN) += exynos7420-zerolte_usa_01.dtb exynos7420-zerolte_usa_02.dtb exynos7420-zerolte_usa_03.dtb exynos7420-zerolte_usa_open_04.dtb exynos7420-zerolte_usa_05.dtb exynos7420-zerolte_usa_06.dtb exynos7420-zerolte_usa_07.dtb
 dtb-$(CONFIG_BOARD_ZENLTE) += exynos7420-zenlte_eur_open_00.dtb exynos7420-zenlte_eur_open_09.dtb
 dtb-$(CONFIG_BOARD_NOBLELTE) += exynos7420-noblelte_eur_open_00.dtb exynos7420-noblelte_eur_open_09.dtb
+dtb-$(CONFIG_BOARD_ZENLTECAN) += exynos7420-zenlte_usa_00.dtb exynos7420-zenlte_usa_09.dtb
+dtb-$(CONFIG_BOARD_NOBLELTECAN) += exynos7420-noblelte_usa_00.dtb exynos7420-noblelte_usa_09.dtb
 	
 targets += dtbs
 
