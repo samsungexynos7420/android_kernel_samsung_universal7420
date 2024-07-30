@@ -395,6 +395,16 @@ config BOARD_ZEROLTE
 	bool "Samsung Galaxy S6 Edge"
 	depends on SOC_EXYNOS7420
 	default n
+
+config BOARD_ZEROFLTECAN
+	bool "Samsung Galaxy S6 (EarSmart variants)"
+	depends on SOC_EXYNOS7420
+	default n
+	
+config BOARD_ZEROLTECAN
+	bool "Samsung Galaxy S6 Edge (EarSmart variants)"
+	depends on SOC_EXYNOS7420
+	default n
 	
 config BOARD_ZENLTE
 	bool "Samsung Galaxy S6 Edge+"
@@ -405,4 +415,13 @@ config BOARD_NOBLELTE
 	bool "Samsung Galaxy Note5"
 	depends on SOC_EXYNOS7420
 	default n
+
+config BOARD_ZENLTECAN
+	bool "Samsung Galaxy S6 Edge+ (EarSmart variants)"
+	depends on SOC_EXYNOS7420
+	default n
 	
+config BOARD_NOBLELTECAN
+	bool "Samsung Galaxy Note5 (EarSmart variants)"
+	depends on SOC_EXYNOS7420
+	default n
