@@ -2755,7 +2755,7 @@ static void sec_bat_get_battery_info(
 		battery->current_max, battery->capacity,
 		battery->temperature, battery->chg_temp,
 		battery->wpc_temp, battery->is_hc_usb);
-	dev_info(battery->dev,
+	dev_dbg(battery->dev,
 		"%s,Vavg(%dmV),Vocv(%dmV),Tamb(%d),"
 		"Iavg(%dmA),Isysavg(%dmA),Iadc(%d)\n",
 		battery->present ? "Connected" : "Disconnected",
