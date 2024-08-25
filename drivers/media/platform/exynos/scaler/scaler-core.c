@@ -2589,9 +2589,25 @@ static int sc_get_bufaddr(struct sc_dev *sc, struct vb2_buffer *vb2buf,
 		break;
 	case 2:
 		if (frame->sc_fmt->num_planes == 1) {
-			frame->addr.cb = frame->addr.y + pixsize;
-			frame->addr.ysize = pixsize;
-			frame->addr.cbsize = bytesize - pixsize;
+            if (frame->sc_fmt->pixelformat == V4L2_PIX_FMT_NV12N) {
+				unsigned int w = frame->width;
+				unsigned int h = frame->height;
+				frame->addr.cb =
+					NV12N_CBCR_BASE(frame->addr.y, w, h);
+				frame->addr.ysize = NV12N_Y_SIZE(w, h);
+				frame->addr.cbsize = NV12N_CBCR_SIZE(w, h);
+			} else if (frame->sc_fmt->pixelformat == V4L2_PIX_FMT_NV12N_10B) {
+				unsigned int w = frame->width;
+				unsigned int h = frame->height;
+				frame->addr.cb =
+					NV12N_10B_CBCR_BASE(frame->addr.y, w, h);
+				frame->addr.ysize = NV12N_Y_SIZE(w, h);
+				frame->addr.cbsize = NV12N_CBCR_SIZE(w, h);
+			} else {
+                frame->addr.cb = frame->addr.y + pixsize;
+                frame->addr.ysize = pixsize;
+                frame->addr.cbsize = bytesize - pixsize;
+            }
 		} else if (frame->sc_fmt->num_planes == 2) {
 			cookie = vb2_plane_cookie(vb2buf, 1);
 			if (!cookie)
