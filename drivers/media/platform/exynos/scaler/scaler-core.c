@@ -229,6 +229,25 @@ static const struct sc_fmt sc_formats[] = {
 		.num_planes	= 1,
 		.num_comp	= 3,
 		.h_shift	= 1,
+	},
+	{
+		.name		= "YUV 4:2:0 contiguous Y/CbCr",
+		.pixelformat	= V4L2_PIX_FMT_NV12N,
+		.cfg_val	= SCALER_CFG_FMT_YCBCR420_2P,
+		.bitperpixel	= { 12 },
+		.num_planes	= 1,
+		.num_comp	= 2,
+		.h_shift	= 1,
+		.v_shift	= 1,
+	}, {
+		.name		= "YUV 4:2:0 contiguous Y/CbCr 10-bit",
+		.pixelformat	= V4L2_PIX_FMT_NV12N_10B,
+		.cfg_val	= SCALER_CFG_FMT_YCBCR420_2P,
+		.bitperpixel	= { 15 },
+		.num_planes	= 1,
+		.num_comp	= 2,
+		.h_shift	= 1,
+		.v_shift	= 1,
 	}, {
 		.name		= "YUV 4:4:4 contiguous Y/CbCr",
 		.pixelformat	= V4L2_PIX_FMT_NV24,
@@ -2589,9 +2608,25 @@ static int sc_get_bufaddr(struct sc_dev *sc, struct vb2_buffer *vb2buf,
 		break;
 	case 2:
 		if (frame->sc_fmt->num_planes == 1) {
-			frame->addr.cb = frame->addr.y + pixsize;
-			frame->addr.ysize = pixsize;
-			frame->addr.cbsize = bytesize - pixsize;
+            if (frame->sc_fmt->pixelformat == V4L2_PIX_FMT_NV12N) {
+				unsigned int w = frame->width;
+				unsigned int h = frame->height;
+				frame->addr.cb =
+					NV12N_CBCR_BASE(frame->addr.y, w, h);
+				frame->addr.ysize = NV12N_Y_SIZE(w, h);
+				frame->addr.cbsize = NV12N_CBCR_SIZE(w, h);
+			} else if (frame->sc_fmt->pixelformat == V4L2_PIX_FMT_NV12N_10B) {
+				unsigned int w = frame->width;
+				unsigned int h = frame->height;
+				frame->addr.cb =
+					NV12N_10B_CBCR_BASE(frame->addr.y, w, h);
+				frame->addr.ysize = NV12N_Y_SIZE(w, h);
+				frame->addr.cbsize = NV12N_CBCR_SIZE(w, h);
+			} else {
+                frame->addr.cb = frame->addr.y + pixsize;
+                frame->addr.ysize = pixsize;
+                frame->addr.cbsize = bytesize - pixsize;
+            }
 		} else if (frame->sc_fmt->num_planes == 2) {
 			cookie = vb2_plane_cookie(vb2buf, 1);
 			if (!cookie)
@@ -3007,9 +3042,25 @@ static void sc_m2m1shot_get_bufaddr(struct sc_dev *sc,
 		break;
 	case 2:
 		if (frame->sc_fmt->num_planes == 1) {
-			frame->addr.cb = frame->addr.y + pixsize;
-			frame->addr.ysize = pixsize;
-			frame->addr.cbsize = bytesize - pixsize;
+			if (frame->sc_fmt->pixelformat == V4L2_PIX_FMT_NV12N) {
+				unsigned int w = frame->width;
+				unsigned int h = frame->height;
+				frame->addr.cb =
+					NV12N_CBCR_BASE(frame->addr.y, w, h);
+				frame->addr.ysize = NV12N_Y_SIZE(w, h);
+				frame->addr.cbsize = NV12N_CBCR_SIZE(w, h);
+			} else if (frame->sc_fmt->pixelformat == V4L2_PIX_FMT_NV12N_10B) {
+				unsigned int w = frame->width;
+				unsigned int h = frame->height;
+				frame->addr.cb =
+					NV12N_10B_CBCR_BASE(frame->addr.y, w, h);
+				frame->addr.ysize = NV12N_Y_SIZE(w, h);
+				frame->addr.cbsize = NV12N_CBCR_SIZE(w, h);
+			} else {
+				frame->addr.cb = frame->addr.y + pixsize;
+				frame->addr.ysize = pixsize;
+				frame->addr.cbsize = bytesize - pixsize;
+			}
 		} else if (frame->sc_fmt->num_planes == 2) {
 			frame->addr.cb = buf->plane[1].dma_addr;
 
