@@ -185,14 +185,15 @@ static void mptcp_ccc_set_state(struct sock *sk, u8 ca_state)
 }
 
 /* <MPTCP> Arguments modified according to the current kernel version */
-static void mptcp_ccc_cong_avoid(struct sock *sk, u32 ack, u32 in_flight)
+static void mptcp_ccc_cong_avoid(struct sock *sk, u32 ack, u32 acked,
+				 u32 in_flight)
 {
 	struct tcp_sock *tp = tcp_sk(sk);
 	struct mptcp_cb *mpcb = tp->mpcb;
 	int snd_cwnd;
 
 	if (!mptcp(tp)) {
-		tcp_reno_cong_avoid(sk, ack, in_flight);
+		tcp_reno_cong_avoid(sk, ack, acked, in_flight);
 		return;
 	}
 
@@ -201,7 +202,7 @@ static void mptcp_ccc_cong_avoid(struct sock *sk, u32 ack, u32 in_flight)
 
 	if (tp->snd_cwnd <= tp->snd_ssthresh) {
 		/* In "safe" area, increase. */
-		tcp_slow_start(tp);
+		tcp_slow_start(tp, acked);
 		mptcp_ccc_recalc_alpha(sk);
 		return;
 	}
