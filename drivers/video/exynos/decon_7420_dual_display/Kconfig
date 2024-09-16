@@ -97,8 +97,8 @@ config DECON_EVENT_LOG
         depends on DEBUG_INFO && EXYNOS_DECON_DUAL_DISPLAY
         default y
 
-source "drivers/video/exynos/decon_dual_display/vpp/Kconfig"
+source "drivers/video/exynos/decon_7420_dual_display/vpp/Kconfig"
 
 endif
 
-source "drivers/video/exynos/decon_dual_display/panels/Kconfig"
+source "drivers/video/exynos/decon_7420_dual_display/panels/Kconfig"
