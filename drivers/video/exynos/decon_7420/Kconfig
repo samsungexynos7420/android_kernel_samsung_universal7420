@@ -125,8 +125,8 @@ config FB_DSU_REG_LOCK
         depends on FB_DSU
         default n
 
-source "drivers/video/exynos/decon/vpp/Kconfig"
+source "drivers/video/exynos/decon_7420/vpp/Kconfig"
 
 endif
 
-source "drivers/video/exynos/decon/panels/Kconfig"
+source "drivers/video/exynos/decon_7420/panels/Kconfig"
