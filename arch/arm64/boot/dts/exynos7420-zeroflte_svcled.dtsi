@@ -11,7 +11,7 @@
 
 / {
 	rgb {
-		device_type = <1>;
+		led_device_type = <1>;
 		normal_powermode_current = <10>;
 		low_powermode_current = <2>;
 		br_ratio_r = <450>;
