@@ -415,7 +415,7 @@ static struct max77843_rgb_platform_data
 	}
 
 	/* get device_type value in dt */
-	ret = of_property_read_u32(np, "device_type", &temp);
+	ret = of_property_read_u32(np, "led_device_type", &temp);
 	if (IS_ERR_VALUE(ret)) {
 		max77843_dbg("leds-max77843-rgb: %s, can't parsing device_type in dt\n", __func__);
 	}
