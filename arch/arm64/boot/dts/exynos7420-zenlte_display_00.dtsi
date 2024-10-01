@@ -12,7 +12,7 @@
 
 / {
 
-	decon_0: decon_fb {
+	decon_0: decon_fb@0x13930000 {
 		/* EINT for TE */
 		gpios = <&gpg0 0 0xf>;
 		gpio_err = <&gpr3 7 0>;

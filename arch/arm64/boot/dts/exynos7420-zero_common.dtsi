@@ -876,17 +876,6 @@
 		ctlr.integral_reset_threshold = <5>;
 	};
 
-	decon_0: decon_fb {
-		/* EINT for TE */
-		gpios = <&gpg0 0 0xf>;
-		gpio_err = <&gpr3 7 0>;
-		gpio_det = <&gpr3 1 0>;
-		te_eint {
-			reg = <0x13470A34 0x4>, <0x13470934 0x4>;
-			te_pend_mask = <0x00000001>;
-		};
-	};
-
 	hdmi@13970000 {
 		/* all bit clock supports: 1, not support: 0 */
 		audio_master_clk = <1>;
