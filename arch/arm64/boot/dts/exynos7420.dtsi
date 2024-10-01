@@ -240,7 +240,7 @@
 		};
 	};
 
-	coresight {
+	coresight@16000000 {
 		compatible = "exynos,coresight";
 		reg = <0x16000000 0xc00000>;
 		#address-cells = <1>;
@@ -1149,7 +1149,7 @@
 		};
 	};
 
-    mali {
+    mali@14AC0000 {
         compatible = "arm,mali";
         reg = <0x14AC0000 0x5000>;
         interrupts = <0 241 0>, <0 242 0>, <0 240 0>;
@@ -3034,7 +3034,7 @@
 		};
 	};
 
-	decon_1: decon_ext {
+	decon_1: decon_ext@0x13950000 {
 		compatible = "samsung,exynos5-decon_driver";
 		#pb-id-cells = <4>;
 
