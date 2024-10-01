@@ -65,7 +65,7 @@
 		uart4 = &serial_4;
 		hsi2c0 = &hsi2c_0;
 		hsi2c1 = &hsi2c_1;
-                hsi2c2 = &hsi2c_2;
+		hsi2c2 = &hsi2c_2;
 		hsi2c3 = &hsi2c_3;
 		hsi2c4 = &hsi2c_4;
 		hsi2c5 = &hsi2c_5;
