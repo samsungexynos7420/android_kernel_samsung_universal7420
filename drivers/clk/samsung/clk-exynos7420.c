@@ -64,7 +64,7 @@ enum exynos7420_clks {
 	um_decon1_vclk, m_decon1_vclk, d_decon1_vclk,
 	aclk_lh_disp0 = 230, aclk_lh_disp1, aclk_disp, pclk_disp, rgb_vclk0,
 	rgb_vclk1, mipi1_rx, mipi1_bit,
-#ifdef CONFIG_EXYNOS_DECON_DUAL_DSI
+#ifdef CONFIG_EXYNOS_DECON_7420_DUAL_DSI
 	mout_sclk_decon_int_eclk = 240, mout_bus0_pll_top0, dout_sclk_decon_int_eclk,
 	um_decon0_eclk, mout_sclk_decon_ext_eclk, dout_sclk_decon_ext_eclk,
 #endif
@@ -1038,7 +1038,7 @@ static struct samsung_composite_mux exynos7420_mux_clks[] __refdata = {
 	MUX(none, "mout_aclk_mfc_532", topc_group1, \
 			EXYNOS7420_MUX_SEL_TOPC3, 8, 2, \
 			EXYNOS7420_MUX_STAT_TOPC3, 8, 4, 0, "mout_aclk_mfc_532"),
-#ifdef CONFIG_EXYNOS_DECON_DUAL_DSI
+#ifdef CONFIG_EXYNOS_DECON_7420_DUAL_DSI
 	/* top0 block */
 	MUX(mout_bus0_pll_top0, "mout_bus0_pll_top0", mout_bus0_pll_top0_p, \
 			EXYNOS7420_MUX_SEL_TOP01, 16, 1, \
@@ -1151,7 +1151,7 @@ static struct samsung_composite_mux exynos7420_mux_clks[] __refdata = {
 	MUX(none, "mout_sclk_uart3", top0_group1, \
 			EXYNOS7420_MUX_SEL_TOP0_PERIC3, 4, 2, \
 			EXYNOS7420_MUX_STAT_TOP0_PERIC3, 4, 4, 0, NULL),
-#ifdef CONFIG_EXYNOS_DECON_DUAL_DSI
+#ifdef CONFIG_EXYNOS_DECON_7420_DUAL_DSI
 	MUX(mout_sclk_decon_int_eclk, "mout_sclk_decon_int_eclk", top0_group1, \
 			EXYNOS7420_MUX_SEL_TOP0_DISP, 28, 2, \
 			EXYNOS7420_MUX_STAT_TOP0_DISP, 28, 4, 0, "m_sclk_decon0_eclk"),
@@ -1491,7 +1491,7 @@ static struct samsung_composite_divider exynos7420_div_clks[] __refdata = {
 	DIV(baud3, "dout_sclk_uart3", "mout_sclk_uart3", \
 			EXYNOS7420_DIV_TOP0_PERIC3, 4, 4, \
 			EXYNOS7420_DIV_STAT_TOP0_PERIC3, 4, 1, 0, NULL),
-#ifdef CONFIG_EXYNOS_DECON_DUAL_DSI
+#ifdef CONFIG_EXYNOS_DECON_7420_DUAL_DSI
 	DIV(dout_sclk_decon_int_eclk, "dout_sclk_decon_int_eclk", "mout_sclk_decon_int_eclk", \
 			EXYNOS7420_DIV_TOP0_DISP, 28, 4, \
 			EXYNOS7420_DIV_STAT_TOP0_DISP, 28, 1, 0, "dout_sclk_decon_int_eclk"),
@@ -1846,7 +1846,7 @@ static struct samsung_usermux exynos7420_usermux_clks[] __initdata = {
 	USERMUX(none, "usermux_sclk_dsd", "top_sclk_dsd", \
 			EXYNOS7420_MUX_SEL_DISP1, 16, \
 			EXYNOS7420_MUX_STAT_DISP1, 16, 0, NULL),
-#ifdef CONFIG_EXYNOS_DECON_DUAL_DSI
+#ifdef CONFIG_EXYNOS_DECON_7420_DUAL_DSI
 	USERMUX(um_decon0_eclk, "usermux_sclk_decon_int_eclk", "top_sclk_decon_int_eclk", \
 			EXYNOS7420_MUX_SEL_DISP1, 28, \
 			EXYNOS7420_MUX_STAT_DISP1, 28, 0, "um_decon0_eclk"),

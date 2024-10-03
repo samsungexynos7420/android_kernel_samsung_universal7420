@@ -443,7 +443,7 @@ struct decon_reg_data {
 	bool				need_update;
 #endif
 	bool				protection[MAX_DECON_WIN];
-#ifdef CONFIG_EXYNOS_DECON_DUAL_DSI
+#ifdef CONFIG_EXYNOS_DECON_7420_DUAL_DSI
 	u32					which_dsi;
 #endif
 };
@@ -476,7 +476,7 @@ struct decon_underrun_stat {
 	unsigned long used_windows;
 };
 
-#ifdef CONFIG_EXYNOS_DECON_DUAL_DSI
+#ifdef CONFIG_EXYNOS_DECON_7420_DUAL_DSI
 typedef enum display_type {
 	DECON_PRIMARY_DISPLAY = 0,
 	DECON_SECONDARY_DISPLAY,
@@ -690,7 +690,7 @@ struct vpp_drm_log {
 	bool protection;
 };
 
-#ifdef CONFIG_EXYNOS_DECON_DUAL_DSI
+#ifdef CONFIG_EXYNOS_DECON_7420_DUAL_DSI
 
 #define WIN_UPDATE_DSI0		0x01
 #define WIN_UPDATE_DSI1		0x02
@@ -1023,7 +1023,7 @@ static inline bool is_any_pending_frames(struct decon_device *decon)
 #define DECON_IOC_LPD_EXIT_LOCK		_IOW('L', 0, u32)
 #define DECON_IOC_LPD_UNLOCK		_IOW('L', 1, u32)
 
-#ifdef CONFIG_EXYNOS_DECON_DUAL_DSI
+#ifdef CONFIG_EXYNOS_DECON_7420_DUAL_DSI
 #define S3CFB_DUAL_DISPLAY_BLANK _IOW('F', 300, \
 				struct dual_blank_data)
 #endif

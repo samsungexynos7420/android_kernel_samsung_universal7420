@@ -908,7 +908,7 @@ int decon_fb_config_eint_for_te(struct platform_device *pdev, struct decon_devic
 	ret = devm_request_irq(dev, gpio, decon_fb_isr_for_eint,
 			  IRQF_TRIGGER_RISING, pdev->name, decon);
 	decon->eint_status = 1;
-#ifdef CONFIG_EXYNOS_DECON_DUAL_DSI
+#ifdef CONFIG_EXYNOS_DECON_7420_DUAL_DSI
 	gpio = of_get_gpio(dev->of_node, 1);
 	if (gpio < 0) {
 		decon_err("failed to get proper gpio number\n");
