@@ -1,6 +1,6 @@
 config EXYNOS_VPP
 	bool "Samsung Exynos Video Post Processor driver"
-	depends on EXYNOS_DECON_DUAL_DISPLAY
+	depends on EXYNOS_DECON_7420_DUAL_DISPLAY
 	depends on !SOC_EXYNOS7580
 	default y
 	help
