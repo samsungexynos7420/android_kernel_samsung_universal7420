@@ -2599,7 +2599,7 @@ static int decon_set_win_buffer(struct decon_device *decon, struct decon_win *wi
 	regs->vidosd_a[win_no] = vidosd_a(win_config->dst.x, win_config->dst.y);
 	regs->vidosd_b[win_no] = vidosd_b(win_config->dst.x, win_config->dst.y,
 			win_config->dst.w, win_config->dst.h);
-#ifdef CONFIG_EXYNOS_DECON_DUAL_DSI
+#ifdef CONFIG_EXYNOS_DECON_7420_DUAL_DSI
 // dst.x : incase of FHD, 0 ~ (1080 -1) -> update for dsi0 (main)
 //                        1080 ~        -> update for dsi1 (sub)
 	if (win_config->dst.x < decon->lcd_info->xres)
@@ -3923,7 +3923,7 @@ err:
 
 
 
-#ifdef CONFIG_EXYNOS_DECON_DUAL_DSI
+#ifdef CONFIG_EXYNOS_DECON_7420_DUAL_DSI
 
 #define DECON_TE_SWAP_DISABLE		0x00
 #define DECON_TE_SWAP_ENABLE		0x01
@@ -4533,7 +4533,7 @@ static int decon_ioctl(struct fb_info *info, unsigned int cmd,
 {
 	struct decon_win *win = info->par;
 	struct decon_device *decon = win->decon;
-#ifdef CONFIG_EXYNOS_DECON_DUAL_DSI
+#ifdef CONFIG_EXYNOS_DECON_7420_DUAL_DSI
 	struct dual_blank_data blank_data;
 #endif
 
@@ -4654,7 +4654,7 @@ static int decon_ioctl(struct fb_info *info, unsigned int cmd,
 		ret = decon_set_hdmi_config(decon, &decon->ioctl_data.hdmi_data);
 		break;
 
-#ifdef CONFIG_EXYNOS_DECON_DUAL_DSI
+#ifdef CONFIG_EXYNOS_DECON_7420_DUAL_DSI
 	case S3CFB_DUAL_DISPLAY_BLANK:
 		if (copy_from_user(&blank_data, 
 				(struct dual_blank_data __user *)arg, sizeof(blank_data))) {

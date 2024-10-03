@@ -1,5 +1,5 @@
 config EXYNOS_DECON_LCD
-	depends on EXYNOS_DECON
+	depends on EXYNOS_DECON_7420
 	bool "Select LCD panel driver"
 
 config EXYNOS_DECON_MDNIE_LITE
