@@ -16,7 +16,7 @@
 
 #include <linux/workqueue.h>
 #include "fastcall.h"
-#include "platforms/EXYNOS_7420_STD/platform.h"
+#include "platform.h"
 
 #define UUID_LENGTH			16
 

@@ -21,7 +21,7 @@
 
 #include "public/mc_linux.h"
 /* Platform specific settings */
-#include "platforms/EXYNOS_7420_STD/platform.h"
+#include "platform.h"
 
 #define MC_VERSION(major, minor) \
 		(((major & 0x0000ffff) << 16) | (minor & 0x0000ffff))
