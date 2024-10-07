@@ -38,8 +38,8 @@
 
 #include "platform.h"
 
-#define MID_CPUFREQ	1700000
-#define STB_CPUFREQ	1700000
+#define MID_CPUFREQ	1704000
+#define STB_CPUFREQ	1704000
 #define MIN_CPUFREQ	800000
 
 #define INT_PERFORMANCE	400000
