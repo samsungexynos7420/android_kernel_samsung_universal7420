@@ -23,7 +23,6 @@
 #include <linux/dma-buf.h>
 #include <linux/ion.h>
 #include <t-base-tui.h>
-#include <linux/ktime.h>
 #include <linux/switch.h>
 #include "decon.h"
 #include "tui_ioctl.h"
@@ -240,20 +239,6 @@ static int fb_tui_protection(void)
 	ret = decon_tui_protection(decon, true);
 	unlock_fb_info(fb_info);
 	return ret;
-
-#if 0 // time check
-	ktime_t start, end;
-	long long ns;
-
-	start = ktime_get();            /* get time stamp before execution */
-#endif
-//	decon_tui_protection(decon, true);
-#if 0 // time check
-	end = ktime_get();              /* get time stamp after execution */
-
-	ns = ktime_to_ns( ktime_sub(end, start) ); /* get the elapsed time in nano-seconds */
-	printk(KERN_INFO "[TIME_CHECK] blank -> Elapsed time %lld ns\n", ns); /* print it on the console */
-#endif
 }
 
 static void set_va_to_decon(u32 va)
