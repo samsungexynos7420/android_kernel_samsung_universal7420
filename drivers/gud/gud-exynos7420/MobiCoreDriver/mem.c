@@ -74,14 +74,14 @@ static int lock_pages(struct task_struct *task, void *virt_start_page_addr,
 
 	/* lock user pages, must hold the mmap_sem to do this. */
 	down_read(&(task->mm->mmap_sem));
-	locked_pages = get_user_pages(
+	locked_pages = __get_user_pages(
 				task,
 				task->mm,
 				(unsigned long)virt_start_page_addr,
 				pages_no,
-				1, /* write access */
-				0,
+				FOLL_TOUCH | FOLL_GET | FOLL_WRITE | FOLL_CMA,
 				pages,
+				NULL,
 				NULL);
 	up_read(&(task->mm->mmap_sem));
 
@@ -607,14 +607,16 @@ int mc_free_mmu_table(struct mc_instance *instance, uint32_t handle)
 		goto err_unlock;
 	}
 
-	/* clean-up in the case of fake L1 table:
+	/*
+	 * Clean-up in the case of fake L1 table:
 	 * we need to unmap all sub-tables and
 	 * the buffer referred by the fake table
 	 */
 	if (table->type&MC_MMU_TABLE_TYPE_WSM_FAKE_L1) {
 		int i = 0;
 		uint64_t *va;
-		/* first and only record of the fake table
+		/*
+		 * first and only record of the fake table
 		 * contains physical address of the buffer
 		 */
 #ifdef LPAE_SUPPORT

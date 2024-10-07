@@ -93,13 +93,20 @@ size_t connection_read_data_msg(struct connection *conn, void *buffer,
 size_t connection_read_datablock(struct connection *conn, void *buffer,
 				 uint32_t len)
 {
-        /*##################################
-        #mobicore_security_team_add
-        ##################################*/
-        return connection_read_data(conn, buffer, len, 1000);
-        /* default timeout is -1, which may cause infinite waiting,
-        so that phone cannot boot. */   
-        /*##################################*/
+        /*##################################                                                        
+
+        #mobicore_security_team_add                                                       
+
+        ##################################*/                                                        
+
+        return connection_read_data(conn, buffer, len, 1000);                                                        
+
+        /* default timeout is -1, which may cause infinite waiting,                                                   
+
+        so that phone cannot boot. */                                                          
+
+        /*##################################*/               
+
 }
 
 size_t connection_read_data(struct connection *conn, void *buffer, uint32_t len,
@@ -125,17 +132,13 @@ size_t connection_read_data(struct connection *conn, void *buffer, uint32_t len,
 			break;
 		}
 
-    /*##################################
-    #mobicore_security_team_add
-    ##################################*/
-    /*if (mutex_lock_interruptible(&(conn->data_lock))) {
-            MCDRV_DBG_ERROR(mc_kapi,
-                            "interrupted reading the data sem");
-            ret = -1;
-            break;
-    }*/
-    mutex_lock(&(conn->data_lock));         
-    /*##################################*/
+		/*if (mutex_lock_interruptible(&(conn->data_lock))) {
+			MCDRV_DBG_ERROR(mc_kapi,
+					"interrupted reading the data sem");
+			ret = -1;
+			break;
+		}*/
+        mutex_lock(&(conn->data_lock));
 
 		/* Have data, use it */
 		if (conn->data_len > 0)
@@ -190,17 +193,13 @@ int connection_process(struct connection *conn, struct sk_buff *skb)
 {
 	int ret = 0;
 	do {
-	  /*##################################
-	  #mobicore_security_team_add
-	  ##################################*/
-    /*if (mutex_lock_interruptible(&(conn->data_lock))) {
-            MCDRV_DBG_ERROR(mc_kapi,
-                            "Interrupted getting data semaphore!");
-            ret = -1;
-            break;
-    }*/
-    mutex_lock(&(conn->data_lock));
-    /*##################################*/
+		/*if (mutex_lock_interruptible(&(conn->data_lock))) {
+			MCDRV_DBG_ERROR(mc_kapi,
+					"Interrupted getting data semaphore!");
+			ret = -1;
+			break;
+		}*/
+        mutex_lock(&(conn->data_lock));
 
 		kfree_skb(conn->skb);
 

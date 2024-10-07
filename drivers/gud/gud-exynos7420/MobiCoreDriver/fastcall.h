@@ -147,25 +147,26 @@ static inline long _smc(void *data)
 		return -EPERM;
 
 	{
-        union fc_generic *fc_generic = data;
-        /* SMC expect values in x0-x3 */
-        register u64 reg0 __asm__("x0") = fc_generic->as_in.cmd;
-        register u64 reg1 __asm__("x1") = fc_generic->as_in.param[0];
+		union fc_generic *fc_generic = data;
+		/* SMC expect values in x0-x3 */
+		register u64 reg0 __asm__("x0") = fc_generic->as_in.cmd;
+		register u64 reg1 __asm__("x1") = fc_generic->as_in.param[0];
 		register u64 reg2 __asm__("x2") = fc_generic->as_in.param[1];
 		register u64 reg3 __asm__("x3") = fc_generic->as_in.param[2];
 
-		/* According to AARCH64 SMC Calling Convention (ARM DEN 0028A),
-		section 3.1 : registers x4-x17 are unpredictable/scratch
-		registers. So we have to make sure that the compiler does not
-		allocate any of those registers by letting him know that the
-		asm code might clobber them */
+		/*
+		 * According to AARCH64 SMC Calling Convention (ARM DEN 0028A),
+		 * section 3.1 : registers x4-x17 are unpredictable/scratch
+		 * registers. So we have to make sure that the compiler does not
+		 * allocate any of those registers by letting him know that the
+		 * asm code might clobber them
+		 */
 		__asm__ volatile (
 			"smc #0\n"
 			: "+r"(reg0), "+r"(reg1), "+r"(reg2), "+r"(reg3) : :
 			"x4", "x5", "x6", "x7", "x8", "x9", "x10", "x11", "x12",
 			"x13", "x14", "x15", "x16", "x17"
 		);
-
 
 		/* set response */
 		fc_generic->as_out.resp     = reg0;
