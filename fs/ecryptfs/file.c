@@ -399,6 +399,12 @@ static int ecryptfs_open(struct inode *inode, struct file *file)
 	struct timespec ts;
 #endif
 
+#if defined(CONFIG_MMC_DW_FMP_ECRYPT_FS) || defined(CONFIG_UFS_FMP_ECRYPT_FS) || defined(CONFIG_SDP)
+	struct ecryptfs_mount_crypt_stat *mount_crypt_stat;
+	mount_crypt_stat = &ecryptfs_superblock_to_private(
+							inode->i_sb)->mount_crypt_stat;
+#endif
+
 	/* Released in ecryptfs_release or end of function if failure */
 	file_info = kmem_cache_zalloc(ecryptfs_file_info_cache, GFP_KERNEL);
 	ecryptfs_set_file_private(file, file_info);
