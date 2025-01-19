@@ -23,8 +23,3 @@ ifeq ($(CONFIG_MALI_T7XX),y)
 		obj-y += t7xx/r22p0/
 	endif
 endif
-ifeq ($(CONFIG_MALI_T72X),y)
-	ifeq ($(CONFIG_MALI_R5P0_T72X),y)
-		obj-y += t72x/r5p0/
-	endif
-endif
