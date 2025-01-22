@@ -598,16 +598,6 @@ config CMA_DEBUG
 	  processing calls such as dma_alloc_from_contiguous().
 	  This option does not affect warning and error messages.
 
-config MIN_DIRTY_THRESH_PAGES
-	int "The lower bound of VM dirty_thresh value in number of pages"
-	default 2560
-	help
-	  Setting this to certain positive number guaranttees
-	  the VM Dirty-Thresh valus is always larger than that value.
-	  It is only effective when dirty_ratio is used. (Setting dirty_bytes
-	  disables this option.)
-	  Do not use it if you unsure.
-
 config MMAP_READAROUND_LIMIT
 	int "Limit mmap readaround upperbound"
 	default 0
