@@ -54,8 +54,8 @@ static inline unsigned long __copy_from_user_nocache(void *to,
 
 #endif		/* ARCH_HAS_NOCACHE_UACCESS */
 
-extern long strncpy_from_unsafe_user(char *dst, const void __user *unsafe_addr,
-				     long count);
+long strncpy_from_user_nofault(char *dst, const void __user *unsafe_addr,
+		long count);
 extern long strnlen_unsafe_user(const void __user *unsafe_addr, long count);
 
 /**
