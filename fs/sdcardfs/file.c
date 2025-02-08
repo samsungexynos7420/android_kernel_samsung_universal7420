@@ -51,7 +51,7 @@ static ssize_t sdcardfs_read(struct file *file, char __user *buf,
 	/* update our inode atime upon a successful lower read */
 	if (err >= 0)
 		fsstack_copy_attr_atime(dentry->d_inode,
-					lower_file->f_path.dentry->d_inode);
+					file_inode(lower_file));
 
 	return err;
 }
@@ -59,7 +59,7 @@ static ssize_t sdcardfs_read(struct file *file, char __user *buf,
 static ssize_t sdcardfs_write(struct file *file, const char __user *buf,
 			    size_t count, loff_t *ppos)
 {
-	int err = 0;
+	int err;
 	struct file *lower_file;
 	struct dentry *dentry = file->f_path.dentry;
 	struct inode *inode = dentry->d_inode;
@@ -76,10 +76,8 @@ static ssize_t sdcardfs_write(struct file *file, const char __user *buf,
 	if (err >= 0) {
 		if (sizeof(loff_t) > sizeof(long))
 			mutex_lock(&inode->i_mutex);
-		fsstack_copy_inode_size(inode,
-				lower_file->f_path.dentry->d_inode);
-		fsstack_copy_attr_times(inode,
-				lower_file->f_path.dentry->d_inode);
+		fsstack_copy_inode_size(inode, file_inode(lower_file));
+		fsstack_copy_attr_times(inode, file_inode(lower_file));
 		if (sizeof(loff_t) > sizeof(long))
 			mutex_unlock(&inode->i_mutex);
 	}
@@ -100,7 +98,7 @@ static int sdcardfs_readdir(struct file *file, struct dir_context *ctx)
 	file->f_pos = lower_file->f_pos;
 	if (err >= 0)		/* copy the atime */
 		fsstack_copy_attr_atime(dentry->d_inode,
-					lower_file->f_path.dentry->d_inode);
+					file_inode(lower_file));
 	return err;
 }
 
@@ -298,8 +296,10 @@ static int sdcardfs_flush(struct file *file, fl_owner_t id)
 	struct file *lower_file = NULL;
 
 	lower_file = sdcardfs_lower_file(file);
-	if (lower_file && lower_file->f_op && lower_file->f_op->flush)
+	if (lower_file && lower_file->f_op && lower_file->f_op->flush) {
+		filemap_write_and_wait(file->f_mapping);
 		err = lower_file->f_op->flush(lower_file, id);
+	}
 
 	return err;
 }

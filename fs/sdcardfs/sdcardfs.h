@@ -45,6 +45,8 @@
 #include <linux/security.h>
 #include <linux/string.h>
 #include <linux/list.h>
+#include <linux/ratelimit.h>
+#include <linux/android_aid.h>
 #include "multiuser.h"
 
 /* the file system name */
@@ -82,8 +84,9 @@
  */
 #define fixup_tmp_permissions(x)	\
 	do {						\
-		(x)->i_uid = SDCARDFS_I(x)->data->d_uid;	\
-		(x)->i_gid = AID_SDCARD_RW;	\
+		(x)->i_uid = make_kuid(&init_user_ns,	\
+				SDCARDFS_I(x)->data->d_uid);	\
+		(x)->i_gid = make_kgid(&init_user_ns, AID_SDCARD_RW);	\
 		(x)->i_mode = ((x)->i_mode & S_IFMT) | 0775;\
 	} while (0)
 
@@ -113,6 +116,29 @@ typedef enum {
 	PERM_ANDROID_PACKAGE,
 	/* This node is "/Android/[data|media|obb]/[package]/cache" */
 	PERM_ANDROID_PACKAGE_CACHE,
+	/*
+	 * The knox directory has different uses depending on whether it's
+	 * used for external storage or secondary storage.
+	 *
+	 * 1. external storage
+	 * It's used for Andorid For Work(AFW) to provide SDP feature.
+	 * /mnt/shell/enc_emulated/10 will be bind mounted on it.
+	 *
+	 * 2. Secondary storage(external SD Card)
+	 * Knox doesn't encrypt files in secondary storage. Instead,
+	 * it restricts access to Knox files by DAC.
+	 */
+	/* This node is /knox */
+	PERM_KNOX_PRE_ROOT,
+	/* This node is /knox/[userid] */
+	PERM_KNOX_ROOT,
+	/* This node is /knox/[userid]/Android */
+	PERM_KNOX_ANDROID,
+	/* This node is /knox/[userid]/Android/[data|shared] */
+	PERM_KNOX_ANDROID_DATA,
+	PERM_KNOX_ANDROID_SHARED,
+	/* This node is /knox/[userid]/Android/[data|shared]/[package] */
+	PERM_KNOX_ANDROID_PACKAGE,
 } perm_t;
 
 struct sdcardfs_sb_info;
@@ -166,6 +192,8 @@ struct sdcardfs_inode_data {
 	bool under_android;
 	bool under_cache;
 	bool under_obb;
+
+	bool under_knox;
 };
 
 /* sdcardfs inode data in memory */
@@ -407,6 +435,22 @@ static inline int get_gid(struct vfsmount *mnt,
 	struct sdcardfs_vfsmount_options *vfsopts = mnt->data;
 	struct sdcardfs_sb_info *sbi = SDCARDFS_SB(sb);
 
+	if (data->under_knox) {
+		switch (data->perm) {
+		case PERM_KNOX_PRE_ROOT:
+			return AID_SDCARD_R;
+		case PERM_KNOX_ROOT:
+		case PERM_KNOX_ANDROID:
+		case PERM_KNOX_ANDROID_DATA:
+		case PERM_KNOX_ANDROID_PACKAGE:
+			return multiuser_get_uid(data->userid, AID_SDCARD_R);
+		case PERM_KNOX_ANDROID_SHARED:
+			return AID_SDCARD_RW;
+		default:
+			break;
+		}
+	}
+
 	if (vfsopts->gid == AID_SDCARD_RW && !sbi->options.default_normal)
 		/* As an optimization, certain trusted system components only run
 		 * as owner but operate across all users. Since we're now handing
@@ -443,6 +487,8 @@ static inline int get_mode(struct vfsmount *mnt,
 			visible_mode = visible_mode & ~0006;
 		else
 			visible_mode = visible_mode & ~0007;
+	} else if (data->perm == PERM_KNOX_ANDROID_PACKAGE) {
+		visible_mode = visible_mode & ~0006;
 	}
 	owner_mode = info->lower_inode->i_mode & 0700;
 	filtered_mode = visible_mode & (owner_mode | (owner_mode >> 3) | (owner_mode >> 6));
@@ -552,8 +598,8 @@ static inline int prepare_dir(const char *path_s, uid_t uid, gid_t gid, mode_t m
 		goto out_dput;
 	}
 
-	attrs.ia_uid = uid;
-	attrs.ia_gid = gid;
+	attrs.ia_uid = make_kuid(&init_user_ns, uid);
+	attrs.ia_gid = make_kgid(&init_user_ns, gid);
 	attrs.ia_valid = ATTR_UID | ATTR_GID;
 	mutex_lock(&dent->d_inode->i_mutex);
 	notify_change2(parent.mnt, dent, &attrs);
@@ -581,18 +627,24 @@ static inline int check_min_free_space(struct dentry *dentry, size_t size, int d
 	u64 avail;
 	struct sdcardfs_sb_info *sbi = SDCARDFS_SB(dentry->d_sb);
 
+	if (uid_eq(GLOBAL_ROOT_UID, current_fsuid()) ||
+			capable(CAP_SYS_RESOURCE) ||
+			in_group_p(AID_USE_ROOT_RESERVED) ||
+			in_group_p(AID_USE_SEC_RESERVED))
+		return 1;
+
 	if (sbi->options.reserved_mb) {
 		/* Get fs stat of lower filesystem. */
-		sdcardfs_get_lower_path(dentry, &lower_path);
+		sdcardfs_get_lower_path(dentry->d_sb->s_root, &lower_path);
 		err = vfs_statfs(&lower_path, &statfs);
-		sdcardfs_put_lower_path(dentry, &lower_path);
+		sdcardfs_put_lower_path(dentry->d_sb->s_root, &lower_path);
 
 		if (unlikely(err))
-			return 0;
+			goto out_invalid;
 
 		/* Invalid statfs informations. */
 		if (unlikely(statfs.f_bsize == 0))
-			return 0;
+			goto out_invalid;
 
 		/* if you are checking directory, set size to f_bsize. */
 		if (unlikely(dir))
@@ -603,15 +655,34 @@ static inline int check_min_free_space(struct dentry *dentry, size_t size, int d
 
 		/* not enough space */
 		if ((u64)size > avail)
-			return 0;
+			goto out_nospc;
 
 		/* enough space */
 		if ((avail - size) > (sbi->options.reserved_mb * 1024 * 1024))
 			return 1;
 
-		return 0;
+		goto out_nospc;
 	} else
 		return 1;
+
+out_invalid:
+	pr_info("sdcardfs: statfs error  : %d\n", err);
+	pr_info("sdcardfs: f_type        : 0x%X\n", (u32) statfs.f_type);
+	pr_info("sdcardfs: f_blocks      : %llu blocks\n", statfs.f_blocks);
+	pr_info("sdcardfs: f_bfree       : %llu blocks\n", statfs.f_bfree);
+	pr_info("sdcardfs: f_files       : %llu\n", statfs.f_files);
+	pr_info("sdcardfs: f_ffree       : %llu\n", statfs.f_ffree);
+	pr_info("sdcardfs: f_fsid.val[1] : 0x%X\n", (u32) statfs.f_fsid.val[1]);
+	pr_info("sdcardfs: f_fsid.val[0] : 0x%X\n", (u32) statfs.f_fsid.val[0]);
+	pr_info("sdcardfs: f_namelen     : %ld\n", statfs.f_namelen);
+	pr_info("sdcardfs: f_frsize      : %ld\n", statfs.f_frsize);
+	pr_info("sdcardfs: f_flags       : %ld\n", statfs.f_flags);
+	pr_info("sdcardfs: reserved_mb   : %u\n", sbi->options.reserved_mb);
+
+out_nospc:
+	pr_info_ratelimited("sdcardfs: f_bavail: %llu f_bsize: %ld required: %llu\n",
+		statfs.f_bavail, statfs.f_bsize, (u64) size);
+	return 0;
 }
 
 /*
@@ -620,11 +691,10 @@ static inline int check_min_free_space(struct dentry *dentry, size_t size, int d
  */
 static inline void sdcardfs_copy_and_fix_attrs(struct inode *dest, const struct inode *src)
 {
-
 	dest->i_mode = (src->i_mode  & S_IFMT) | S_IRWXU | S_IRWXG |
 			S_IROTH | S_IXOTH; /* 0775 */
-	dest->i_uid = SDCARDFS_I(dest)->data->d_uid;
-	dest->i_gid = AID_SDCARD_RW;
+	dest->i_uid = make_kuid(&init_user_ns, SDCARDFS_I(dest)->data->d_uid);
+	dest->i_gid = make_kgid(&init_user_ns, AID_SDCARD_RW);
 	dest->i_rdev = src->i_rdev;
 	dest->i_atime = src->i_atime;
 	dest->i_mtime = src->i_mtime;
