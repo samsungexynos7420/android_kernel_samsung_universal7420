@@ -267,6 +267,9 @@ DHDCFLAGS += -DSUPPORT_RANDOM_MAC_SCAN
 
 DHDCFLAGS += -DDHD_SET_COUNTRY_SUPPORT
 
+# Arbitrarily set version to this to allow /vendor firmware path
+DHDCFLAGS += -DANDROID_PLATFORM_VERSION=9
+
 ##############################
 # Android Platform Definition
 ##############################

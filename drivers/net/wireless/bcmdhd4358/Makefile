@@ -217,6 +217,9 @@ DHDCFLAGS += -DDHD_BLOB_EXISTENCE_CHECK
 # By-pass Android Version Check from Platform source
 DHDCFLAGS += -DDHD_SET_COUNTRY_SUPPORT
 
+# Arbitrarily set version to this to allow /vendor firmware path
+DHDCFLAGS += -DANDROID_PLATFORM_VERSION=9
+
 ###########
 # Lollipop
 ###########
