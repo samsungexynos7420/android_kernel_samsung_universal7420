@@ -373,6 +373,7 @@ config RKP_DMAP_PROT
 	default n
 	help
 		Prevents unauthorized cred modification.
+
 config RKP_NS_PROT
 	bool "Protection for cred structure"
 	depends on (TIMA_RKP && RKP_KDP)
@@ -391,8 +392,18 @@ config BOARD_ZEROFLTE
 	depends on SOC_EXYNOS7420
 	default n
 
+config BOARD_ZEROFLTE_UNI
+	bool "Samsung Galaxy S6 (F/I/S/K/W8/T)"
+	depends on SOC_EXYNOS7420
+	default n
+
 config BOARD_ZEROLTE
 	bool "Samsung Galaxy S6 Edge"
+	depends on SOC_EXYNOS7420
+	default n
+
+config BOARD_ZEROLTE_UNI
+	bool "Samsung Galaxy S6 Edge (F/I/S/K/W8/T)"
 	depends on SOC_EXYNOS7420
 	default n
 

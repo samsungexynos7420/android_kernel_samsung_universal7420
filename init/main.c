@@ -92,6 +92,12 @@
 #include <linux/rkp_entry.h> 
 #endif //CONFIG_TIMA_RKP
 
+#if (defined(CONFIG_BOARD_ZEROLTE_UNI) || defined(CONFIG_BOARD_ZEROFLTE_UNI))
+#include <linux/variant_detection.h>
+unsigned int model_type = VARDET_UNKNOWN;
+unsigned int variant_aif_required = NO_AIF;
+#endif
+
 static int kernel_init(void *);
 
 extern void init_IRQ(void);
@@ -605,6 +611,22 @@ asmlinkage void __init start_kernel(void)
 
 	printk(KERN_INFO "MDM_LOG - Start Kernel\n");
 	pr_notice("Kernel command line: %s\n", boot_command_line);
+#if (defined(CONFIG_BOARD_ZEROLTE_UNI) || defined(CONFIG_BOARD_ZEROFLTE_UNI))
+	/* Variant Detection */
+	if ((strstr(boot_command_line, "G920T")) || (
+		strstr(boot_command_line, "G925T")) || 
+		(strstr(boot_command_line, "G920W8")) || 
+		(strstr(boot_command_line, "G925W8")) || 
+		(strstr(boot_command_line, "G920P")) || 
+		(strstr(boot_command_line, "G925P")) || 
+		(strstr(boot_command_line, "G928T")) ||
+		(strstr(boot_command_line, "G928W8")) ||
+		(strstr(boot_command_line, "N920T")) ||
+		(strstr(boot_command_line, "N920W8")))
+	{
+		variant_aif_required = HAS_AIF;
+	}
+#endif
 	parse_early_param();
 	parse_args("Booting kernel", static_command_line, __start___param,
 		   __stop___param - __start___param,

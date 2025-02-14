@@ -20,6 +20,8 @@
 #include <linux/wakelock.h>
 #if (defined CONFIG_SWITCH_ANTENNA_EARJACK \
 	 || defined CONFIG_SWITCH_ANTENNA_EARJACK_IF) \
+	 || ((defined CONFIG_BOARD_ZEROFLTE_UNI) \
+	  || (defined CONFIG_BOARD_ZEROLTE_UNI)) \
 	 && (!defined CONFIG_SEC_FACTORY)
 #include <linux/antenna_switch.h>
 #endif
@@ -51,6 +53,10 @@
 #endif
 
 #include <sound/samsung_audio_debugfs.h>
+
+#if (defined(CONFIG_BOARD_ZEROLTE_UNI) || defined(CONFIG_BOARD_ZEROFLTE_UNI))
+#include <linux/variant_detection.h>
+#endif
 
 /* PACIFIC use CLKOUT from AP */
 #define PACIFIC_MCLK_FREQ	24000000
@@ -255,11 +261,17 @@ void pacific_arizona_hpdet_cb(unsigned int meas)
 
 	dev_info(the_codec->dev, "%s(%d) meas(%d)\n", __func__, jack_det, meas);
 
+#if (defined(CONFIG_BOARD_ZEROLTE_UNI) || defined(CONFIG_BOARD_ZEROFLTE_UNI))
+	if (variant_aif_required == NO_AIF)
+		/* Notify jack condition to other devices */
+		antenna_switch_work_earjack(jack_det);
+#else
 #if (defined CONFIG_SWITCH_ANTENNA_EARJACK \
 	 || defined CONFIG_SWITCH_ANTENNA_EARJACK_IF) \
 	 && (!defined CONFIG_SEC_FACTORY)
 	/* Notify jack condition to other devices */
 	antenna_switch_work_earjack(jack_det);
+#endif
 #endif
 
 	num_hp_gain_table = (int) ARRAY_SIZE(hp_gain_table);
@@ -297,6 +309,19 @@ void pacific_update_impedance_table(struct device_node *np)
 	if (!the_codec)
 		return;
 
+#if (defined(CONFIG_BOARD_ZEROLTE_UNI) || defined(CONFIG_BOARD_ZEROFLTE_UNI))
+	if (variant_aif_required == HAS_AIF) {
+		if (!of_property_read_u32_array(np, "imp_table", data, (len * 3))) {
+			dev_info(the_codec->dev, "%s: data from DT\n", __func__);
+
+			for (i = 0; i < len; i++) {
+				hp_gain_table[i].min = data[i * 3];
+				hp_gain_table[i].max = data[(i * 3) + 1];
+				hp_gain_table[i].gain = data[(i * 3) + 2];
+			}
+		}
+	}
+#else
 	if (!of_property_read_u32_array(np, "imp_table", data, (len * 3))) {
 		dev_info(the_codec->dev, "%s: data from DT\n", __func__);
 
@@ -306,6 +331,7 @@ void pacific_update_impedance_table(struct device_node *np)
 			hp_gain_table[i].gain = data[(i * 3) + 2];
 		}
 	}
+#endif
 
 	if (!of_property_read_u32(np, "imp_shift", &shift)) {
 		dev_info(the_codec->dev, "%s: shift = %d\n", __func__, shift);
@@ -1560,9 +1586,19 @@ static int pacific_of_get_pdata(struct snd_soc_card *card)
 	priv->seamless_voicewakeup =
 		of_property_read_bool(pdata_np, "seamless_voicewakeup");
 
+#if (defined(CONFIG_BOARD_ZEROLTE_UNI) || defined(CONFIG_BOARD_ZEROFLTE_UNI))
+	if (variant_aif_required == HAS_AIF) {
+		of_property_read_u32_array(pdata_np, "aif_format",
+			priv->aif_format, ARRAY_SIZE(priv->aif_format));
+		of_property_read_u32_array(pdata_np, "aif_format_tdm",
+			priv->aif_format_tdm, ARRAY_SIZE(priv->aif_format_tdm));
+	} else {
+#else
 	ret = of_property_read_u32_array(pdata_np, "aif_format",
 			priv->aif_format, ARRAY_SIZE(priv->aif_format));
+
 	if (ret == -EINVAL) {
+#endif
 		priv->aif_format[0] =  SND_SOC_DAIFMT_I2S
 					| SND_SOC_DAIFMT_NB_NF
 					| SND_SOC_DAIFMT_CBM_CFM;
@@ -1574,8 +1610,10 @@ static int pacific_of_get_pdata(struct snd_soc_card *card)
 					| SND_SOC_DAIFMT_CBM_CFM;
 	}
 
+#if (!defined(CONFIG_BOARD_ZEROLTE_UNI) || !defined(CONFIG_BOARD_ZEROFLTE_UNI))
 	of_property_read_u32_array(pdata_np, "aif_format_tdm",
 			priv->aif_format_tdm, ARRAY_SIZE(priv->aif_format_tdm));
+#endif
 
 	return 0;
 }
