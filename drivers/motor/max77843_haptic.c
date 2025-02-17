@@ -36,6 +36,8 @@
 #define MAX77843_REG_MAINCTRL1_MREN		(1 << 3)
 #define MAX77843_REG_MAINCTRL1_BIASEN		(1 << 7)
 
+#define VIB_BUFSIZE			100
+
 static struct device *motor_dev;
 
 struct max77843_haptic_data {
@@ -353,7 +355,8 @@ static ssize_t store_period(struct device *dev,
 static ssize_t show_duty_period(struct device *dev,
 			struct device_attribute *attr, char *buf)
 {
-	return sprintf(buf, "duty: %u, period%u\n", g_hap_data->pdata->duty,
+	return sprintf(buf, VIB_BUFSIZE, "duty: %u, period%u\n",
+						g_hap_data->pdata->duty,
 						g_hap_data->pdata->period);
 }
 
@@ -413,8 +416,7 @@ static ssize_t intensity_show(struct device *dev,
 	struct max77843_haptic_data *drvdata
 		= container_of(tdev, struct max77843_haptic_data, tout_dev);
 
-	return sprintf(buf, "%u\n",
-			drvdata->intensity);
+	return sprintf(buf, VIB_BUFSIZE, "%u\n", drvdata->intensity);
 }
 
 static DEVICE_ATTR(intensity, 0660, intensity_show, intensity_store);
