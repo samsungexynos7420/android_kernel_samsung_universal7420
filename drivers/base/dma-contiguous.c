@@ -521,7 +521,7 @@ int dma_contiguous_isolate(struct device *dev)
 
 	if (cma->isolated) {
 		mutex_unlock(&cma_mutex);
-		dev_err(dev, "Alread isolated!\n");
+		dev_err(dev, "Already isolated!\n");
 		return 0;
 	}
 

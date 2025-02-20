@@ -569,6 +569,20 @@ config SWAP_ENABLE_READAHEAD
 	  also paged in expecting those pages will be used in near future.
 	  This behaviour is good at disk-based system, but not on in-memory
 	  compression (e.g. zram).
+	  
+config MMAP_READAROUND_LIMIT
+	int "Limit mmap readaround upperbound"
+	default 0
+	help
+	  Inappropriate mmap readaround size can hurt device performance
+	  during the sluggish situation. Add the hard upper-limit for
+	  mmap readaround.
+
+config LARGE_DIRTY_BUFFER
+	bool "Use large dirty_threshold value"
+	default n
+	help
+	  If unsure, say N to use kernel default value
 
 config GENERIC_EARLY_IOREMAP
 	bool
@@ -598,13 +612,12 @@ config CMA_DEBUG
 	  processing calls such as dma_alloc_from_contiguous().
 	  This option does not affect warning and error messages.
 
-config MMAP_READAROUND_LIMIT
-	int "Limit mmap readaround upperbound"
-	default 0
+config CMA_PINPAGE_MIGRATION
+	bool "CMA pinned page migration (EXPERIMENTAL)"
+	depends on CMA
+	default n
 	help
-	  Inappropriate mmap readaround size can hurt device performance
-	  during the sluggish situation. Add the hard upper-limit for
-	  mmap readaround.
+	  Turns on cma page migration for pinned page.
 
 config BALANCE_ANON_FILE_RECLAIM
 	bool "During reclaim treat anon and file backed pages equally"
