@@ -420,8 +420,12 @@ static ssize_t isolated_show(struct device *dev,
 
 static int exynos_ion_isolate_thread(void *p)
 {
+	pr_info("%s: enter (%s)\n", __func__, dev_name(p));
+
 	if (dma_contiguous_isolate(p) != 0)
 		dev_err(p, "Failed to isolate\n");
+
+	pr_info("%s: completed (%s)\n", __func__, dev_name(p));
 
 	flush_all_cpu_caches();
 
