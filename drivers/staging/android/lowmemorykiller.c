@@ -40,13 +40,14 @@
 #include <linux/swap.h>
 #include <linux/rcupdate.h>
 #include <linux/notifier.h>
+#include <linux/mutex.h>
 #include <linux/delay.h>
+#include <linux/swap.h>
 
 #ifdef CONFIG_SEC_OOM_KILLER
 #define MULTIPLE_OOM_KILLER
 #define OOM_COUNT_READ
 #endif
-
 
 #ifdef OOM_COUNT_READ
 static uint32_t oom_count = 0;
@@ -55,7 +56,6 @@ static uint32_t oom_count = 0;
 #ifdef MULTIPLE_OOM_KILLER
 #define OOM_DEPTH 5
 #endif
-
 
 static uint32_t lowmem_debug_level = 1;
 static short lowmem_adj[6] = {
@@ -86,6 +86,22 @@ static unsigned long lowmem_deathpending_timeout;
 extern u64 zswap_pool_pages;
 extern atomic_t zswap_stored_pages;
 #endif
+
+static int test_task_flag(struct task_struct *p, int flag)
+{
+	struct task_struct *t = p;
+
+	do {
+		task_lock(t);
+		if (test_tsk_thread_flag(t, flag)) {
+			task_unlock(t);
+			return 1;
+		}
+		task_unlock(t);
+	} while_each_thread(p, t);
+
+	return 0;
+}
 
 static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 {
@@ -134,6 +150,7 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 	if (sc->nr_to_scan <= 0 || min_score_adj == OOM_SCORE_ADJ_MAX + 1) {
 		lowmem_print(5, "lowmem_shrink %lu, %x, return %d\n",
 			     sc->nr_to_scan, sc->gfp_mask, rem);
+
 		return rem;
 	}
 	selected_oom_score_adj = min_score_adj;
@@ -146,17 +163,22 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 		if (tsk->flags & PF_KTHREAD)
 			continue;
 
+#if defined(CONFIG_ARM) || defined(CONFIG_ARM64)
+		if (test_task_flag(tsk, TIF_MEMALLOC))
+			continue;
+#endif
+
 		p = find_lock_task_mm(tsk);
 		if (!p)
 			continue;
 
 		if (test_tsk_thread_flag(p, TIF_MEMDIE) &&
 		    time_before_eq(jiffies, lowmem_deathpending_timeout)) {
-			task_unlock(p);
-			rcu_read_unlock();
-			/* give the system time to free up the memory */
-			msleep_interruptible(20);
-			return 0;
+				task_unlock(p);
+				rcu_read_unlock();
+				/* give the system time to free up the memory */
+				msleep_interruptible(20);
+				return 0;
 		}
 		oom_score_adj = p->signal->oom_score_adj;
 		if (oom_score_adj < min_score_adj) {
@@ -175,6 +197,8 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 
 		task_unlock(p);
 		if (tasksize <= 0)
+			continue;
+		if (same_thread_group(p, current))
 			continue;
 		if (selected) {
 			if (oom_score_adj < selected_oom_score_adj)
@@ -216,6 +240,7 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 	} else {
 		rcu_read_unlock();
 	}
+
 	lowmem_print(4, "lowmem_shrink %lu, %x, return %d\n",
 		     sc->nr_to_scan, sc->gfp_mask, rem);
 	return rem;
