@@ -33,7 +33,7 @@
 #include <linux/irq.h>
 #include <linux/suspend.h>
 
-#include <mach/secos_booster.h>
+#include <secos_booster.h>
 #include <mach/cpufreq.h>
 
 #include "platform.h"
