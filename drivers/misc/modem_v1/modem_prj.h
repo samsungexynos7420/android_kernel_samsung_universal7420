@@ -41,7 +41,7 @@
 #include "modem_pm.h"
 
 /*#ifndef CONFIG_SAMSUNG_PRODUCT_SHIP*/
-#define DEBUG_MODEM_IF
+// #define DEBUG_MODEM_IF
 #include <trace/events/modem_if.h>
 /*#endif*/
 
