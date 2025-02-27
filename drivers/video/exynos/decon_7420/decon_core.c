@@ -898,7 +898,7 @@ static u32 decon_get_bw(struct decon_device *decon,
 	struct decon_win *win;
 	u32 vclk_rate = (u32) (clk_get_rate(decon->res.vclk) / KHZ);
 	struct decon_win_config *win_cfg;
-	u32 format_in_bytes = 4;
+	u32 format_in_bytes = 8;
 	u32 bw, dma_bw, dmaX_bw, dma0_bw = 0, dma1_bw = 0;
 	struct decon_rect dma1_r1, dma1_r2;
 	int dma0_overlap_cnt = 0;
@@ -970,9 +970,11 @@ static u32 decon_get_bw(struct decon_device *decon,
 // 		regs->disp_bw = max(regs->disp_bw, (u32)167000);
 		decon_dbg("vclk_rate %d bw %d format_in_bytes %d,"
 			"win_overlap_cnt %d,"
-			"dma0_bw %d dma1_bw %d int_bw %d disp_bw %d\n",
+			"dma0_bw %d dma1_bw %d int_bw %d disp_bw %d\n"
+			"dma0Over %d dma1Over %d",
 			vclk_rate, bw, format_in_bytes, regs->win_overlap_cnt,
-				dma0_bw, dma1_bw, regs->int_bw, regs->disp_bw);
+				dma0_bw, dma1_bw, regs->int_bw, regs->disp_bw,
+				dma0_overlap_cnt, dma1_overlap_cnt);
 	} else {
 		bw = vclk_rate * format_in_bytes;
 	}
@@ -3129,13 +3131,13 @@ static void decon_set_vpp_min_lock_early(struct decon_device *decon,
 						VPP_SET_MIN_INT,
 						&regs->vpp_config[i]);
 				}
-				
-			if (decon->disp_cur > decon->disp_prev) {
-				SYSTRACE_C_BEGIN("pm_qos_update_request");
-				pm_qos_update_request(&decon->disp_qos, decon->disp_cur);
-				pm_qos_update_request(&decon->int_qos, decon->disp_cur);
-				SYSTRACE_C_FINISH("pm_qos_update_request");
-			}
+					
+				if (decon->disp_cur > decon->disp_prev) {
+					SYSTRACE_C_BEGIN("pm_qos_update_request");
+					pm_qos_update_request(&decon->disp_qos, decon->disp_cur);
+					pm_qos_update_request(&decon->int_qos, decon->disp_cur);
+					SYSTRACE_C_FINISH("pm_qos_update_request");
+				}
 			}
 		}
 	}
