@@ -899,7 +899,7 @@ static u32 decon_get_bw(struct decon_device *decon,
 	u32 vclk_rate = (u32) (clk_get_rate(decon->res.vclk) / KHZ);
 	struct decon_win_config *win_cfg;
 	u32 format_in_bytes = 4;
-	u32 bw, dma_bw, dma0_bw = 0, dma1_bw = 0;
+	u32 bw, dma_bw, dmaX_bw, dma0_bw = 0, dma1_bw = 0;
 	struct decon_rect dma1_r1, dma1_r2;
 	int dma0_overlap_cnt = 0;
 	int dma1_overlap_cnt = 0;
@@ -963,10 +963,11 @@ static u32 decon_get_bw(struct decon_device *decon,
 		bw = vclk_rate * 2 * format_in_bytes * regs->win_overlap_cnt;
 		dma0_bw = vclk_rate * 2 * format_in_bytes * dma0_overlap_cnt;
 		dma1_bw = vclk_rate * 2 * format_in_bytes * dma1_overlap_cnt;
-		dma_bw = max(dma0_bw, dma1_bw);
+		dmaX_bw = max(dma0_bw, dma1_bw);
+		dma_bw = max(dmaX_bw, bw);
 		regs->int_bw = (dma_bw * 100) / (DECON_INT_UTIL * 16);
 		regs->disp_bw = (dma_bw * 100) / (DISP_UTIL * 16);
-		regs->disp_bw = max(regs->disp_bw, (u32)167000);
+// 		regs->disp_bw = max(regs->disp_bw, (u32)167000);
 		decon_dbg("vclk_rate %d bw %d format_in_bytes %d,"
 			"win_overlap_cnt %d,"
 			"dma0_bw %d dma1_bw %d int_bw %d disp_bw %d\n",
@@ -1331,8 +1332,6 @@ int decon_tui_protection(struct decon_device *decon, bool tui_en)
 						decon->default_bw, 0);
 
 		SYSTRACE_C_BEGIN( "pm_qos_update_request" );
-		pm_qos_update_request(&decon->disp_qos, 167000);
-		pm_qos_update_request(&decon->int_qos, 167000);
 		pm_qos_update_request(&decon->mif_qos, 543000);
 		SYSTRACE_C_FINISH( "pm_qos_update_request" );
 	}
@@ -3130,6 +3129,13 @@ static void decon_set_vpp_min_lock_early(struct decon_device *decon,
 						VPP_SET_MIN_INT,
 						&regs->vpp_config[i]);
 				}
+				
+			if (decon->disp_cur > decon->disp_prev) {
+				SYSTRACE_C_BEGIN("pm_qos_update_request");
+				pm_qos_update_request(&decon->disp_qos, decon->disp_cur);
+				pm_qos_update_request(&decon->int_qos, decon->disp_cur);
+				SYSTRACE_C_FINISH("pm_qos_update_request");
+			}
 			}
 		}
 	}
@@ -3160,9 +3166,51 @@ static void decon_set_vpp_min_lock_lately(struct decon_device *decon,
 
 				vpp->prev_bw = vpp->cur_bw;
 				vpp->prev_int = vpp->cur_int;
+				
+			if (decon->disp_cur < decon->disp_prev) {
+				SYSTRACE_C_BEGIN("pm_qos_update_request");
+				pm_qos_update_request(&decon->disp_qos, decon->disp_cur);
+				pm_qos_update_request(&decon->int_qos, decon->disp_cur);
+				SYSTRACE_C_FINISH("pm_qos_update_request");
+			}
+			decon->disp_prev = decon->disp_cur;
 			}
 		}
 	}
+}
+
+
+
+void decon_set_vpp_disp_min_lock(struct decon_device *decon,
+		struct decon_reg_data *regs)
+{
+	int i = 0;
+	u64 disp_bw[4] = {0, 0, 0, 0};
+	u64 disp_max_bw = 0;
+	struct v4l2_subdev *sd = NULL;
+
+	for (i = 0; i < decon->pdata->max_win; i++) {
+		struct decon_win *win = decon->windows[i];
+		if (is_vpp_type(regs->vpp_config[i].idma_type)) {
+		if (decon->vpp_usage_bitmask & (1 << win->vpp_id)) {
+			struct vpp_dev *vpp;
+			sd = decon->mdev->vpp_sd[win->vpp_id];
+			vpp = v4l2_get_subdevdata(sd);
+
+			if((vpp->id == 0) || (vpp->id == 1))
+				disp_bw[0] = disp_bw[0] + vpp->cur_int;
+			if((vpp->id == 2) || (vpp->id == 3))
+				disp_bw[1] = disp_bw[1] + vpp->cur_int;
+		}
+		}
+	}
+
+	disp_max_bw = disp_bw[0];
+	for (i = 0; i < 4; i++) {
+		if (disp_max_bw < disp_bw[i])
+			disp_max_bw = disp_bw[i];
+	}
+	decon->disp_cur = disp_max_bw;
 }
 
 #if defined(CONFIG_DECON_DEVFREQ)
@@ -3829,6 +3877,7 @@ static void decon_update_regs(struct decon_device *decon, struct decon_reg_data 
 	decon_set_qos(decon, regs, 0);
 	decon_check_vpp_used(decon, regs);
 	decon_get_vpp_min_lock(decon, regs);
+	decon_set_vpp_disp_min_lock(decon, regs);
 	decon_set_vpp_min_lock_early(decon, regs);
 
 	DISP_SS_EVENT_LOG_WINCON(&decon->sd, regs);
