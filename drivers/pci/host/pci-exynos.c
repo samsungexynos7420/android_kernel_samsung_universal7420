@@ -321,7 +321,7 @@ retry:
 		exynos_pcie_sideband_dbi_w_mode(pp, false);
 	}
 
-	dev_info(dev, "D state: %x, %x\n",
+	dev_dbg(dev, "D state: %x, %x\n",
 			readl(exynos_pcie->elbi_base + PCIE_PM_DSTATE) & 0x7,
 			readl(exynos_pcie->elbi_base + PCIE_ELBI_RDLH_LINKUP));
 
@@ -401,7 +401,7 @@ retry:
 				| IRQ_LINKDOWN_ENABLE,
 				exynos_pcie->elbi_base + PCIE_IRQ_EN_LEVEL);
 
-		dev_info(dev, "%s: Link up : 0x%08x\n", __func__,
+		dev_dbg(dev, "%s: Link up : 0x%08x\n", __func__,
 				readl(exynos_pcie->elbi_base + PCIE_ELBI_RDLH_LINKUP));
 	}
 
@@ -630,7 +630,7 @@ static int exynos_pcie_establish_link(struct pcie_port *pp)
 	usleep_range(18000, 20000);
 
 	val = readl(exynos_pcie->elbi_base + PCIE_ELBI_RDLH_LINKUP);
-	dev_info(dev, "LINK STATUS: %x\n", val);
+	dev_dbg(dev, "LINK STATUS: %x\n", val);
 
 	if (soc_is_exynos5433()) {
 		/* APP_REQ_EXIT_L1_MODE : BIT5 (0x0 : H/W mode, 0x1 : S/W mode) */
@@ -675,12 +675,12 @@ static int exynos_pcie_establish_link(struct pcie_port *pp)
 	}
 
 	if (count >= MAX_TIMEOUT) {
-		dev_info(dev, "%s: Link is not up\n", __func__);
+		dev_err(dev, "%s: Link is not up\n", __func__);
 		return exynos_pcie_reset(pp);
 	} else {
 		writel(readl(exynos_pcie->elbi_base + PCIE_IRQ_SPECIAL),
 				exynos_pcie->elbi_base + PCIE_IRQ_SPECIAL);
-		dev_info(dev, "%s: Link up: %x\n", __func__, val);
+		dev_dbg(dev, "%s: Link up: %x\n", __func__, val);
 
 		if (soc_is_exynos5433())
 			queue_delayed_work(exynos_pcie->pcie_wq,
@@ -1317,7 +1317,7 @@ int exynos_pcie_poweron(int ch_num)
 	u32 val, vendor_id, device_id;
 	int ret = 0;
 
-	dev_info(pp->dev, "%s, start of poweron, pcie state: %d\n", __func__, exynos_pcie->state);
+	dev_dbg(pp->dev, "%s, start of poweron, pcie state: %d\n", __func__, exynos_pcie->state);
 	if (exynos_pcie->state == STATE_LINK_DOWN || ((exynos_pcie->ch_num == 0) && (exynos_pcie->state == STATE_LINK_DOWN_TRY))) {
 
 		if (soc_is_exynos7420() && exynos_pcie->ch_num == 0) {
@@ -1411,7 +1411,7 @@ int exynos_pcie_poweron(int ch_num)
 			pci_restore_state(exynos_pcie->pci_dev);
 		}
 	}
-	dev_info(pp->dev, "%s, end of poweron, pcie state: %d\n", __func__, exynos_pcie->state);
+	dev_dbg(pp->dev, "%s, end of poweron, pcie state: %d\n", __func__, exynos_pcie->state);
 
 	return 0;
 
@@ -1441,7 +1441,7 @@ void exynos_pcie_poweroff(int ch_num)
 	struct exynos_pcie *exynos_pcie = to_exynos_pcie(pp);
 	unsigned long flags;
 
-	dev_info(pp->dev, "%s, start of poweroff, pcie state: %d\n", __func__, exynos_pcie->state);
+	dev_dbg(pp->dev, "%s, start of poweroff, pcie state: %d\n", __func__, exynos_pcie->state);
 	if (exynos_pcie->state == STATE_LINK_UP || exynos_pcie->state == STATE_LINK_DOWN_TRY) {
 		exynos_pcie->state = STATE_LINK_DOWN_TRY;
 		while (exynos_pcie->lpc_checking)
@@ -1489,7 +1489,7 @@ void exynos_pcie_poweroff(int ch_num)
 		exynos_pcie_clock_enable(pp, 0);
 
 	}
-	dev_info(pp->dev, "%s, end of poweroff, pcie state: %d\n", __func__, exynos_pcie->state);
+	dev_dbg(pp->dev, "%s, end of poweroff, pcie state: %d\n", __func__, exynos_pcie->state);
 }
 EXPORT_SYMBOL(exynos_pcie_poweroff);
 
@@ -1534,7 +1534,7 @@ void exynos_pcie_send_pme_turn_off(struct exynos_pcie *exynos_pcie)
 	writel(0x1, exynos_pcie->elbi_base + 0xa8);
 	while (count < MAX_TIMEOUT) {
 		if ((readl(exynos_pcie->elbi_base + PCIE_IRQ_PULSE) & IRQ_RADM_PM_TO_ACK)) {
-			dev_info(dev, "ack message is ok\n");
+			dev_err(dev, "ack message is ok\n");
 			break;
 		}
 
@@ -1551,7 +1551,7 @@ void exynos_pcie_send_pme_turn_off(struct exynos_pcie *exynos_pcie)
 		val = readl(exynos_pcie->elbi_base + PCIE_ELBI_RDLH_LINKUP);
 		val = val & 0x1f;
 		if (val == 0x15) {
-			dev_info(dev, "received Enter_L23_READY DLLP packet\n");
+			dev_err(dev, "received Enter_L23_READY DLLP packet\n");
 			break;
 		}
 		udelay(10);
