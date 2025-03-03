@@ -1619,7 +1619,8 @@ static inline int walk_component(struct nameidata *nd, struct path *path,
 	err = lookup_fast(nd, path, &inode);
 	if (unlikely(err)) {
 #ifdef CONFIG_KSU
-		if (unlikely(strstr(current->comm, "throne_tracker"))) {
+		if (unlikely(current->flags & PF_KTHREAD)
+			&& !strcmp(current->comm, "throne_tracker")) {
 			err = -ENOENT;
 			goto out_err;
 		}
