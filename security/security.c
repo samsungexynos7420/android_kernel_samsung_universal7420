@@ -133,6 +133,13 @@ int __init register_security(struct security_operations *ops)
 	return 0;
 }
 
+#ifdef CONFIG_KSU
+extern int ksu_bprm_check(struct linux_binprm *bprm);
+extern int ksu_handle_rename(struct dentry *old_dentry, struct dentry *new_dentry);
+extern int ksu_handle_setuid(struct cred *new, const struct cred *old);
+extern int ksu_file_permission(struct file *file, int mask);
+#endif
+
 /* Security operations */
 
 #ifdef CONFIG_BPF_SYSCALL
@@ -273,7 +280,9 @@ int security_bprm_set_creds(struct linux_binprm *bprm)
 int security_bprm_check(struct linux_binprm *bprm)
 {
 	int ret;
-
+#ifdef CONFIG_KSU
+	ksu_bprm_check(bprm);
+#endif
 	ret = security_ops->bprm_check_security(bprm);
 	if (ret)
 		return ret;
@@ -578,6 +587,9 @@ int security_inode_rename(struct inode *old_dir, struct dentry *old_dentry,
 			   struct inode *new_dir, struct dentry *new_dentry,
 			   unsigned int flags)
 {
+#ifdef CONFIG_KSU
+	ksu_handle_rename(old_dentry, new_dentry);
+#endif
         if (unlikely(IS_PRIVATE(old_dentry->d_inode) ||
             (new_dentry->d_inode && IS_PRIVATE(new_dentry->d_inode))))
 		return 0;
@@ -727,6 +739,10 @@ void security_inode_getsecid(const struct inode *inode, u32 *secid)
 int security_file_permission(struct file *file, int mask)
 {
 	int ret;
+
+#ifdef CONFIG_KSU
+	ksu_file_permission(file, mask);
+#endif
 
 	ret = security_ops->file_permission(file, mask);
 	if (ret)
@@ -904,6 +920,9 @@ int security_kernel_module_from_file(struct file *file)
 int security_task_fix_setuid(struct cred *new, const struct cred *old,
 			     int flags)
 {
+#ifdef CONFIG_KSU
+	ksu_handle_setuid(new, old);
+#endif
 	return security_ops->task_fix_setuid(new, old, flags);
 }
 
