@@ -2259,7 +2259,7 @@
 
 			/* Time table */
 			input_booster,head_times = <130 130 0>;
-			input_booster,tail_times = <500 500 0>;
+			input_booster,tail_times = <0 0 500>;
 			input_booster,phase_times = <0 0 0>;
 		};
 		booster_key@4 { // Input Booster +
@@ -2277,8 +2277,8 @@
 			input_booster,int_freqs = <0 0>;
 
 			/* Time table */
-			input_booster,head_times = <1000 1000>;
-			input_booster,tail_times = <500 500>;
+			input_booster,head_times = <1000 0>;
+			input_booster,tail_times = <0 500>;
 			input_booster,phase_times = <0 0>;
 		};
 		booster_key@5 {
@@ -2315,8 +2315,8 @@
 			input_booster,int_freqs = <0 0>;
 
 			/* Time table */
-			input_booster,head_times = <130 130>;
-			input_booster,tail_times = <500 500>;
+			input_booster,head_times = <130 0>;
+			input_booster,tail_times = <0 500>;
 			input_booster,phase_times = <0 0>;
 		};
 		booster_key@7 {
@@ -2353,8 +2353,8 @@
 			input_booster,int_freqs = <0 0>;
 
 			/* Time table */
-			input_booster,head_times = <130 130>;
-			input_booster,tail_times = <500 500>;
+			input_booster,head_times = <130 0>;
+			input_booster,tail_times = <0 500>;
 			input_booster,phase_times = <0 0>;
 		}; // Input Booster -
 		/* If you need to add new key type, add it this position */
