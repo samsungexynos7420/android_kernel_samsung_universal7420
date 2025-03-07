@@ -90,7 +90,7 @@ $(info -- KernelSU/compat: newer kernel_write found)
 ccflags-y += -DKSU_NEW_KERNEL_WRITE
 endif
 
-ccflags-y += -Wno-implicit-function-declaration -Wno-strict-prototypes -Wno-int-conversion -Wno-gcc-compat
+ccflags-y += -Wno-implicit-function-declaration -Wno-strict-prototypes
 ccflags-y += -Wno-declaration-after-statement -Wno-unused-function
 
 # Keep a new line here!! Because someone may append config
