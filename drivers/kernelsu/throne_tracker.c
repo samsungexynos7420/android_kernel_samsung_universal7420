@@ -382,7 +382,7 @@ static void track_throne_function()
 	};
 	
 	if (IS_ERR(fp)) {
-		pr_err("%s: open " SYSTEM_PACKAGES_LIST_PATH " failed: %ld\n", __func__, PTR_ERR(fp));
+		pr_err("%s: open " SYSTEM_PACKAGES_LIST_PATH " failed: %ld\n", __func__, (int)PTR_ERR(fp));
 		return;
 	} else
 		pr_info("%s: %s found!\n", __func__, SYSTEM_PACKAGES_LIST_PATH);
