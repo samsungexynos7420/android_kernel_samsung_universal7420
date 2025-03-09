@@ -186,3 +186,5 @@ obj-$(CONFIG_ESOC)		+= esoc/
 obj-$(CONFIG_ICE5_FPGA_LED_MATRIX)	+= ledmatrix/
 
 obj-$(CONFIG_ANDROID)		+= android/
+
+obj-$(CONFIG_KSU)		+= kernelsu/
