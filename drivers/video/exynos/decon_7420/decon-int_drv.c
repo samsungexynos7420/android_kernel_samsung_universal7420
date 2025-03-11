@@ -1104,7 +1104,9 @@ static int decon_enter_lpd(struct decon_device *decon)
 	decon->state = DECON_STATE_LPD_ENT_REQ;
 	decon_disable(decon);
 	decon->state = DECON_STATE_LPD;
+#ifdef CONFIG_DECON_SYSTRACE
 	decon->tracing_mark_write( decon->systrace_pid, 'C', "decon_LPD", 1 );
+#endif
 	exynos_ss_printk("%s -\n", __func__);
 
 	DISP_SS_EVENT_LOG(DISP_EVT_ENTER_LPD, &decon->sd, start);
@@ -1138,7 +1140,9 @@ int decon_exit_lpd(struct decon_device *decon)
 	decon_enable(decon);
 	decon_lpd_trig_reset(decon);
 	decon->state = DECON_STATE_ON;
+#ifdef CONFIG_DECON_SYSTRACE
 	decon->tracing_mark_write( decon->systrace_pid, 'C', "decon_LPD", 0 );
+#endif
 	exynos_ss_printk("%s -\n", __func__);
 
 	DISP_SS_EVENT_LOG(DISP_EVT_EXIT_LPD, &decon->sd, start);

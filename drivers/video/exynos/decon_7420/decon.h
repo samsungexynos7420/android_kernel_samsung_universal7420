@@ -866,8 +866,10 @@ struct decon_device {
 	struct mutex	dsu_lock;
 #endif
 
+#ifdef CONFIG_DECON_SYSTRACE
 	int	systrace_pid;
 	void	(*tracing_mark_write)( int pid, char id, char* str1, int value );
+#endif
 };
 
 static inline struct decon_device *get_decon_drvdata(u32 id)

@@ -124,6 +124,11 @@ config FB_DSU_REG_LOCK
         bool "Lock register while multi-resolution (only HF4)"
         depends on FB_DSU
         default n
+        
+config DECON_SYSTRACE
+	bool "Decon Systrace"
+	depends on EXYNOS_DECON_7420
+	default n
 
 source "drivers/video/exynos/decon_7420/vpp/Kconfig"
 

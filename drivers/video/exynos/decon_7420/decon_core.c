@@ -94,6 +94,7 @@ static void decon_set_protected_content(struct decon_device *decon,
 static atomic_t extra_vsync_wait;
 #endif /* CCONFIG_USE_VSYNC_SKIP */
 
+#ifdef CONFIG_DECON_SYSTRACE
 #define SYSTRACE_C_BEGIN(a) do { \
 	decon->tracing_mark_write( decon->systrace_pid, 'C', a, 1 );	\
 	} while(0)
@@ -148,6 +149,8 @@ static void tracing_mark_write( int pid, char id, char* str1, int value )
 
 	trace_puts(buf);
 }
+#endif
+
 /*-----------------------------------------------------------------*/
 
 void decon_dump(struct decon_device *decon)
@@ -1332,10 +1335,13 @@ int decon_tui_protection(struct decon_device *decon, bool tui_en)
 		/* set qos for only single window */
 		exynos7_update_media_scenario(TYPE_DECON_INT,
 						decon->default_bw, 0);
-
+#ifdef CONFIG_DECON_SYSTRACE
 		SYSTRACE_C_BEGIN( "pm_qos_update_request" );
+#endif
 		pm_qos_update_request(&decon->mif_qos, 543000);
+#ifdef CONFIG_DECON_SYSTRACE
 		SYSTRACE_C_FINISH( "pm_qos_update_request" );
+#endif
 	}
 	else {
 		mutex_lock(&decon->output_lock);
@@ -1504,11 +1510,15 @@ int decon_enable(struct decon_device *decon)
 	if (!decon->id) {
 		exynos7_update_media_scenario(TYPE_DECON_INT,
 						decon->default_bw, 0);
+#ifdef CONFIG_DECON_SYSTRACE
 		SYSTRACE_C_BEGIN( "pm_qos_update_request" );
+#endif
 		pm_qos_update_request(&decon->disp_qos, 167000);
 		pm_qos_update_request(&decon->int_qos, 167000);
 		pm_qos_update_request(&decon->mif_qos, 543000);
+#ifdef CONFIG_DECON_SYSTRACE
 		SYSTRACE_C_FINISH( "pm_qos_update_request" );
+#endif
 	} else {
 		exynos7_update_media_scenario(TYPE_DECON_EXT,
 						decon->default_bw, 0);
@@ -1756,11 +1766,15 @@ int decon_disable(struct decon_device *decon)
 #if defined(CONFIG_DECON_DEVFREQ)
 	if (!decon->id) {
 		exynos7_update_media_scenario(TYPE_DECON_INT, 0, 0);
+#ifdef CONFIG_DECON_SYSTRACE
 		SYSTRACE_C_BEGIN( "pm_qos_update_request" );
+#endif
 		pm_qos_update_request(&decon->disp_qos, 0);
 		pm_qos_update_request(&decon->int_qos, 0);
 		pm_qos_update_request(&decon->mif_qos, 0);
+#ifdef CONFIG_DECON_SYSTRACE
 		SYSTRACE_C_FINISH( "pm_qos_update_request" );
+#endif
 		if (decon->prev_frame_has_yuv)
 			exynos7_update_media_scenario(TYPE_YUV, 0, 0);
 	} else {
@@ -1889,8 +1903,9 @@ blank_exit:
 static void decon_activate_vsync(struct decon_device *decon)
 {
 	int prev_refcount;
-
+#ifdef CONFIG_DECON_SYSTRACE
 	SYSTRACE_C_MARK( "decon_activate_vsync", decon->vsync_info.irq_refcount+1 );
+#endif
 	mutex_lock(&decon->vsync_info.irq_lock);
 
 	prev_refcount = decon->vsync_info.irq_refcount++;
@@ -1903,8 +1918,9 @@ static void decon_activate_vsync(struct decon_device *decon)
 static void decon_deactivate_vsync(struct decon_device *decon)
 {
 	int new_refcount;
-
+#ifdef CONFIG_DECON_SYSTRACE
 	SYSTRACE_C_MARK( "decon_activate_vsync", decon->vsync_info.irq_refcount-1 );
+#endif
 	mutex_lock(&decon->vsync_info.irq_lock);
 
 	new_refcount = --decon->vsync_info.irq_refcount;
@@ -3133,10 +3149,14 @@ static void decon_set_vpp_min_lock_early(struct decon_device *decon,
 				}
 					
 				if (decon->disp_cur > decon->disp_prev) {
+#ifdef CONFIG_DECON_SYSTRACE
 					SYSTRACE_C_BEGIN("pm_qos_update_request");
+#endif
 					pm_qos_update_request(&decon->disp_qos, decon->disp_cur);
 					pm_qos_update_request(&decon->int_qos, decon->disp_cur);
+#ifdef CONFIG_DECON_SYSTRACE
 					SYSTRACE_C_FINISH("pm_qos_update_request");
+#endif
 				}
 			}
 		}
@@ -3170,10 +3190,14 @@ static void decon_set_vpp_min_lock_lately(struct decon_device *decon,
 				vpp->prev_int = vpp->cur_int;
 				
 			if (decon->disp_cur < decon->disp_prev) {
+#ifdef CONFIG_DECON_SYSTRACE
 				SYSTRACE_C_BEGIN("pm_qos_update_request");
+#endif
 				pm_qos_update_request(&decon->disp_qos, decon->disp_cur);
 				pm_qos_update_request(&decon->int_qos, decon->disp_cur);
+#ifdef CONFIG_DECON_SYSTRACE
 				SYSTRACE_C_FINISH("pm_qos_update_request");
+#endif
 			}
 			decon->disp_prev = decon->disp_cur;
 			}
@@ -3225,8 +3249,9 @@ static void decon_set_qos(struct decon_device *decon,
 	int yuv_do;
 	int plane_cnt;
 	int i;
-
+#ifdef CONFIG_DECON_SYSTRACE
 	int systrace_on = false;
+#endif
 
 	if (decon->id)
 		return;
@@ -3262,22 +3287,24 @@ static void decon_set_qos(struct decon_device *decon,
 	}
 
 	if (!decon->id) {
+#ifdef CONFIG_DECON_SYSTRACE
 		systrace_on = (disp_do || int_dma_do);
 		if (systrace_on) {
 			SYSTRACE_C_BEGIN( "pm_qos_update_request" );
 //			preempt_disable();
 		}
-
+#endif
 		if (disp_do)
 			pm_qos_update_request(&decon->disp_qos, regs->disp_bw);
 
 		if (int_dma_do)
 			pm_qos_update_request(&decon->int_qos, regs->int_bw);
-
+#ifdef CONFIG_DECON_SYSTRACE
 		if (systrace_on) {
 			SYSTRACE_C_FINISH( "pm_qos_update_request" );
 //			preempt_enable();
 		}
+		#endif
 	}
 
 	if (yuv_do)
@@ -3836,8 +3863,11 @@ static void decon_update_regs(struct decon_device *decon, struct decon_reg_data 
 		dsim = container_of(decon->output_sd, struct dsim_device, sd);
 #endif
 
+#ifdef CONFIG_DECON_SYSTRACE
 	if( !decon->systrace_pid ) decon->systrace_pid = current->pid;
 	decon->tracing_mark_write( decon->systrace_pid, 'B', "decon_update_regs", 0 );
+#endif
+	
 #ifdef CONFIG_FB_DSU
 	if (!decon->id && decon->out_type == DECON_OUT_DSI)
 		mutex_lock(&decon->dsu_lock);
@@ -3855,8 +3885,11 @@ static void decon_update_regs(struct decon_device *decon, struct decon_reg_data 
 		old_plane_cnt[i] = 0;
 		old_handle_crc[i] = NULL;
 	}
-
+	
+#ifdef CONFIG_DECON_SYSTRACE
 	decon->tracing_mark_write( decon->systrace_pid, 'B', "decon_fence_wait", 0 );
+#endif
+	
 	for (i = decon->pdata->max_win - 1; i >= 0; i--) {
 		old_plane_cnt[i] = decon->windows[i]->plane_cnt;
 		old_handle_crc[i] = decon->windows[i]->handle_crc;
@@ -3865,17 +3898,22 @@ static void decon_update_regs(struct decon_device *decon, struct decon_reg_data 
 
 		if (regs->dma_buf_data[i][0].fence) {
 			sprintf( strace_str, "decon_fence_wait%d", i );
+			
+#ifdef CONFIG_DECON_SYSTRACE
 			decon->tracing_mark_write( decon->systrace_pid, 'B', strace_str, 0 );
-
+#endif
 			decon_fence_wait(regs->dma_buf_data[i][0].fence);
-
+#ifdef CONFIG_DECON_SYSTRACE
 			decon->tracing_mark_write( decon->systrace_pid, 'E', strace_str, 0 );
+#endif
 		}
 
 		decon_set_smart_dma_blocking(decon, regs, i);
 	}
+#ifdef CONFIG_DECON_SYSTRACE
 	decon->tracing_mark_write( decon->systrace_pid, 'E', "decon_fence_wait", 0 );
-
+#endif
+	
 	decon_set_qos(decon, regs, 0);
 	decon_check_vpp_used(decon, regs);
 	decon_get_vpp_min_lock(decon, regs);
@@ -3918,7 +3956,9 @@ static void decon_update_regs(struct decon_device *decon, struct decon_reg_data 
 		}
 	} else {
 	        decon_wait_for_vsync(decon, VSYNC_TIMEOUT_MSEC);
-		decon->tracing_mark_write( decon->systrace_pid, 'E', "decon_update_regs", 0 );
+#ifdef CONFIG_DECON_SYSTRACE
+			decon->tracing_mark_write( decon->systrace_pid, 'E', "decon_update_regs", 0 );
+#endif
 	        DISP_SS_EVENT_LOG(DISP_EVT_TE_WAIT_DONE, &decon->sd, ktime_set(0, 0));
 	        if (decon_reg_wait_for_update_timeout(decon->id, 300 * 1000) < 0) {
 		        decon_dump(decon);
@@ -3999,11 +4039,15 @@ static void decon_update_regs_handler(struct kthread_work *work)
 	mutex_unlock(&decon->update_regs_list_lock);
 
 	list_for_each_entry_safe(data, next, &saved_list, list) {
+#ifdef CONFIG_DECON_SYSTRACE
 		SYSTRACE_C_MARK( "update_regs_list", decon->update_regs_list_cnt);
+#endif
 		decon_update_regs(decon, data);
 		decon_lpd_unblock(decon);
 		list_del(&data->list);
+#ifdef CONFIG_DECON_SYSTRACE
 		SYSTRACE_C_MARK( "update_regs_list", --decon->update_regs_list_cnt);
+#endif
 		kfree(data);
 	}
 }
@@ -4773,14 +4817,17 @@ static int decon_ioctl(struct fb_info *info, unsigned int cmd,
 #ifdef CONFIG_LCD_DOZE_MODE
 	u32 pwr_mode;
 #endif
+#ifdef CONFIG_DECON_SYSTRACE
 	int systrace_cnt = 0;
 
 	SYSTRACE_C_MARK( "decon_ioctl", ++systrace_cnt );
 
 	SYSTRACE_C_MARK( "decon_ioctl", ++systrace_cnt );
+#endif
 	decon_lpd_block_exit(decon);
+#ifdef CONFIG_DECON_SYSTRACE
 	SYSTRACE_C_MARK( "decon_ioctl", --systrace_cnt );
-
+#endif
 	switch (cmd) {
 	case FBIO_WAITFORVSYNC:
 		if (get_user(crtc, (u32 __user *)arg)) {
@@ -4932,12 +4979,15 @@ static int decon_ioctl(struct fb_info *info, unsigned int cmd,
 	default:
 		ret = -ENOTTY;
 	}
+#ifdef CONFIG_DECON_SYSTRACE
 	SYSTRACE_C_MARK( "decon_ioctl", ++systrace_cnt );
+#endif
 	decon_lpd_unblock(decon);
+#ifdef CONFIG_DECON_SYSTRACE
 	SYSTRACE_C_MARK( "decon_ioctl", --systrace_cnt );
 
 	SYSTRACE_C_MARK( "decon_ioctl", --systrace_cnt );
-
+#endif
 	return ret;
 }
 
@@ -6174,9 +6224,11 @@ static int decon_probe(struct platform_device *pdev)
 	mutex_init(&decon->output_lock);
 	mutex_init(&decon->mutex);
 
+#ifdef CONFIG_DECON_SYSTRACE
 	/* systrace */
 	decon->systrace_pid = 0;
 	decon->tracing_mark_write = tracing_mark_write;
+#endif
 
 #ifdef CONFIG_FB_DSU
 	if (!decon->id && decon->out_type == DECON_OUT_DSI) {
@@ -6191,7 +6243,9 @@ static int decon_probe(struct platform_device *pdev)
 	INIT_LIST_HEAD(&decon->update_regs_list);
 	mutex_init(&decon->update_regs_list_lock);
 	decon->update_regs_list_cnt = 0;
+#ifdef CONFIG_DECON_SYSTRACE
 	SYSTRACE_C_MARK( "update_regs_list", decon->update_regs_list_cnt);
+#endif
 	init_kthread_worker(&decon->update_regs_worker);
 
 	decon->update_regs_thread = kthread_run(kthread_worker_fn,
