@@ -212,6 +212,7 @@ fw-shipped-$(CONFIG_SENSORS_SSP_STM32) += ssp_stmf410_a8xe.fw
 
 # IrDA FPGA
 fw-shipped-$(CONFIG_SEC_FPGA_ICE40XX) += ice40xx/i2c_top_bitmap_1.fw
+fw-shipped-all := $(fw-shipped-y) $(fw-shipped-m) $(fw-shipped-)
 
 #for ice5 led matrix
 fw-shipped-$(CONFIG_ICE5_FPGA_LED_MATRIX) += ice50/EINK0.fw ice50/EINK1.fw ice50/EINK0_05T.fw ice50/EINK1_05T.fw
