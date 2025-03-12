@@ -64,6 +64,13 @@ config SECURITY_SELINUX_DEVELOP
 	  unless you specify enforcing=1 on the kernel command line.  You
 	  can interactively toggle the kernel between enforcing mode and
 	  permissive mode (if permitted by the policy) via /selinux/enforce.
+	  
+config SECURITY_SELINUX_PERMISSIVE
+	bool "SELinux permissive"
+	depends on SECURITY_SELINUX
+	default n
+	help
+	  This option switches SELinux to permissive mode
 
 config SECURITY_SELINUX_AVC_STATS
 	bool "NSA SELinux AVC Statistics"
