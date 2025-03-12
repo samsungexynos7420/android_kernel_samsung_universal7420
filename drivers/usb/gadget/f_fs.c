@@ -1302,14 +1302,14 @@ static void ffs_data_closed(struct ffs_data *ffs)
 
 	if (atomic_dec_and_test(&ffs->opened)) {
 		ffs->state = FFS_CLOSING;
-		ffs_data_reset(ffs);
-	}
+		/* call closed callback even if all ep is closed */
+		if (test_and_clear_bit(FFS_FL_CALL_CLOSED_CALLBACK, &ffs->flags)) {
+			pr_info("functionfs closed\n");
+			mdelay(20);
+			functionfs_closed_callback(ffs);
+		}
 
-	/* call closed callback even if only one file is closed */
-	if (test_and_clear_bit(FFS_FL_CALL_CLOSED_CALLBACK, &ffs->flags)) {
-		pr_info("functionfs closed added delay\n");
-		mdelay(20);
-		functionfs_closed_callback(ffs);
+		ffs_data_reset(ffs);
 	}
 
 	ffs_data_put(ffs);

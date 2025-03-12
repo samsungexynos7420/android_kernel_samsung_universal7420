@@ -6168,6 +6168,12 @@ static int decon_probe(struct platform_device *pdev)
 #endif
 		decon_to_init_param(decon, &p);
 
+		dsim = container_of(decon->output_sd, struct dsim_device, sd);
+		if (dsim)
+			dsim->decon = (void *)decon;
+		else
+			decon_err("%s : failed to get dsim device\n", __func__);
+
 		/* DECON does not need to start, if DECON is already
 		 * running(enabled in LCD_ON_UBOOT) */
 		if (decon_reg_get_stop_status(decon->id)) {
@@ -6213,18 +6219,14 @@ static int decon_probe(struct platform_device *pdev)
 			decon_reg_set_trigger(decon->id, decon->pdata->dsi_mode,
 					decon->pdata->trig_mode, DECON_TRIG_ENABLE);
 
-		dsim = container_of(decon->output_sd, struct dsim_device, sd);
-		dsim->decon = (void *)decon;
-		call_panel_ops(dsim, displayon, dsim);
+		if (dsim)
+			call_panel_ops(dsim, displayon, dsim);
 
 decon_init_done:
 		decon->int_fifo_status = false;
 		decon->ignore_vsync = false;
 		decon->disp_ss_log_level = DISP_EVENT_LEVEL_HIGH;
 		if ((decon->id == 0)  && (decon->pdata->psr_mode == DECON_MIPI_COMMAND_MODE)) {
-			if (dsim == NULL)
-				dsim = container_of(decon->output_sd, struct dsim_device, sd);
-
 			if (dsim) {
 				panel = &dsim->priv;
 				if ((panel) && (!panel->lcdConnected)) {

@@ -301,6 +301,9 @@ static int dsim_panel_suspend(struct dsim_device *dsim)
 		}
 	}
 	panel->state = PANEL_STATE_SUSPENED;
+#ifdef CONFIG_LCD_DOZE_MODE
+	panel->curr_alpm_mode = ALPM_OFF;
+#endif
 
 suspend_err:
 	return ret;

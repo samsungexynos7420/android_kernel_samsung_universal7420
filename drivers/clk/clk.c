@@ -92,7 +92,7 @@ static void clk_enable_unlock(unsigned long flags)
 
 /***        debugfs support        ***/
 
-#ifdef CONFIG_COMMON_CLK_DEBUG
+#if defined(CONFIG_COMMON_CLK_DEBUG) && !defined(CONFIG_ARCH_EXYNOS)
 #include <linux/debugfs.h>
 
 static struct dentry *rootdir;

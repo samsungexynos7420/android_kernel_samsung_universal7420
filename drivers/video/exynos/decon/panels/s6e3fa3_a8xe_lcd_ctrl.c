@@ -942,8 +942,6 @@ int s6e3fa3_a8xe_setalpm(struct dsim_device *dsim, int mode)
 {
 	int ret = 0;
 
-	msleep(20);
-
 	switch(mode) {
 		case HLPM_ON_LOW:
 			ret = dsim_write_hl_data(dsim, SEQ_SELECT_HLPM, ARRAY_SIZE(SEQ_SELECT_HLPM));
