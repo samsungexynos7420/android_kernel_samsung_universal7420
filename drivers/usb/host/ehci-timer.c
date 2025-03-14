@@ -345,7 +345,7 @@ static void ehci_iaa_watchdog(struct ehci_hcd *ehci)
 	watchdog_count++;
 	if (watchdog_count == 10) {
 		watchdog_count = 0;
-		print_all_registers();
+	//	print_all_registers();
 		print_gic_registers();
 	}
 #endif
