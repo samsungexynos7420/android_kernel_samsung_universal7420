@@ -34,7 +34,7 @@ extern struct devfreq_opp_table devfreq_disp_opp_list[];
 static struct devfreq_simple_ondemand_data exynos7_devfreq_disp_governor_data = {
 	.pm_qos_class		= PM_QOS_DISPLAY_THROUGHPUT,
 	.upthreshold		= 95,
-	.cal_qos_max		= 267000,
+	.cal_qos_max		= DEVFREQ_INITIAL_FREQ,
 };
 
 static struct exynos_devfreq_platdata exynos7420_qos_disp = {
