@@ -754,20 +754,8 @@ extern void copy_debug_dump_time(char *dest, char *src);
 #define DHDIF_FWDER(dhdif)      FALSE
 
 #if defined(CUSTOMER_HW4)
-#if defined(ANDROID_PLATFORM_VERSION)
-#if (ANDROID_PLATFORM_VERSION >= 9)
-#ifdef DHD_COMMON_DUMP_PATH
-#undef DHD_COMMON_DUMP_PATH
-#endif /* DHD_COMMON_DUMP_PATH */
-#if defined(BCM4361_CHIP) || defined(BCM4359_CHIP) || defined(BCM43456_CHIP)
-#define DHD_COMMON_DUMP_PATH	"/data/log/wifi/"
-#else
-#define DHD_COMMON_DUMP_PATH	"/data/vendor/log/wifi/"
-#endif /* BCM4361_CHIP || BCM4359_CHIP || BCM43456_CHIP */
-#endif /* ANDROID_PLATFORM_VERSION >= 9 */
-#endif /* ANDROID_PLATFORM_VERSION */
 #ifndef DHD_COMMON_DUMP_PATH
-#define DHD_COMMON_DUMP_PATH	"/data/media/wifi/log/"
+#define DHD_COMMON_DUMP_PATH	"/data/misc/wifi/log/"
 #endif /* !DHD_COMMON_DUMP_PATH */
 #else
 #define DHD_COMMON_DUMP_PATH	"/installmedia/"
@@ -2375,43 +2363,12 @@ extern char fw_path2[MOD_PARAM_PATHLEN];
 #define VENDOR_PATH ""
 #endif /* ANDROID_PLATFORM_VERSION */
 
-#if defined(ANDROID_PLATFORM_VERSION)
-#if (ANDROID_PLATFORM_VERSION < 9)
-#ifdef WL_STATIC_IF
-#undef WL_STATIC_IF
-#endif /* WL_STATIC_IF */
-#ifdef WL_STATIC_IFNAME_PREFIX
-#undef WL_STATIC_IFNAME_PREFIX
-#endif /* WL_STATIC_IFNAME_PREFIX */
-#ifdef IFACE_HANG_FORCE_DEV_CLOSE
-#undef IFACE_HANG_FORCE_DEV_CLOSE
-#endif /* IFACE_HANG_FORCE_DEV_CLOSE */
-#endif /* ANDROID_PLATFORM_VERSION < 9 */
-#endif /* ANDROID_PLATFORM_VERSION */
-
 #if defined(DHD_LEGACY_FILE_PATH)
 #define PLATFORM_PATH	"/data/"
 #elif defined(PLATFORM_SLP)
 #define PLATFORM_PATH	"/opt/etc/"
 #else
 #if defined(ANDROID_PLATFORM_VERSION)
-#if (ANDROID_PLATFORM_VERSION >= 9)
-#define PLATFORM_PATH	"/data/vendor/conn/"
-#define DHD_MAC_ADDR_EXPORT
-#if defined(WL_BAM)
-#define DHD_ADPS_BAM_EXPORT
-#endif	/* WL_BAM */
-#define DHD_EXPORT_CNTL_FILE
-#define DHD_SOFTAP_DUAL_IF_INFO
-#define DHD_SEND_HANG_PRIVCMD_ERRORS
-/* ANDROID P(9.0) and later, always use single nvram file */
-#ifndef DHD_USE_SINGLE_NVRAM_FILE
-#define DHD_USE_SINGLE_NVRAM_FILE
-#endif /* !DHD_USE_SINGLE_NVRAM_FILE */
-#else
-#define PLATFORM_PATH   "/data/misc/conn/"
-#endif /* ANDROID_PLATFORM_VERSION >= 9 */
-#else
 #define PLATFORM_PATH   "/data/misc/conn/"
 #endif /* ANDROID_PLATFORM_VERSION */
 #endif /* DHD_LEGACY_FILE_PATH */
