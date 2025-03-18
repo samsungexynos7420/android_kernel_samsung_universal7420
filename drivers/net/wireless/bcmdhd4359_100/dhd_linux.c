@@ -5675,6 +5675,16 @@ dhd_rx_frame(dhd_pub_t *dhdp, int ifidx, void *pktbuf, int numpkt, uint8 chan)
 				PKTFREE(dhdp->osh, pktbuf, FALSE);
 #endif // endif
 				continue;
+				
+#ifdef DHD_DONOT_FORWARD_BCMEVENT_AS_NETWORK_PKT
+#if defined(BCMPCIE) && defined(CONFIG_DHD_USE_STATIC_BUF) && \
+	defined(DHD_USE_STATIC_CTRLBUF)
+			PKTFREE_STATIC(dhdp->osh, pktbuf, FALSE);
+#else
+			PKTFREE(dhdp->osh, pktbuf, FALSE);
+#endif /* BCMPCIE && CONFIG_DHD_USE_STATIC_BUF && DHD_USE_STATIC_CTRLBUF */
+			continue;
+#endif /* DHD_DONOT_FORWARD_BCMEVENT_AS_NETWORK_PKT */
 			}
 
 			/*
