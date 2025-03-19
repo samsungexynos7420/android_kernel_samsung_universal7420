@@ -529,7 +529,7 @@ ifeq ($(filter y,$(CONFIG_WLAN_GREAT) $(CONFIG_SEC_GREATQLTE_PROJECT) $(CONFIG_S
 # To support CAC
   DHDCFLAGS += -DSUPPORT_SET_CAC
 # Use single nvram file
-  DHDCFLAGS += -DDHD_USE_SINGLE_NVRAM_FILE
+  # DHDCFLAGS += -DDHD_USE_SINGLE_NVRAM_FILE
 # RSSI Logging
   DHDCFLAGS += -DSUPPORT_RSSI_SUM_REPORT
 # To send hang evnet for Samsung phone platform
@@ -708,7 +708,7 @@ ifeq ($(filter y,$(CONFIG_WLAN_GREAT) $(CONFIG_SEC_GREATQLTE_PROJECT) $(CONFIG_S
 # To support CAC
   DHDCFLAGS += -DSUPPORT_SET_CAC
 # Use single nvram file
-  DHDCFLAGS += -DDHD_USE_SINGLE_NVRAM_FILE
+  # DHDCFLAGS += -DDHD_USE_SINGLE_NVRAM_FILE
 # RSSI Logging
   DHDCFLAGS += -DSUPPORT_RSSI_SUM_REPORT
 # To send hang evnet for Samsung phone platform
@@ -1149,7 +1149,7 @@ ifneq ($(PLATFORM_VERSION),)
 # Android O OS use below features
 ifeq ($(shell expr $(PLATFORM_VERSION) \>= 8.0),1)
 # Use single nvram file
-  DHDCFLAGS += -DDHD_USE_SINGLE_NVRAM_FILE
+  # DHDCFLAGS += -DDHD_USE_SINGLE_NVRAM_FILE
 endif
 endif
 
@@ -1332,7 +1332,7 @@ ifneq ($(PLATFORM_VERSION),)
 # Android O OS use below features
 ifeq ($(shell expr $(PLATFORM_VERSION) \>= 8.0),1)
 # Use single nvram file
-  DHDCFLAGS += -DDHD_USE_SINGLE_NVRAM_FILE
+  # DHDCFLAGS += -DDHD_USE_SINGLE_NVRAM_FILE
 endif
 endif
 endif
