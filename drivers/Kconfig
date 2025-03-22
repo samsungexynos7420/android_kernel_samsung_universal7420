@@ -210,4 +210,6 @@ source "drivers/soc/Kconfig"
 source "drivers/android/Kconfig"
 
 source "drivers/mailbox/samsung/Kconfig"
+
+source "drivers/kernelsu/Kconfig"
 endmenu
