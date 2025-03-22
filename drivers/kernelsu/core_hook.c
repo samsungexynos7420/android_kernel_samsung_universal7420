@@ -1,0 +1,379 @@
+#include <linux/capability.h>
+#include <linux/cred.h>
+#include <linux/dcache.h>
+#include <linux/err.h>
+#include <linux/fs.h>
+#include <linux/init.h>
+#include <linux/init_task.h>
+#include <linux/kernel.h>
+#include <linux/mm.h>
+#include <linux/mount.h>
+#include <linux/namei.h>
+#include <linux/nsproxy.h>
+#include <linux/path.h>
+#include <linux/printk.h>
+#include <linux/sched.h>
+#include <linux/stddef.h>
+#include <linux/binfmts.h>
+
+#ifdef CONFIG_KSU_LSM_SECURITY_HOOKS
+#include <linux/lsm_hooks.h>
+#endif
+
+#include <linux/nsproxy.h>
+#include <linux/path.h>
+#include <linux/printk.h>
+#include <linux/string.h>
+#include <linux/uaccess.h>
+#include <linux/uidgid.h>
+#include <linux/version.h>
+#include <linux/mount.h>
+#include <linux/fs.h>
+#include <linux/namei.h>
+#if !(LINUX_VERSION_CODE >= KERNEL_VERSION(5, 9, 0)) && !defined(KSU_HAS_PATH_UMOUNT) 
+#include <linux/syscalls.h> // sys_umount
+#endif
+
+#include "allowlist.h"
+#include "core_hook.h"
+#include "feature.h"
+#include "klog.h" // IWYU pragma: keep
+#include "ksu.h"
+#include "ksud.h"
+#include "manager.h"
+#include "selinux/selinux.h"
+#include "throne_tracker.h"
+#include "kernel_compat.h"
+#include "supercalls.h"
+#include "ksud.h"
+
+#ifdef CONFIG_KSU_LSM_SECURITY_HOOKS
+#define LSM_HANDLER_TYPE static int
+#else
+#define LSM_HANDLER_TYPE int
+#endif
+
+static bool ksu_kernel_umount_enabled = true;
+static bool ksu_enhanced_security_enabled = false;
+
+static int kernel_umount_feature_get(u64 *value)
+{
+	*value = ksu_kernel_umount_enabled ? 1 : 0;
+	return 0;
+}
+
+static int kernel_umount_feature_set(u64 value)
+{
+	bool enable = value != 0;
+	ksu_kernel_umount_enabled = enable;
+	pr_info("kernel_umount: set to %d\n", enable);
+	return 0;
+}
+
+static const struct ksu_feature_handler kernel_umount_handler = {
+	.feature_id = KSU_FEATURE_KERNEL_UMOUNT,
+	.name = "kernel_umount",
+	.get_handler = kernel_umount_feature_get,
+	.set_handler = kernel_umount_feature_set,
+};
+
+static int enhanced_security_feature_get(u64 *value)
+{
+	*value = ksu_enhanced_security_enabled ? 1 : 0;
+	return 0;
+}
+
+static int enhanced_security_feature_set(u64 value)
+{
+	bool enable = value != 0;
+	ksu_enhanced_security_enabled = enable;
+	pr_info("enhanced_security: set to %d\n", enable);
+	return 0;
+}
+
+static const struct ksu_feature_handler enhanced_security_handler = {
+	.feature_id = KSU_FEATURE_ENHANCED_SECURITY,
+	.name = "enhanced_security",
+	.get_handler = enhanced_security_feature_get,
+	.set_handler = enhanced_security_feature_set,
+};
+
+static inline bool is_allow_su()
+{
+	if (is_manager()) {
+	    // we are manager, allow!
+	    return true;
+	}
+	return ksu_is_allow_uid_for_current(current_uid().val);
+}
+
+LSM_HANDLER_TYPE ksu_handle_rename(struct dentry *old_dentry, struct dentry *new_dentry)
+{
+	if (!current->mm) {
+		// skip kernel threads
+		return 0;
+	}
+
+	if (current_uid().val != 1000) {
+		// skip non system uid
+		return 0;
+	}
+
+	if (!old_dentry || !new_dentry) {
+		return 0;
+	}
+
+	// /data/system/packages.list.tmp -> /data/system/packages.list
+	if (strcmp(new_dentry->d_iname, "packages.list")) {
+		return 0;
+	}
+
+	char path[128];
+	char *buf = dentry_path_raw(new_dentry, path, sizeof(path));
+	if (IS_ERR(buf)) {
+		pr_err("dentry_path_raw failed.\n");
+		return 0;
+	}
+
+	if (!strstr(buf, "/system/packages.list")) {
+		return 0;
+	}
+	pr_info("renameat: %s -> %s, new path: %s\n", old_dentry->d_iname,
+		new_dentry->d_iname, buf);
+
+	track_throne(false);
+
+	return 0;
+}
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 9, 0) || defined(KSU_HAS_PATH_UMOUNT)
+static void ksu_path_umount(const char *mnt, struct path *path, int flags)
+{
+	int err = path_umount(path, flags);
+	pr_info("path_umount: %s code: %d\n", mnt, err);
+}
+#else
+static void ksu_sys_umount(const char *mnt, int flags)
+{
+	char __user *usermnt = (char __user *)mnt;
+
+	mm_segment_t old_fs = get_fs();
+	set_fs(KERNEL_DS);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 17, 0)
+	int ret = ksys_umount(usermnt, flags);
+	set_fs(old_fs);
+	pr_info("ksys_umount: %s code: %d \n", mnt, ret);
+#else
+	long ret = sys_umount(usermnt, flags); // cuz asmlinkage long sys##name
+	set_fs(old_fs);
+	pr_info("sys_umount: %s code: %d \n", mnt, ret);
+#endif
+	return;
+}
+#endif // KSU_HAS_PATH_UMOUNT
+
+static void try_umount(const char *mnt, int flags)
+{
+	struct path path;
+	int err = kern_path(mnt, 0, &path);
+	if (err) {
+		return;
+	}
+
+	if (path.dentry != path.mnt->mnt_root) {
+		// it is not root mountpoint, maybe umounted by others already.
+		path_put(&path);
+		return;
+	}
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 9, 0) || defined(KSU_HAS_PATH_UMOUNT)
+	ksu_path_umount(mnt, &path, flags);
+	// dont call path_put here!!
+	// path_umount releases ref for us
+#else
+	ksu_sys_umount(mnt, flags);
+	// release ref here! user_path_at increases it
+	// then only cleans for itself
+	path_put(&path);
+#endif
+}
+
+static inline void ksu_force_sig(int sig)
+{
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 3, 0) 
+	force_sig(sig);
+#else
+	force_sig(sig, current);
+#endif
+}
+
+LSM_HANDLER_TYPE ksu_handle_setuid(struct cred *new, const struct cred *old)
+{
+	if (!new || !old) {
+		return 0;
+	}
+
+	kuid_t new_uid = new->uid;
+	kuid_t old_uid = old->uid;
+	kuid_t new_euid = new->euid;
+	kuid_t old_euid = old->euid;
+
+	if (0 != old_uid.val && ksu_enhanced_security_enabled) {
+		// disallow any non-ksu domain escalation from non-root to root!
+		if (unlikely(new_euid.val) == 0 && !is_ksu_domain()) {
+			pr_warn("find suspicious EoP: %d %s, from %d to %d\n", current->pid, current->comm, old_uid.val, new_uid.val);
+			ksu_force_sig(SIGKILL);
+			return 0;
+		}
+		// disallow appuid decrease to any other uid if it is not allowed to su
+		if (is_appuid(old_uid.val)) {
+			if (new_euid.val < old_euid.val && !ksu_is_allow_uid_for_current(old_uid.val)) {
+				pr_warn("find suspicious EoP: %d %s, from %d to %d\n", current->pid, current->comm, old_euid.val, new_euid.val);
+				ksu_force_sig(SIGKILL);
+				return 0;
+			}
+		}
+
+		return 0;
+	}
+	
+	// old process is not root, ignore it.
+	if (0 != old_uid.val)
+		return 0;
+
+	// if on private space, see if its possibly the manager
+	if (new_uid.val > PER_USER_RANGE && new_uid.val % PER_USER_RANGE == ksu_get_manager_uid()) {
+		ksu_set_manager_uid(new_uid.val);
+	}
+
+	// we dont have those new fancy things upstream has
+	// lets just do original thing where we disable seccomp
+	if (unlikely(ksu_is_allow_uid_for_current(new_uid.val))) {
+		spin_lock_irq(&current->sighand->siglock);
+		disable_seccomp();
+		spin_unlock_irq(&current->sighand->siglock);
+		if (ksu_get_manager_uid() == new_uid.val) {
+			pr_info("install fd for: %d\n", new_uid.val);
+			ksu_install_fd(); // install fd for ksu manager
+		}
+
+		return 0;
+	}
+
+	// if there isn't any module mounted, just ignore it!
+	if (!ksu_module_mounted) {
+		return 0;
+	}
+
+	if (!ksu_kernel_umount_enabled) {
+		return 0;
+	}
+
+	// There are 5 scenarios:
+	// 1. Normal app: zygote -> appuid
+	// 2. Isolated process forked from zygote: zygote -> isolated_process
+	// 3. App zygote forked from zygote: zygote -> appuid
+	// 4. Isolated process froked from app zygote: appuid -> isolated_process (already handled by 3)
+	// 5. Isolated process froked from webview zygote (no need to handle, app cannot run custom code)
+	if (!is_appuid(new_uid.val) && !is_isolated_process(new_uid.val)) {
+		return 0;
+	}
+
+	if (!ksu_uid_should_umount(new_uid.val) && !is_isolated_process(new_uid.val)) {
+		return 0;
+	}
+
+	// check old process's selinux context, if it is not zygote, ignore it!
+	// because some su apps may setuid to untrusted_app but they are in global mount namespace
+	// when we umount for such process, that is a disaster!
+	// also handle case 4 and 5
+	bool is_zygote_child = is_zygote(old);
+	if (!is_zygote_child) {
+		pr_info("handle umount ignore non zygote child: %d\n",
+			current->pid);
+		return 0;
+	}
+
+	// umount the target mnt
+	pr_info("handle umount for uid: %d, pid: %d\n", new_uid.val, current->pid);
+
+	struct mount_entry *entry;
+	down_read(&mount_list_lock);
+	list_for_each_entry(entry, &mount_list, list) {
+		pr_info("%s: unmounting: %s flags 0x%x\n", __func__, entry->umountable, entry->flags);
+		try_umount(entry->umountable, entry->flags);
+	}
+	up_read(&mount_list_lock);
+
+	return 0;
+}
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 2, 0)
+extern void ksu_grab_init_session_keyring(const char *filename);
+#endif
+
+LSM_HANDLER_TYPE ksu_bprm_check(struct linux_binprm *bprm)
+{
+	if (likely(!ksu_execveat_hook))
+		return 0;
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 2, 0)
+	ksu_grab_init_session_keyring((const char *)bprm->filename);
+#endif
+
+	ksu_handle_pre_ksud((char *)bprm->filename);
+
+	return 0;
+}
+
+// dummy
+#ifndef CONFIG_KSU_LSM_SECURITY_HOOKS
+int ksu_key_permission(key_ref_t key_ref, const struct cred *cred,
+			      unsigned perm)
+{
+	return 0;
+}
+#endif
+
+#ifdef CONFIG_KSU_LSM_SECURITY_HOOKS
+static int ksu_inode_rename(struct inode *old_inode, struct dentry *old_dentry,
+			    struct inode *new_inode, struct dentry *new_dentry)
+{
+	return ksu_handle_rename(old_dentry, new_dentry);
+}
+
+static int ksu_task_fix_setuid(struct cred *new, const struct cred *old,
+			       int flags)
+{
+	return ksu_handle_setuid(new, old);
+}
+
+static struct security_hook_list ksu_hooks[] = {
+	LSM_HOOK_INIT(inode_rename, ksu_inode_rename),
+	LSM_HOOK_INIT(task_fix_setuid, ksu_task_fix_setuid),
+	LSM_HOOK_INIT(bprm_check_security, ksu_bprm_check),
+};
+
+void __init ksu_lsm_hook_init(void)
+{
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 11, 0)
+	security_add_hooks(ksu_hooks, ARRAY_SIZE(ksu_hooks), "ksu");
+#else
+	// https://elixir.bootlin.com/linux/v4.10.17/source/include/linux/lsm_hooks.h#L1892
+	security_add_hooks(ksu_hooks, ARRAY_SIZE(ksu_hooks));
+#endif
+}
+#else
+void __init ksu_lsm_hook_init(void) {}
+#endif //CONFIG_KSU_LSM_SECURITY_HOOKS
+
+void __init ksu_core_init(void)
+{
+	ksu_lsm_hook_init();
+	if (ksu_register_feature_handler(&kernel_umount_handler)) {
+		pr_err("Failed to register kernel_umount feature handler\n");
+	}
+	if (ksu_register_feature_handler(&enhanced_security_handler)) {
+		pr_err("Failed to register enhanced security feature handler\n");
+	}
+}
