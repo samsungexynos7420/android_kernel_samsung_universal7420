@@ -137,16 +137,6 @@ static inline int wbc_to_write_flags(struct writeback_control *wbc)
 	return 0;
 }
 
-static inline void inode_lock(struct inode *inode)
-{
-	mutex_lock(&inode->i_mutex);
-}
-
-static inline void inode_unlock(struct inode *inode)
-{
-	mutex_unlock(&inode->i_mutex);
-}
-
 #define rb_entry_safe(ptr, type, member) \
 	({ typeof(ptr) ____ptr = (ptr); \
 	   ____ptr ? rb_entry(____ptr, type, member) : NULL; \
