@@ -76,3 +76,8 @@ config PROC_STLOG
 	bool "Enable Storage log"
 	depends on PROC_FS
 	default y
+	
+config PROC_FAKE_CMDLINE
+	bool "Fake cmdline parameters to bypass some Play Integtity checks"
+	depends on PROC_FS
+	default n
