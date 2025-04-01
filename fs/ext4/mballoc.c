@@ -4563,7 +4563,7 @@ ext4_fsblk_t ext4_mb_new_blocks(handle_t *handle,
 	/* Allow to use superuser reservation for quota file */
 	if (IS_NOQUOTA(ar->inode))
 		ar->flags |= EXT4_MB_USE_ROOT_BLOCKS;
-	
+
 	if (ext4_test_inode_flag(ar->inode, EXT4_INODE_CORE_FILE))
 		ar->flags |= EXT4_MB_USE_EXTRA_ROOT_BLOCKS;
 
@@ -4952,9 +4952,9 @@ do_more:
 	    ((flags & EXT4_FREE_BLOCKS_METADATA) ||
 	     !ext4_should_writeback_data(inode))) {
 		struct ext4_free_data *new_entry;
-		/*
-		 * blocks being freed are metadata. these blocks shouldn't
-		 * be used until this transaction is committed
+ 		/*
+ 		 * blocks being freed are metadata. these blocks shouldn't
+ 		 * be used until this transaction is committed
 		 *
 		 * We use __GFP_NOFAIL because ext4_free_blocks() is not allowed
 		 * to fail.

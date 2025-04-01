@@ -1405,7 +1405,7 @@ int htree_inlinedir_to_tree(struct file *dir_file,
 		if (de->inode == 0)
 			continue;
 		err = ext4_htree_store_dirent(dir_file,
-				   hinfo->hash, hinfo->minor_hash, de);
+					      hinfo->hash, hinfo->minor_hash, de);
 		if (err) {
 			ret = err;
 			goto out;
