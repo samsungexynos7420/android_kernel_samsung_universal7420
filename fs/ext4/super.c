@@ -604,7 +604,7 @@ void __ext4_std_error(struct super_block *sb, const char *function,
 		printk(KERN_CRIT "EXT4-fs error (device %s) in %s:%d: %s\n",
 		       sb->s_id, function, line, errstr);
 	}
-	
+
 	save_error_info(sb, function, line);
 	page_buf = (char *)__get_free_page(GFP_ATOMIC);
 	if (page_buf)
@@ -5855,6 +5855,7 @@ out:
 }
 
 #endif
+
 void print_iloc_info(struct super_block *sb, struct ext4_iloc iloc)
 {
 	/* for debugging, woojoong.lee */
