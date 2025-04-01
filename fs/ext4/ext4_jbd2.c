@@ -44,7 +44,7 @@ static int ext4_journal_check_start(struct super_block *sb)
 
 	might_sleep();
 
-	if (sb->s_flags & MS_RDONLY && !journal_current_handle())
+	if (sb->s_flags & MS_RDONLY && !ext4_journal_current_handle())
 		return -EROFS;
 
 	WARN_ON(sb->s_writers.frozen == SB_FREEZE_COMPLETE);
