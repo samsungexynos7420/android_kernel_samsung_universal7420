@@ -28,10 +28,10 @@
 #include <linux/platform_device.h>
 #if (defined(CONFIG_SWITCH_ANTENNA_IF) \
 || defined(CONFIG_SWITCH_ANTENNA_EARJACK_IF)) \
-|| ((defined(CONFIG_BOARD_ZEROFLTE_UNI) || (defined(CONFIG_BOARD_ZEROLTE_UNI))))
+|| (defined(CONFIG_BOARD_7420_UNIFY))
 #include <linux/antenna_switch.h>
 #endif
-#if (defined(CONFIG_BOARD_ZEROFLTE_UNI) || (defined(CONFIG_BOARD_ZEROLTE_UNI)))
+#if (defined(CONFIG_BOARD_7420_UNIFY))
 #include <linux/variant_detection.h>
 #endif
 
@@ -2713,11 +2713,11 @@ static void max77843_muic_detect_dev(struct max77843_muic_data *muic_data, int i
 
 	if (intr == MUIC_INTR_ATTACH) {
 		pr_info("%s:%s ATTACHED\n", MUIC_DEV_NAME, __func__);
-#if (defined(CONFIG_BOARD_ZEROFLTE_UNI) || defined(CONFIG_BOARD_ZEROLTE_UNI)) 
+#if (defined(CONFIG_BOARD_7420_UNIFY))
 		if (variant_aif_required == HAS_AIF)
 			antenna_switch_work_if(1);
 #elif defined(CONFIG_SWITCH_ANTENNA_IF) || defined(CONFIG_SWITCH_ANTENNA_EARJACK_IF) && \
-(!defined(CONFIG_BOARD_ZEROFLTE_UNI) || (!defined(CONFIG_BOARD_ZEROLTE_UNI))) 
+(!defined(CONFIG_BOARD_7420_UNIFY))
 	    antenna_switch_work_if(1);
 #endif
 		ret = max77843_muic_handle_attach(muic_data, new_dev);
@@ -2726,11 +2726,11 @@ static void max77843_muic_detect_dev(struct max77843_muic_data *muic_data, int i
 								__func__, ret);
 	} else {
 		pr_info("%s:%s DETACHED\n", MUIC_DEV_NAME, __func__);
-#if (defined(CONFIG_BOARD_ZEROFLTE_UNI) || defined(CONFIG_BOARD_ZEROLTE_UNI)) 
+#if (defined(CONFIG_BOARD_7420_UNIFY))
 		if (variant_aif_required == HAS_AIF)
 			antenna_switch_work_if(0);
 #elif defined(CONFIG_SWITCH_ANTENNA_IF) || defined(CONFIG_SWITCH_ANTENNA_EARJACK_IF) && \
-(!defined(CONFIG_BOARD_ZEROFLTE_UNI) || (!defined(CONFIG_BOARD_ZEROLTE_UNI))) 
+(!defined(CONFIG_BOARD_7420_UNIFY))
 		antenna_switch_work_if(0);
 #endif		
 		ret = max77843_muic_handle_detach(muic_data);

@@ -92,7 +92,7 @@
 #include <linux/rkp_entry.h> 
 #endif //CONFIG_TIMA_RKP
 
-#if (defined(CONFIG_BOARD_ZEROLTE_UNI) || defined(CONFIG_BOARD_ZEROFLTE_UNI))
+#if (defined(CONFIG_BOARD_7420_UNIFY))
 #include <linux/variant_detection.h>
 unsigned int model_type = VARDET_UNKNOWN;
 unsigned int variant_aif_required = NO_AIF;
@@ -611,7 +611,7 @@ asmlinkage void __init start_kernel(void)
 
 	printk(KERN_INFO "MDM_LOG - Start Kernel\n");
 	pr_notice("Kernel command line: %s\n", boot_command_line);
-#if (defined(CONFIG_BOARD_ZEROLTE_UNI) || defined(CONFIG_BOARD_ZEROFLTE_UNI))
+#if (defined(CONFIG_BOARD_7420_UNIFY))
 	/* Variant Detection */
 	if ((strstr(boot_command_line, "G920T")) || (
 		strstr(boot_command_line, "G925T")) || 

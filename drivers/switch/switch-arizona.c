@@ -38,7 +38,7 @@
 #include <linux/mfd/arizona/core.h>
 #include <linux/mfd/arizona/pdata.h>
 #include <linux/mfd/arizona/registers.h>
-#if (defined(CONFIG_BOARD_ZEROLTE_UNI) || defined(CONFIG_BOARD_ZEROFLTE_UNI))
+#if (defined(CONFIG_BOARD_7420_UNIFY))
 #include <linux/variant_detection.h>
 #endif
 
@@ -2914,7 +2914,7 @@ static int arizona_extcon_of_get_pdata(struct arizona *arizona)
 	arizona_of_read_s32(arizona, "wlf,hpdet-moisture-debounce", false,
 			    &pdata->hpdet_moisture_debounce);
 
-#if (defined(CONFIG_BOARD_ZEROLTE_UNI) || defined(CONFIG_BOARD_ZEROFLTE_UNI))
+#if (defined(CONFIG_BOARD_7420_UNIFY))
 	if (variant_aif_required == HAS_AIF)
 		arizona_of_read_s32(arizona, "wlf,hpdet-short-circuit-imp_aif", false,
  			    &pdata->hpdet_short_circuit_imp);

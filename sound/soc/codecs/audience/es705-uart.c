@@ -40,7 +40,7 @@
 #include "es705-uart.h"
 #include "es705-uart-common.h"
 #include "es705-cdev.h"
-#if (defined(CONFIG_BOARD_ZEROLTE_UNI) || defined(CONFIG_BOARD_ZEROFLTE_UNI))
+#if (defined(CONFIG_BOARD_7420_UNIFY))
 #include <linux/variant_detection.h>
 #endif
 
@@ -429,7 +429,7 @@ static int es705_uart_probe_thread(void *ptr)
 {
 	int rc = 0;
 	struct device *dev = (struct device *)ptr;
-#if (defined(CONFIG_BOARD_ZEROLTE_UNI) || defined(CONFIG_BOARD_ZEROFLTE_UNI))
+#if (defined(CONFIG_BOARD_7420_UNIFY))
 	if (variant_aif_required == NO_AIF)
 		return rc;
 #endif
@@ -500,7 +500,7 @@ static int es705_uart_probe(struct platform_device *dev)
 static int es705_uart_remove(struct platform_device *dev)
 {
 	int rc = 0;
-#if (defined(CONFIG_BOARD_ZEROLTE_UNI) || defined(CONFIG_BOARD_ZEROFLTE_UNI))
+#if (defined(CONFIG_BOARD_7420_UNIFY))
 	if (variant_aif_required == NO_AIF)
 		return rc;
 #endif

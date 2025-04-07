@@ -59,7 +59,7 @@
 #include "es705-uart.h"
 #include "es705-uart-common.h"
 #include "es705-veq-params.h"
-#if (defined(CONFIG_BOARD_ZEROLTE_UNI) || defined(CONFIG_BOARD_ZEROFLTE_UNI))
+#if (defined(CONFIG_BOARD_7420_UNIFY))
 #include <linux/variant_detection.h>
 #endif
 
@@ -5812,7 +5812,7 @@ int es705_core_init(struct device *dev)
 	struct esxxx_platform_data *pdata = dev->platform_data;
 	int rc = 0;
 
-#if (defined(CONFIG_BOARD_ZEROLTE_UNI) || defined(CONFIG_BOARD_ZEROFLTE_UNI))
+#if (defined(CONFIG_BOARD_7420_UNIFY))
 	if (variant_aif_required == NO_AIF)
 		return rc;
 #endif
@@ -6099,7 +6099,7 @@ static __init int es705_init(void)
 {
 	int rc = 0;
 
-#if (defined(CONFIG_BOARD_ZEROLTE_UNI) || defined(CONFIG_BOARD_ZEROFLTE_UNI))
+#if (defined(CONFIG_BOARD_7420_UNIFY))
 	if (variant_aif_required == NO_AIF)
 		return rc;
 #endif
@@ -6167,7 +6167,7 @@ module_init(es705_init);
 
 static __exit void es705_exit(void)
 {
-#if (defined(CONFIG_BOARD_ZEROLTE_UNI) || defined(CONFIG_BOARD_ZEROFLTE_UNI))
+#if (defined(CONFIG_BOARD_7420_UNIFY))
 	if (variant_aif_required == NO_AIF)
 		return;
 #endif
