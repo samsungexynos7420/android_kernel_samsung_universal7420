@@ -441,3 +441,13 @@ config BOARD_NOBLELTECAN
 	bool "Samsung Galaxy Note5 (EarSmart variants)"
 	depends on SOC_EXYNOS7420 && !BOARD_7420_UNIFY
 	default n
+
+config BOARD_NOBLELTE_UNI 
+	bool "Samsung Galaxy Note5 (C/I/S/K/W8/T)"
+	depends on SOC_EXYNOS7420 && BOARD_7420_UNIFY
+	default n
+
+config BOARD_ZENLTE_UNI
+	bool "Samsung Galaxy S6 Edge+ (F/I/S/K/W8/T)"
+	depends on SOC_EXYNOS7420 && BOARD_7420_UNIFY
+	default n
