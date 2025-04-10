@@ -514,7 +514,7 @@ ifneq ($(DREAM_NOS_DISCARD_FEATURES),y)
 # LAST ROAM EVENT LOG
   DHDCFLAGS += -DWL_LASTEVT
 # Use single nvram file
-  DHDCFLAGS += -DDHD_USE_SINGLE_NVRAM_FILE
+  #DHDCFLAGS += -DDHD_USE_SINGLE_NVRAM_FILE
 #STAT REPORT
 #stat report shall be defined only if LINK STAT is defined
   DHDCFLAGS += -DSTAT_REPORT
@@ -928,7 +928,7 @@ ifneq ($(PLATFORM_VERSION),)
 # Android O OS use below features
 ifeq ($(shell expr $(PLATFORM_VERSION) \>= 8.0),1)
 # Use single nvram file
-  DHDCFLAGS += -DDHD_USE_SINGLE_NVRAM_FILE
+  #DHDCFLAGS += -DDHD_USE_SINGLE_NVRAM_FILE
 endif
 endif
 
@@ -1107,7 +1107,7 @@ ifneq ($(PLATFORM_VERSION),)
 # Android O OS use below features
 ifeq ($(shell expr $(PLATFORM_VERSION) \>= 8.0),1)
 # Use single nvram file
-  DHDCFLAGS += -DDHD_USE_SINGLE_NVRAM_FILE
+  #DHDCFLAGS += -DDHD_USE_SINGLE_NVRAM_FILE
 endif
 endif
 endif
