@@ -6336,7 +6336,7 @@ static void mem_cgroup_invalidate_reclaim_iterators(struct mem_cgroup *memcg)
 
 static void mem_cgroup_css_offline(struct cgroup_subsys_state *css)
 {
-	struct mem_cgroup *memcg = mem_cgroup_from_cont(css);
+	struct mem_cgroup *memcg = mem_cgroup_from_css(css);
 	struct cgroup *iter;
 
 	kmem_cgroup_css_offline(memcg);
@@ -6350,7 +6350,7 @@ static void mem_cgroup_css_offline(struct cgroup_subsys_state *css)
 	rcu_read_lock();
 	cgroup_for_each_descendant_post(iter, cont) {
 		rcu_read_unlock();
-		mem_cgroup_reparent_charges(mem_cgroup_from_cont(iter));
+		mem_cgroup_reparent_charges(mem_cgroup_from_css(iter));
 		rcu_read_lock();
 	}
 	rcu_read_unlock();
