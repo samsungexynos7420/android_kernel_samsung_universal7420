@@ -6348,7 +6348,7 @@ static void mem_cgroup_css_offline(struct cgroup_subsys_state *css)
 	 * guaranteed because css_killed_work_fn() holds the cgroup_mutex.
 	 */
 	rcu_read_lock();
-	cgroup_for_each_descendant_post(iter, cont) {
+	css_for_each_descendant_post(iter, css) {
 		rcu_read_unlock();
 		mem_cgroup_reparent_charges(mem_cgroup_from_css(iter));
 		rcu_read_lock();
