@@ -313,7 +313,7 @@ out_bad:
 	 * is performed at its new name the dentry will be readded
 	 * to the dcache hashes.
 	 */
-	is_dir = (sysfs_type(kn) == SYSFS_DIR);
+	is_dir = (kernfs_type(kn) == KERNFS_DIR);
 	mutex_unlock(&sysfs_mutex);
 
 	if (is_dir) {
