@@ -43,8 +43,8 @@
 #include <linux/delay.h>
 #include <linux/clk.h>
 #include <linux/suspend.h>
-#ifdef CONFIG_SERIAL_SAMSUNG_DMA
 #include <linux/slab.h>
+#ifdef CONFIG_SERIAL_SAMSUNG_DMA
 #include <linux/spinlock.h>
 #endif
 #include <linux/of.h>
