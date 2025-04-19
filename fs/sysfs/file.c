@@ -338,12 +338,12 @@ EXPORT_SYMBOL_GPL(sysfs_add_file_to_group);
 int sysfs_chown_file(struct kobject *kobj, const struct attribute *attr,
 		     uid_t uid, gid_t gid)
 {
-	struct sysfs_dirent *sd;
+	struct kernfs_node *kn;
 	struct iattr newattrs;
 	int rc;
 
-	sd = sysfs_get_dirent(kobj->sd, attr->name);
-	if (!sd)
+	kn = kernfs_find_and_get(kobj->sd, attr->name);
+	if (!kn)
 		return -ENOENT;
 
 	memset(&newattrs, 0, sizeof(newattrs));
@@ -351,9 +351,9 @@ int sysfs_chown_file(struct kobject *kobj, const struct attribute *attr,
 	newattrs.ia_uid = uid;
 	newattrs.ia_gid = gid;
 
-	rc = kernfs_setattr(sd, &newattrs);
+	rc = kernfs_setattr(kn, &newattrs);
 
-	sysfs_put(sd);
+	kernfs_put(kn);
 	return rc;
 }
 EXPORT_SYMBOL_GPL(sysfs_chown_file);
