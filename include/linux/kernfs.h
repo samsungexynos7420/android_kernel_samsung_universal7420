@@ -162,7 +162,6 @@ struct kernfs_open_file {
 	int			event;
 	struct list_head	list;
 
-	size_t			atomic_write_len;
 	bool			mmapped;
 	const struct vm_operations_struct *vm_ops;
 };
