@@ -647,6 +647,12 @@
 		};
 	};
 
+	hsi2c@13670000 {
+		max77838@60 {
+			status = "disabled";
+		};
+	};
+
 	hsi2c@13680000 {
 		status = "okay";
 		samsung,hs-mode;
@@ -666,12 +672,6 @@
 	serial_0: uart@13630000 {
 		status = "okay";
 		samsung,use-default-irq;
-	};
-
-	hsi2c@13670000 {
-		max77838@60 {
-			status = "disabled";
-		};
 	};
 
 	hsi2c@14E00000 {
