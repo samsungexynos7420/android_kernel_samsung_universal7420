@@ -37,17 +37,12 @@
 	pinctrl-0 = <&initial2>;
 	pinctrl-1 = <&sleep2>;
 	initial2: initial-state {
-		PIN_IN(gpd0-0, DOWN, LV1);	/* NC */
-		PIN_IN(gpd0-1, DOWN, LV1);	/* NC */
-
 		PIN_IN(gpd1-2, DOWN, LV1);	/* NC */
 		PIN_IN(gpd1-3, DOWN, LV1);	/* NC */
 		PIN_IN(gpd1-4, DOWN, LV1);	/* NC */
 		PIN_IN(gpd1-5, DOWN, LV1);	/* NC */
 
 		PIN_IN(gpd2-4, DOWN, LV1);	/* NC */
-		PIN_IN(gpd2-6, DOWN, LV1);	/* NC */
-		PIN_IN(gpd2-7, DOWN, LV1);	/* NC */
 
 		PIN_IN(gpd4-0, DOWN, LV1);	/* NC */
 		PIN_IN(gpd4-1, DOWN, LV1);	/* NC */
@@ -158,7 +153,6 @@
 		PIN_IN(gpf0-3, NONE, LV1);	/* HW_REV(3) */
 		PIN_IN(gpf0-5, DOWN, LV1);	/* NC */
 
-		PIN_IN(gpf1-0, DOWN, LV1);	/* NC */
 		PIN_IN(gpf1-2, DOWN, LV1);	/* NC */
 		PIN_IN(gpf1-3, DOWN, LV1);	/* NC */
 
@@ -168,10 +162,8 @@
 		PIN_IN(gpf2-3, DOWN, LV1);	/* NC */
 
 		PIN_IN(gpf3-1, DOWN, LV1);	/* FPS_ID */
-		PIN_IN(gpf3-2, DOWN, LV1);	/* NC */
 
 		PIN_IN(gpf5-3, DOWN, LV1);	/* NC */
-		PIN_IN(gpf5-5, DOWN, LV1);	/* NC */
 		PIN_IN(gpf5-6, DOWN, LV1);	/* NC */
 		PIN_IN(gpf5-7, DOWN, LV1);	/* NC */
 
