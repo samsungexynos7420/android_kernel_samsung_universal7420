@@ -231,8 +231,8 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 		set_tsk_thread_flag(selected, TIF_MEMDIE);
 		send_sig(SIGKILL, selected, 0);
 		rem -= selected_tasksize;
-		rcu_read_unlock();
 		lowmem_lmkcount++;
+		rcu_read_unlock();
 		/* give the system time to free up the memory */
 		msleep_interruptible(20);
 
