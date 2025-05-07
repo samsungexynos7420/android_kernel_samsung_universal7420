@@ -1,0 +1,177 @@
+From 4ddda69ab43ccdac6291fc020f7e77570a8cb988 Mon Sep 17 00:00:00 2001
+From: Fakeman <55951275+fakemanoan@users.noreply.github.com>
+Date: Mon, 8 Jan 2024 14:28:51 +0000
+Subject: [PATCH] Add support in decon for NV12N and NV12N_10B
+
+pretty sure our r22p graphics driver and hardware is capable of these
+
+eventually i want to back port some of the vpp changes to the s6 from the s7, but this will take time. this was easy enough to do
+---
+ .../platform/exynos/scaler/scaler-core.c      | 22 +++++++++++--
+ drivers/video/exynos/decon/decon.h            |  5 ++-
+ drivers/video/exynos/decon/decon_core.c       |  8 +++++
+ drivers/video/exynos/decon/vpp/vpp_drv.c      | 16 ++++++++++
+ include/uapi/linux/videodev2_exynos_media.h   | 31 +++++++++++++++++++
+ 5 files changed, 78 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/media/platform/exynos/scaler/scaler-core.c b/drivers/media/platform/exynos/scaler/scaler-core.c
+index 5f1e7e0ec163..d8b0d63a058a 100644
+--- a/drivers/media/platform/exynos/scaler/scaler-core.c
++++ b/drivers/media/platform/exynos/scaler/scaler-core.c
+@@ -2589,9 +2589,25 @@ static int sc_get_bufaddr(struct sc_dev *sc, struct vb2_buffer *vb2buf,
+ 		break;
+ 	case 2:
+ 		if (frame->sc_fmt->num_planes == 1) {
+-			frame->addr.cb = frame->addr.y + pixsize;
+-			frame->addr.ysize = pixsize;
+-			frame->addr.cbsize = bytesize - pixsize;
++            if (frame->sc_fmt->pixelformat == V4L2_PIX_FMT_NV12N) {
++				unsigned int w = frame->width;
++				unsigned int h = frame->height;
++				frame->addr.cb =
++					NV12N_CBCR_BASE(frame->addr.y, w, h);
++				frame->addr.ysize = NV12N_Y_SIZE(w, h);
++				frame->addr.cbsize = NV12N_CBCR_SIZE(w, h);
++			} else if (frame->sc_fmt->pixelformat == V4L2_PIX_FMT_NV12N_10B) {
++				unsigned int w = frame->width;
++				unsigned int h = frame->height;
++				frame->addr.cb =
++					NV12N_10B_CBCR_BASE(frame->addr.y, w, h);
++				frame->addr.ysize = NV12N_Y_SIZE(w, h);
++				frame->addr.cbsize = NV12N_CBCR_SIZE(w, h);
++			} else {
++                frame->addr.cb = frame->addr.y + pixsize;
++                frame->addr.ysize = pixsize;
++                frame->addr.cbsize = bytesize - pixsize;
++            }
+ 		} else if (frame->sc_fmt->num_planes == 2) {
+ 			cookie = vb2_plane_cookie(vb2buf, 1);
+ 			if (!cookie)
+diff --git a/drivers/video/exynos/decon/decon.h b/drivers/video/exynos/decon/decon.h
+index f9bbfd7a5378..55adea784466 100644
+--- a/drivers/video/exynos/decon/decon.h
++++ b/drivers/video/exynos/decon/decon.h
+@@ -321,7 +321,10 @@ enum decon_pixel_format {
+ 	DECON_PIXEL_FORMAT_YVU420,
+ 	DECON_PIXEL_FORMAT_YUV420M,
+ 	DECON_PIXEL_FORMAT_YVU420M,
+-
++	/* YUV - support for single plane */
++	DECON_PIXEL_FORMAT_NV12N,
++	DECON_PIXEL_FORMAT_NV12N_10B,
++	
+ 	DECON_PIXEL_FORMAT_MAX,
+ };
+ 
+diff --git a/drivers/video/exynos/decon/decon_core.c b/drivers/video/exynos/decon/decon_core.c
+index b565dc3590c9..8138fa8b0749 100644
+--- a/drivers/video/exynos/decon/decon_core.c
++++ b/drivers/video/exynos/decon/decon_core.c
+@@ -2067,6 +2067,8 @@ static int decon_get_plane_cnt(enum decon_pixel_format format)
+ 	case DECON_PIXEL_FORMAT_BGRX_8888:
+ 	case DECON_PIXEL_FORMAT_RGBA_5551:
+ 	case DECON_PIXEL_FORMAT_RGB_565:
++	case DECON_PIXEL_FORMAT_NV12N:
++	case DECON_PIXEL_FORMAT_NV12N_10B:
+ 		return 1;
+ 
+ 	case DECON_PIXEL_FORMAT_NV16:
+@@ -2128,6 +2130,10 @@ static u32 get_vpp_src_format(u32 format, int id)
+ 		return DECON_PIXEL_FORMAT_NV21M;
+ 	case DECON_PIXEL_FORMAT_NV21M:
+ 		return DECON_PIXEL_FORMAT_NV12M;
++	case DECON_PIXEL_FORMAT_NV12N:
++		return DECON_PIXEL_FORMAT_NV12N;
++	case DECON_PIXEL_FORMAT_NV12N_10B:
++		return DECON_PIXEL_FORMAT_NV12N_10B;
+ 	case DECON_PIXEL_FORMAT_YUV420:
+ 		return DECON_PIXEL_FORMAT_YVU420;
+ 	case DECON_PIXEL_FORMAT_YVU420:
+@@ -2164,6 +2170,8 @@ static u32 get_vpp_out_format(u32 format)
+ 	case DECON_PIXEL_FORMAT_NV21:
+ 	case DECON_PIXEL_FORMAT_NV12M:
+ 	case DECON_PIXEL_FORMAT_NV21M:
++	case DECON_PIXEL_FORMAT_NV12N:
++	case DECON_PIXEL_FORMAT_NV12N_10B:
+ 	case DECON_PIXEL_FORMAT_YUV420:
+ 	case DECON_PIXEL_FORMAT_YVU420:
+ 	case DECON_PIXEL_FORMAT_YUV420M:
+diff --git a/drivers/video/exynos/decon/vpp/vpp_drv.c b/drivers/video/exynos/decon/vpp/vpp_drv.c
+index 1f868dc52ac6..6645732bb4ab 100644
+--- a/drivers/video/exynos/decon/vpp/vpp_drv.c
++++ b/drivers/video/exynos/decon/vpp/vpp_drv.c
+@@ -705,6 +705,21 @@ static int vpp_set_read_order(struct vpp_dev *vpp)
+ 
+ 	return ret;
+ }
++void vpp_split_single_plane(struct vpp_dev *vpp)
++{
++    struct decon_win_config *config = vpp->config;
++    struct vpp_params *vpp_parm = &vpp->config->vpp_parm;
++    
++	switch(config->format) {
++	case DECON_PIXEL_FORMAT_NV12N:
++		vpp_parm->addr[1] = NV12N_CBCR_BASE(vpp_parm->addr[0], config->src.f_w, config->src.f_h);
++		break;
++	case DECON_PIXEL_FORMAT_NV12N_10B:
++		vpp_parm->addr[1] = NV12N_10B_CBCR_BASE(vpp_parm->addr[0], config->src.f_w, config->src.f_h);
++	default:
++		break;
++	}
++}
+ 
+ static int vpp_set_config(struct vpp_dev *vpp)
+ {
+@@ -761,6 +776,7 @@ static int vpp_set_config(struct vpp_dev *vpp)
+ 		if (ret)
+ 			goto err;
+ 	}
++	vpp_split_single_plane(vpp);
+ 	vpp_hw_set_in_buf_addr(vpp);
+ 	vpp_hw_set_smart_if_pix_num(vpp);
+ 
+diff --git a/include/uapi/linux/videodev2_exynos_media.h b/include/uapi/linux/videodev2_exynos_media.h
+index 21927206676a..703f21ad6459 100644
+--- a/include/uapi/linux/videodev2_exynos_media.h
++++ b/include/uapi/linux/videodev2_exynos_media.h
+@@ -114,6 +114,37 @@
+ /* for DRM playback scenario */
+ #define V4L2_CID_CONTENT_PROTECTION	(V4L2_CID_EXYNOS_BASE + 201)
+ 
++/*
++ *	V I D E O   I M A G E   F O R M A T
++ */
++/* 1 plane -- one Y, one Cb + Cr interleaved, non contiguous  */
++#define V4L2_PIX_FMT_NV12N		v4l2_fourcc('N', 'N', '1', '2')
++#define V4L2_PIX_FMT_NV12NT		v4l2_fourcc('T', 'N', '1', '2')
++
++/* 1 plane -- one Y, one Cb, one Cr, non contiguous */
++#define V4L2_PIX_FMT_YUV420N		v4l2_fourcc('Y', 'N', '1', '2')
++
++/* 1 plane -- 8bit Y, 2bit Y, 8bit Cb + Cr interleaved, 2bit Cb + Cr interleaved, non contiguous */
++#define V4L2_PIX_FMT_NV12N_10B		v4l2_fourcc('B', 'N', '1', '2')
++
++/* helper macros */
++#ifndef __ALIGN_UP
++#define __ALIGN_UP(x, a)		(((x) + ((a) - 1)) & ~((a) - 1))
++#endif
++
++#define NV12N_Y_SIZE(w, h)		(__ALIGN_UP((w), 16) * __ALIGN_UP((h), 16) + 256)
++#define NV12N_CBCR_SIZE(w, h)		(__ALIGN_UP((__ALIGN_UP((w), 16) * (__ALIGN_UP((h), 16) / 2) + 256), 16))
++#define NV12N_CBCR_BASE(base, w, h)	((base) + NV12N_Y_SIZE((w), (h)))
++#define NV12N_10B_Y_2B_SIZE(w,h)	((__ALIGN_UP((w) / 4, 16) * __ALIGN_UP((h), 16) + 64))
++#define NV12N_10B_CBCR_2B_SIZE(w,h)	((__ALIGN_UP((w) / 4, 16) * (__ALIGN_UP((h), 16) / 2) + 64))
++#define NV12N_10B_CBCR_BASE(base,w,h)	((base) + NV12N_Y_SIZE((w), (h)) + NV12N_10B_Y_2B_SIZE((w), (h)))
++
++#define YUV420N_Y_SIZE(w, h)		(__ALIGN_UP((w), 16) * __ALIGN_UP((h), 16) + 256)
++#define YUV420N_CB_SIZE(w, h)		(__ALIGN_UP((__ALIGN_UP((w) / 2, 16) * (__ALIGN_UP((h), 16) / 2) + 256), 16))
++#define YUV420N_CR_SIZE(w, h)		(__ALIGN_UP((__ALIGN_UP((w) / 2, 16) * (__ALIGN_UP((h), 16) / 2) + 256), 16))
++#define YUV420N_CB_BASE(base, w, h)	((base) + YUV420N_Y_SIZE((w), (h)))
++#define YUV420N_CR_BASE(base, w, h)	(YUV420N_CB_BASE((base), (w), (h)) + YUV420N_CB_SIZE((w), (h)))
++
+ /* for 2d operation */
+ #define V4L2_CID_2D_BLEND_OP		(V4L2_CID_EXYNOS_BASE + 103)
+ #define V4L2_CID_2D_COLOR_FILL		(V4L2_CID_EXYNOS_BASE + 104)
+-- 
+2.25.1
+
