@@ -1,0 +1,16 @@
+Skipped commits for update:
+treewide: remove some of Samsung's modifications. 
+random32: add prandom_u32_max and convert open coded users
+
+ipv6: replace 2 uses of ACCESS_ONCE with READ_ONCE.
+a18acd890ae2cfa21988d5bc3acf54f174f835d0^..cde05bba1c9db64ef9642ece84b941af33ac7180
+mm: rcu-protected get_mm_exe_file()
+bluetooth 3.18 update and fixes
+fix regression in "epoll: Keep a reference on files added to the chec…
+xt_qtaguid: Use sk_callback_lock read locks before reading sk->sk_socket 
+
+7c35040b98f69427c80230b4c7842ecf3015df37^..be9081a08610dab32e81be7535bb490f58f5d31d
+
+ext4: save error to disk in __ext4_grp_locked_error()
+
+netfilter: nf_nat_h323: fix logical-not-parentheses warning

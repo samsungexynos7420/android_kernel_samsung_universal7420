@@ -1,0 +1,37 @@
+###############################################
+Things not present in 8890 but applied anyway:
+###############################################
+
+594e1baa4aaa4792990422107fa1ffc16c5a2638
+
+###############################################
+Selectively applied/initial commit modified:
+###############################################
+
+ext4: add cond_resched() to ext4_free_blocks() & ext4_mb_regular_a
+ext4: remove metadata reservation checks
+access: avoid the RCU grace period for the temporary subjectiv
+ext4: rename: create ext4_renament structure for local vars
+ext4: rename: split out helper functions 
+ext4: propagate errors up to ext4_find_entry()'s callers 
+ext4: convert ext4_dx_find_entry() to use the ERR_PTR convention
+ext4: pass inode pointer instead of file pointer to punch hole 
+swap: add a simple detector for inappropriate swapin readahead
+
+tcp: remove one indentation level in tcp_rcv_state_process()
+tcp: Remove another indentation level in tcp_rcv_state_process
+tcp: Remove 2 indentation levels in tcp_rcv_state_process
+Tcp: consolidate SYNACK RTT sampling 
+tcp: introduce a per-route knob for quick ack
+Revert "tcp: fix xmit timer to only be reset if data ACKed/SACKed"
+tcp: increase throughput when reordering is high 
+tcp: fix SYNACK RTT estimation in Fast Open
+tcp: remove poll() flakes with FastOpen 
+Revert "net: tcp: Scale the TCP backlog queue to absorb packet bursts"
+tcp: tcp_grow_window() needs to respect tcp_space() 
+tcp: fix tcp_mark_head_lost to check skb len before fragmenting 
+tcp: avoid fragmenting peculiar skbs in SACK 
+
+
+###############################################
+###############################################
