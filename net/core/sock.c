@@ -723,11 +723,13 @@ int sock_setsockopt(struct socket *sock, int level, int optname,
 
 	if (optname == SO_BINDTODEVICE)
 		return sock_setbindtodevice(sk, optval, optlen);
-
+	
+#ifdef CONFIG_KNOX_NCM
     /* START_OF_KNOX_VPN */
     if (optname == SO_SET_DOMAIN_NAME)
         return sock_set_domain_name(sk, optval, optlen);
     /* END_OF_KNOX_VPN */
+#endif
 
 	if (optlen < sizeof(int))
 		return -EINVAL;
