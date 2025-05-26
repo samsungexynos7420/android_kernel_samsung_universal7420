@@ -80,6 +80,10 @@
 
 #define SO_BPF_EXTENSIONS	48
 
+#ifdef CONFIG_KNOX_NCM
+/* START_OF_KNOX_VPN */
 #define SO_SET_DOMAIN_NAME 51
+/* END_OF_KNOX_VPN */
+#endif
 
 #endif /* __ASM_GENERIC_SOCKET_H */
