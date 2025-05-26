@@ -82,7 +82,7 @@
 
 #ifdef CONFIG_KNOX_NCM
 /* START_OF_KNOX_VPN */
-#define SO_SET_DOMAIN_NAME 51
+#define SO_SET_DOMAIN_NAME	1000
 /* END_OF_KNOX_VPN */
 #endif
 
