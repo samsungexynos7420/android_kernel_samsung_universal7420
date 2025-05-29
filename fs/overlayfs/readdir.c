@@ -265,7 +265,7 @@ static int ovl_dir_read_merged(struct dentry *dentry, struct list_head *list)
 	int err;
 	struct path realpath;
 	struct ovl_readdir_data rdd = {
-		.ctx.actor = ovl_fill_merge,
+		.ctx.actor = (filldir_t)ovl_fill_merge,
 		.list = list,
 		.root = RB_ROOT,
 		.is_merge = false,
