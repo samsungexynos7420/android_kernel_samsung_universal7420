@@ -19,7 +19,7 @@ void ovl_cleanup(struct inode *wdir, struct dentry *wdentry)
 	int err;
 
 	dget(wdentry);
-	if (d_is_dir(wdentry))
+	if (!S_ISDIR(wdentry->d_inode->i_mode))
 		err = ovl_do_rmdir(wdir, wdentry);
 	else
 		err = ovl_do_unlink(wdir, wdentry);
@@ -607,7 +607,7 @@ static int ovl_remove_upper(struct dentry *dentry, bool is_dir)
 		if (is_dir)
 			err = vfs_rmdir(dir, upper);
 		else
-			err = vfs_unlink(dir, upper, NULL);
+			err = vfs_unlink(dir, upper);
 		dput(upper);
 		ovl_dentry_version_inc(dentry->d_parent);
 	}
@@ -716,7 +716,7 @@ static int ovl_rename2(struct inode *olddir, struct dentry *old,
 	bool new_create = false;
 	bool cleanup_whiteout = false;
 	bool overwrite = !(flags & RENAME_EXCHANGE);
-	bool is_dir = d_is_dir(old);
+	bool is_dir = S_ISDIR(old->d_inode->i_mode);
 	bool new_is_dir = false;
 	struct dentry *opaquedir = NULL;
 	const struct cred *old_cred = NULL;
@@ -743,7 +743,7 @@ static int ovl_rename2(struct inode *olddir, struct dentry *old,
 		if (err)
 			goto out;
 
-		if (d_is_dir(new))
+		if (S_ISDIR(new->d_inode->i_mode))
 			new_is_dir = true;
 
 		new_type = ovl_path_type(new);
@@ -886,8 +886,7 @@ static int ovl_rename2(struct inode *olddir, struct dentry *old,
 		/* No debug for the plain case */
 		BUG_ON(flags & ~RENAME_EXCHANGE);
 		err = vfs_rename(old_upperdir->d_inode, olddentry,
-				 new_upperdir->d_inode, newdentry,
-				 NULL, flags);
+				 new_upperdir->d_inode, newdentry);
 	}
 
 	if (err) {
