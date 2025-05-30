@@ -354,11 +354,11 @@ static inline u32 bpf_prog_run_save_cb(const struct bpf_prog *prog,
 				       struct sk_buff *skb)
 {
 	u8 *cb_data = qdisc_skb_cb(skb)->data;
-	u8 saved_cb[QDISC_CB_PRIV_LEN];
+	u8 saved_cb[20];
 	u32 res;
 
 	BUILD_BUG_ON(FIELD_SIZEOF(struct __sk_buff, cb) !=
-		     QDISC_CB_PRIV_LEN);
+		     20);
 
 	if (unlikely(prog->cb_access)) {
 		memcpy(saved_cb, cb_data, sizeof(saved_cb));
@@ -379,7 +379,7 @@ static inline u32 bpf_prog_run_clear_cb(const struct bpf_prog *prog,
 	u8 *cb_data = qdisc_skb_cb(skb)->data;
 
 	if (unlikely(prog->cb_access))
-		memset(cb_data, 0, QDISC_CB_PRIV_LEN);
+		memset(cb_data, 0, 20);
 	return BPF_PROG_RUN(prog, skb);
 }
 
