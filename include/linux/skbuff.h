@@ -737,6 +737,10 @@ static inline __u32 skb_get_rxhash(struct sk_buff *skb)
 	return skb->rxhash;
 }
 
+static inline void skb_sender_cpu_clear(struct sk_buff *skb)
+{
+}
+
 #ifdef NET_SKBUFF_DATA_USES_OFFSET
 static inline unsigned char *skb_end_pointer(const struct sk_buff *skb)
 {
