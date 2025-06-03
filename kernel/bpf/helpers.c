@@ -95,7 +95,7 @@ const struct bpf_func_proto bpf_get_smp_processor_id_proto = {
 BPF_CALL_0(bpf_ktime_get_ns)
 {
 	/* NMI safe access to clock monotonic */
-	return ktime_get_mono_fast_ns();
+	return sched_clock();
 }
 
 const struct bpf_func_proto bpf_ktime_get_ns_proto = {
