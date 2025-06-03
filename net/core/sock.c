@@ -148,6 +148,8 @@
 #include <net/tcp.h>
 #endif
 
+#include <linux/sock_diag.h>
+
 static DEFINE_MUTEX(proto_list_mutex);
 static LIST_HEAD(proto_list);
 
