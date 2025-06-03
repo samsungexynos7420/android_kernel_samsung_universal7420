@@ -2134,7 +2134,7 @@ static const struct bpf_func_proto bpf_get_socket_cookie_proto = {
 
 BPF_CALL_1(bpf_get_socket_uid, struct sk_buff *, skb)
 {
-	struct sock *sk = sk_to_full_sk(skb->sk);
+	struct sock *sk = skb->sk;
 	kuid_t kuid;
 
 	if (!sk || !sk_fullsock(sk))
