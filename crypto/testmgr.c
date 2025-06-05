@@ -3452,6 +3452,8 @@ non_fips_alg:
 			driver, alg);
 	return rc;
 }
+
+#ifdef CONFIG_CRYPTO_FIPS
 int testmgr_crypto_proc_init(void)
 {
 #ifdef CONFIG_CRYPTO_FIPS
@@ -3461,6 +3463,7 @@ int testmgr_crypto_proc_init(void)
 #endif
 	return 0;
 }
+#endif
 
 #endif /* CONFIG_CRYPTO_MANAGER_DISABLE_TESTS */
 
