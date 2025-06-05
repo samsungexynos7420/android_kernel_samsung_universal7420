@@ -226,9 +226,11 @@ static int ufshcd_link_hibern8_ctrl(struct ufs_hba *hba, bool en);
 static int ufshcd_host_reset_and_restore(struct ufs_hba *hba);
 static irqreturn_t ufshcd_intr(int irq, void *__hba);
 
+#if defined(CONFIG_FMP_UFS)
 extern int fmp_map_sg(struct ufshcd_sg_entry *prd_table, struct scatterlist *sg,
 					uint32_t sector_key, uint32_t idx,
 					uint32_t sector);
+#endif
 
 #if defined(CONFIG_UFS_FMP_ECRYPT_FS)
 extern void fmp_clear_sg(struct ufshcd_lrb *lrbp);
@@ -1210,6 +1212,8 @@ static int ufshcd_map_sg(struct ufs_hba *hba, struct ufshcd_lrb *lrbp)
 				sector_key &= ~UFS_FILE_ENCRYPTION_SECTOR_BEGIN;
 			}
 #endif
+
+#if defined(CONFIG_FMP_UFS)
 			if (sector_key == UFS_BYPASS_SECTOR_BEGIN) {
 				SET_DAS(&prd_table[i], CLEAR);
 				SET_FAS(&prd_table[i], CLEAR);
@@ -1221,6 +1225,10 @@ static int ufshcd_map_sg(struct ufs_hba *hba, struct ufshcd_lrb *lrbp)
 							}
 						}
 			sector += UFSHCI_SECTOR_SIZE / MIN_SECTOR_SIZE;
+#else
+			SET_DAS(&prd_table[i], CLEAR);
+			SET_FAS(&prd_table[i], CLEAR);
+#endif
 		}
 	} else {
 		lrbp->utr_descriptor_ptr->prd_table_length = 0;
