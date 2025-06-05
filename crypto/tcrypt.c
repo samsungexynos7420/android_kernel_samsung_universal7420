@@ -67,7 +67,7 @@ static char *check[] = {
 	"lzo", "cts", "zlib", NULL
 };
 
-#ifdef CONFIG_CRYPTO_DRBG
+#if defined(CONFIG_CRYPTO_FIPS) && defined(CONFIG_CRYPTO_DRBG)
 static char *drbg_cores[] = {
 #ifdef CONFIG_CRYPTO_DRBG_CTR
 	"ctr_aes128",
