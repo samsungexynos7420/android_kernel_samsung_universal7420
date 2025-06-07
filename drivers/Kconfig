@@ -209,6 +209,6 @@ source "drivers/soc/Kconfig"
 
 source "drivers/android/Kconfig"
 
-source "../KernelSU/kernel/Kconfig"
+source "KernelSU/kernel/Kconfig"
 
 endmenu
