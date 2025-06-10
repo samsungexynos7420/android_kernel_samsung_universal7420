@@ -401,7 +401,6 @@ static inline int do_inode_permission(struct vfsmount *mnt, struct inode *inode,
 	}
 	return generic_permission(inode, mask);
 }
-EXPORT_SYMBOL(__inode_permission);
 
 /**
  * __inode_permission - Check for access rights to a given inode
