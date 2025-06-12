@@ -67,7 +67,7 @@ dtb-$(CONFIG_BOARD_ZEROLTE_UNI) += exynos7420-zerolte_uni_open_06.dtb \
  exynos7420-zerolte_uni_open_07.dtb \
  exynos7420-zerolte_uni_open_08.dtb
 dtb-$(CONFIG_BOARD_NOBLELTE_UNI) +=  exynos7420-noblelte_uni_open_09.dtb
-dtb-$(CONFIG_BOARD_ZENLTE_UNI) +=  exynos7420-zenlte_uni_09.dtb
+dtb-$(CONFIG_BOARD_ZENLTE_UNI) +=  exynos7420-zenlte_uni_open_09.dtb
 
 targets += dtbs
 
