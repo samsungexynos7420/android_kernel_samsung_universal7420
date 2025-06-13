@@ -297,12 +297,28 @@ static void __init setup_processor(void)
 #endif
 }
 
-struct machine_desc * __init setup_machine_fdt(phys_addr_t dt_phys)
+struct machine_desc *machine_desc __initdata;
+struct machine_desc * __init mdesc_init(void)
 {
-	struct boot_param_header *devtree;
 	unsigned long dt_root;
 	struct machine_desc *mdesc, *mdesc_best = NULL;
 	unsigned int score, mdesc_score = ~1;
+
+	dt_root = of_get_flat_dt_root();
+	for_each_machine_desc(mdesc) {
+		score = of_flat_dt_match(dt_root, mdesc->dt_compat);
+		if (score > 0 && score < mdesc_score) {
+			mdesc_best = mdesc;
+			mdesc_score = score;
+		}
+	}
+	return mdesc_best;
+}
+
+static void __init setup_machine_fdt(phys_addr_t dt_phys)
+{
+	struct boot_param_header *devtree;
+	unsigned long dt_root;
 
 	cpuinfo_store_cpu();
 
@@ -335,13 +351,6 @@ struct machine_desc * __init setup_machine_fdt(phys_addr_t dt_phys)
 
 	initial_boot_params = devtree;
 	dt_root = of_get_flat_dt_root();
-	for_each_machine_desc(mdesc) {
-		score = of_flat_dt_match(dt_root, mdesc->dt_compat);
-		if (score > 0 && score < mdesc_score) {
-			mdesc_best = mdesc;
-			mdesc_score = score;
-		}
-	}
 
 	machine_name = of_get_flat_dt_prop(dt_root, "model", NULL);
 	if (!machine_name)
@@ -356,8 +365,6 @@ struct machine_desc * __init setup_machine_fdt(phys_addr_t dt_phys)
 	of_scan_flat_dt(early_init_dt_scan_root, NULL);
 	/* Setup memory, calling early_init_dt_add_memory_arch */
 	of_scan_flat_dt(early_init_dt_scan_memory, NULL);
-
-	return mdesc_best;
 }
 
 /*
@@ -432,8 +439,6 @@ late_initcall(init_machine_late);
 
 u64 __cpu_logical_map[NR_CPUS] = { [0 ... NR_CPUS-1] = INVALID_HWID };
 
-struct machine_desc *machine_desc __initdata;
-
 void __init setup_arch(char **cmdline_p)
 {
 	struct machine_desc *mdesc;
@@ -445,7 +450,9 @@ void __init setup_arch(char **cmdline_p)
 
 	setup_processor();
 
-	mdesc = setup_machine_fdt(__fdt_pointer);
+	setup_machine_fdt(__fdt_pointer);
+
+	mdesc = mdesc_init();
 	machine_desc = mdesc;
 	machine_name = mdesc->name;
 
