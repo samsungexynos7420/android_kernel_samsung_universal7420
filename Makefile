@@ -485,6 +485,11 @@ config-targets := 0
 mixed-targets  := 0
 dot-config     := 1
 
+ifeq ($(CONFIG_SOC_EXYNOS7420), y)
+KBUILD_CFLAGS	+= -march=armv8-a+crc -mtune=cortex-a57.cortex-a53
+KBUILD_CFLAGS	+= -mfloat-abi=hard
+endif
+
 ifneq ($(filter $(no-dot-config-targets), $(MAKECMDGOALS)),)
 	ifeq ($(filter-out $(no-dot-config-targets), $(MAKECMDGOALS)),)
 		dot-config := 0
