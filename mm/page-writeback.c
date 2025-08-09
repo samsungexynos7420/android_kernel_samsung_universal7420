@@ -71,7 +71,7 @@ static long ratelimit_pages = 32;
 #ifdef CONFIG_LARGE_DIRTY_BUFFER
 int dirty_background_ratio = 5;
 #else
-int dirty_background_ratio = 0;
+int dirty_background_ratio;
 #endif
 
 /*
@@ -79,7 +79,7 @@ int dirty_background_ratio = 0;
  * dirty_background_ratio * the amount of dirtyable memory
  */
 #ifdef CONFIG_LARGE_DIRTY_BUFFER
-unsigned long dirty_background_bytes = 0;
+unsigned long dirty_background_bytes;
 #else
 unsigned long dirty_background_bytes = 25 * 1024 * 1024;
 #endif
@@ -94,7 +94,7 @@ int vm_highmem_is_dirtyable;
  * The generator of dirty data starts writeback at this percentage
  */
 #ifdef CONFIG_LARGE_DIRTY_BUFFER
-int vm_dirty_ratio = 25;
+int vm_dirty_ratio = 20;
 #else
 int vm_dirty_ratio = 0;
 #endif
@@ -539,11 +539,7 @@ EXPORT_SYMBOL(bdi_set_max_ratio);
 static unsigned long dirty_freerun_ceiling(unsigned long thresh,
 					   unsigned long bg_thresh)
 {
-#ifdef CONFIG_LARGE_DIRTY_BUFFER
-	return (3 * thresh + bg_thresh) / 4;
-#else
 	return (thresh + bg_thresh) / 2;
-#endif
 }
 
 static unsigned long hard_dirty_limit(unsigned long thresh)
