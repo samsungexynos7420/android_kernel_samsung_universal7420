@@ -6076,6 +6076,8 @@ static int decon_probe(struct platform_device *pdev)
 	int win_idx = 0;
 	u32 vclk_rate;
 	int disply_det_val;
+	
+	struct sched_param param;
 
 	dev_info(dev, "%s start\n", __func__);
 
@@ -6256,6 +6258,8 @@ static int decon_probe(struct platform_device *pdev)
 		decon_err("failed to run update_regs thread\n");
 		goto fail_output_lock;
 	}
+	param.sched_priority = 2;
+	sched_setscheduler_nocheck(decon->update_regs_thread, SCHED_FIFO, &param);
 	init_kthread_work(&decon->update_regs_work, decon_update_regs_handler);
 
 	snprintf(device_name, MAX_NAME_SIZE, "decon%d-wb", decon->id);
