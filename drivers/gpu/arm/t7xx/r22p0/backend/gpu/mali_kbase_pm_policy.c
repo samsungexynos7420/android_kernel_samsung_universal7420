@@ -499,11 +499,18 @@ void kbase_pm_update_cores_state_nolock(struct kbase_device *kbdev)
 							~desired_tiler_bitmap);
 
 			if (kbdev->pm.poweroff_shader_ticks &&
-					!kbdev->protected_mode_transition)
+					!kbdev->protected_mode_transition) {
 				kbdev->pm.backend.shader_poweroff_pending_time =
 						kbdev->pm.poweroff_shader_ticks;
-			else
+				if (kbdev->pm.backend.pm_current_policy->handle_event)
+					kbdev->pm.backend.pm_current_policy->handle_event(kbdev,
+						KBASE_PM_POLICY_EVENT_TIMER_HIT);
+			} else {
+				if (kbdev->pm.backend.pm_current_policy->handle_event)
+					kbdev->pm.backend.pm_current_policy->handle_event(kbdev,
+						KBASE_PM_POLICY_EVENT_TIMER_MISS);
 				do_poweroff = true;
+			}
 		}
 
 		kbdev->pm.backend.desired_shader_state = desired_bitmap;
@@ -542,6 +549,9 @@ void kbase_pm_update_cores_state_nolock(struct kbase_device *kbdev)
 	 * off unwanted cores */
 	if (kbdev->pm.backend.shader_poweroff_pending ||
 			kbdev->pm.backend.tiler_poweroff_pending) {
+		if (kbdev->pm.backend.pm_current_policy->handle_event)
+			kbdev->pm.backend.pm_current_policy->handle_event(kbdev,
+						KBASE_PM_POLICY_EVENT_POWER_ON);
 		kbdev->pm.backend.shader_poweroff_pending &=
 				~(kbdev->pm.backend.desired_shader_state &
 								desired_bitmap);
@@ -557,8 +567,12 @@ void kbase_pm_update_cores_state_nolock(struct kbase_device *kbdev)
 	/* Shader poweroff is deferred to the end of the function, to eliminate
 	 * issues caused by the core availability policy recursing into this
 	 * function */
-	if (do_poweroff)
+	if (do_poweroff) {
 		kbasep_pm_do_poweroff_cores(kbdev);
+		if (kbdev->pm.backend.pm_current_policy->handle_event)
+			kbdev->pm.backend.pm_current_policy->handle_event(kbdev,
+						KBASE_PM_POLICY_EVENT_IDLE);
+	}
 
 	/* Don't need 'cores_are_available', because we don't return anything */
 	CSTD_UNUSED(cores_are_available);
@@ -626,6 +640,8 @@ void kbase_pm_set_policy(struct kbase_device *kbdev,
 								old_policy->id);
 	if (old_policy->term)
 		old_policy->term(kbdev);
+	
+	memset(&kbdev->pm.backend.pm_policy_data, 0, sizeof(union kbase_pm_policy_data));
 
 	KBASE_TRACE_ADD(kbdev, PM_CURRENT_POLICY_INIT, NULL, NULL, 0u,
 								new_policy->id);
