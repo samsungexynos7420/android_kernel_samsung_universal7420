@@ -2828,7 +2828,8 @@ static ssize_t set_pm_poweroff(struct device *dev,
 	}
 
 	kbdev->pm.gpu_poweroff_time = HR_TIMER_DELAY_NSEC(gpu_poweroff_time);
-	kbdev->pm.poweroff_shader_ticks = poweroff_shader_ticks;
+	kbdev->pm.default_ticks = poweroff_shader_ticks;
+	kbdev->pm.poweroff_shader_ticks = kbdev->pm.default_ticks;
 	kbdev->pm.poweroff_gpu_ticks = poweroff_gpu_ticks;
 
 	return count;
@@ -2857,7 +2858,7 @@ static ssize_t show_pm_poweroff(struct device *dev,
 
 	ret = scnprintf(buf, PAGE_SIZE, "%llu %u %u\n",
 			ktime_to_ns(kbdev->pm.gpu_poweroff_time),
-			kbdev->pm.poweroff_shader_ticks,
+			kbdev->pm.default_ticks,
 			kbdev->pm.poweroff_gpu_ticks);
 
 	return ret;

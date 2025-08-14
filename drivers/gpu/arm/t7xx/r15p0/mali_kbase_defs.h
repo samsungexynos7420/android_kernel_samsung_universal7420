@@ -912,6 +912,9 @@ struct kbase_pm_device_data {
 
 	/* Period of GPU poweroff timer */
 	ktime_t gpu_poweroff_time;
+	
+	/* Number of ticks of GPU poweroff timer before shader is powered off */
+	int default_ticks;
 
 	/* Number of ticks of GPU poweroff timer before shader is powered off */
 	int poweroff_shader_ticks;
