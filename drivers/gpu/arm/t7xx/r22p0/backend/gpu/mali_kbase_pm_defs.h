@@ -35,6 +35,7 @@
 
 #include "mali_kbase_pm_always_on.h"
 #include "mali_kbase_pm_coarse_demand.h"
+#include "mali_kbase_pm_adaptive.h"
 #include "mali_kbase_pm_demand.h"
 #if !MALI_CUSTOMER_RELEASE
 #include "mali_kbase_pm_demand_always_powered.h"
@@ -136,6 +137,7 @@ union kbase_pm_policy_data {
 	struct kbasep_pm_policy_always_on always_on;
 	struct kbasep_pm_policy_coarse_demand coarse_demand;
 	struct kbasep_pm_policy_demand demand;
+	struct kbasep_pm_policy_adaptive adaptive;
 #if !MALI_CUSTOMER_RELEASE
 	struct kbasep_pm_policy_demand_always_powered demand_always_powered;
 	struct kbasep_pm_policy_fast_start fast_start;
@@ -345,6 +347,7 @@ enum kbase_pm_policy_id {
 	KBASE_PM_POLICY_ID_DEMAND = 1,
 	KBASE_PM_POLICY_ID_ALWAYS_ON,
 	KBASE_PM_POLICY_ID_COARSE_DEMAND,
+	KBASE_PM_POLICY_ID_ADAPTIVE,
 #if !MALI_CUSTOMER_RELEASE
 	KBASE_PM_POLICY_ID_DEMAND_ALWAYS_POWERED,
 	KBASE_PM_POLICY_ID_FAST_START

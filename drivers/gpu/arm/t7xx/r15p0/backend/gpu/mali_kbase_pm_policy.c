@@ -30,6 +30,7 @@ static const struct kbase_pm_policy *const policy_list[] = {
 	&kbase_pm_always_on_policy_ops,
 	&kbase_pm_demand_policy_ops,
 	&kbase_pm_coarse_demand_policy_ops,
+	&kbase_pm_adaptive_policy_ops,
 #if !MALI_CUSTOMER_RELEASE
 	&kbase_pm_demand_always_powered_policy_ops,
 	&kbase_pm_fast_start_policy_ops,
@@ -38,6 +39,7 @@ static const struct kbase_pm_policy *const policy_list[] = {
 	&kbase_pm_demand_policy_ops,
 	&kbase_pm_always_on_policy_ops,
 	&kbase_pm_coarse_demand_policy_ops,
+	&kbase_pm_adaptive_policy_ops,
 #if !MALI_CUSTOMER_RELEASE
 	&kbase_pm_demand_always_powered_policy_ops,
 	&kbase_pm_fast_start_policy_ops,
