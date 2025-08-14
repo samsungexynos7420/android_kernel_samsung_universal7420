@@ -161,7 +161,8 @@ union kbase_pm_ca_policy_data {
  * @pm_current_policy: The policy that is currently actively controlling the
  *                     power state.
  * @ca_policy_data:    Private data for current CA policy
- * @pm_policy_data:    Private data for current PM policy
+ * @pm_policy_data:    Private data for current PM policy. This is automatically
+ *                     zeroed when a policy change occurs.
  * @ca_in_transition:  Flag indicating when core availability policy is
  *                     transitioning cores. The core availability policy must
  *                     set this when a change in core availability is occurring.
@@ -353,6 +354,34 @@ enum kbase_pm_policy_id {
 typedef u32 kbase_pm_policy_flags;
 
 /**
+ * enum kbase_pm_policy_event - PM Policy event ID
+ */
+
+enum kbase_pm_policy_event {
+	/**
+	 * @KBASE_PM_POLICY_EVENT_IDLE: Indicates that the GPU power state
+	 * model has determined that the GPU has gone idle.
+	 */
+	KBASE_PM_POLICY_EVENT_IDLE,
+	/**
+	 * @KBASE_PM_POLICY_EVENT_POWER_ON: Indicates that the GPU state model
+	 * is preparing to power on the GPU.
+	 */
+	KBASE_PM_POLICY_EVENT_POWER_ON,
+	/**
+	 * @KBASE_PM_POLICY_EVENT_TIMER_HIT: Indicates that the GPU became
+	 * active while the Shader Tick Timer was holding the GPU in a powered
+	 * on state.
+	 */
+	KBASE_PM_POLICY_EVENT_TIMER_HIT,
+	/**
+	 * @KBASE_PM_POLICY_EVENT_TIMER_MISS: Indicates that the GPU did not
+	 * become active before the Shader Tick Timer timeout occurred.
+	 */
+	KBASE_PM_POLICY_EVENT_TIMER_MISS,
+};
+
+/**
  * struct kbase_pm_policy - Power policy structure.
  *
  * Each power policy exposes a (static) instance of this structure which
@@ -364,6 +393,9 @@ typedef u32 kbase_pm_policy_flags;
  * @get_core_mask:      Function called to get the current shader core mask
  * @get_core_active:    Function called to get the current overall GPU power
  *                      state
+ * @handle_event:       Function called when a PM policy event occurs. Should be
+ *                      set to NULL if the power policy doesn't require any
+ *                      event notifications.
  * @flags:              Field indicating flags for this policy
  * @id:                 Field indicating an ID for this policy. This is not
  *                      necessarily the same as its index in the list returned
@@ -423,6 +455,16 @@ struct kbase_pm_policy {
 	 * Return: true if the GPU should be powered, false otherwise
 	 */
 	bool (*get_core_active)(struct kbase_device *kbdev);
+
+	/**
+	 * Function called when a power event occurs
+	 *
+	 * @kbdev: The kbase device structure for the device (must be a
+	 *         valid pointer)
+	 * @event: The id of the power event that has occurred
+	 */
+	 void (*handle_event)(struct kbase_device *kbdev,
+		enum kbase_pm_policy_event event);
 
 	kbase_pm_policy_flags flags;
 	enum kbase_pm_policy_id id;

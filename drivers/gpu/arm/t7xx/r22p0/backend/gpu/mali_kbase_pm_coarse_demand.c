@@ -68,6 +68,7 @@ const struct kbase_pm_policy kbase_pm_coarse_demand_policy_ops = {
 	coarse_demand_term,			/* term */
 	coarse_demand_get_core_mask,		/* get_core_mask */
 	coarse_demand_get_core_active,		/* get_core_active */
+	NULL,
 	0u,					/* flags */
 	KBASE_PM_POLICY_ID_COARSE_DEMAND,	/* id */
 };
