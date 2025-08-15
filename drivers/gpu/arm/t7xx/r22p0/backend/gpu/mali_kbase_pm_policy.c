@@ -550,9 +550,6 @@ void kbase_pm_update_cores_state_nolock(struct kbase_device *kbdev)
 	 * off unwanted cores */
 	if (kbdev->pm.backend.shader_poweroff_pending ||
 			kbdev->pm.backend.tiler_poweroff_pending) {
-		if (kbdev->pm.backend.pm_current_policy->handle_event)
-			kbdev->pm.backend.pm_current_policy->handle_event(kbdev,
-						KBASE_PM_POLICY_EVENT_POWER_ON);
 		kbdev->pm.backend.shader_poweroff_pending &=
 				~(kbdev->pm.backend.desired_shader_state &
 								desired_bitmap);
@@ -561,18 +558,22 @@ void kbase_pm_update_cores_state_nolock(struct kbase_device *kbdev)
 				desired_tiler_bitmap);
 
 		if (!kbdev->pm.backend.shader_poweroff_pending &&
-				!kbdev->pm.backend.tiler_poweroff_pending)
+				!kbdev->pm.backend.tiler_poweroff_pending) {
+			if (kbdev->pm.backend.pm_current_policy->handle_event)
+				kbdev->pm.backend.pm_current_policy->handle_event(kbdev,
+							KBASE_PM_POLICY_EVENT_POWER_ON);
 			kbdev->pm.backend.shader_poweroff_pending_time = 0;
+		}
 	}
 
 	/* Shader poweroff is deferred to the end of the function, to eliminate
 	 * issues caused by the core availability policy recursing into this
 	 * function */
 	if (do_poweroff) {
-		kbasep_pm_do_poweroff_cores(kbdev);
 		if (kbdev->pm.backend.pm_current_policy->handle_event)
 			kbdev->pm.backend.pm_current_policy->handle_event(kbdev,
 						KBASE_PM_POLICY_EVENT_IDLE);
+		kbasep_pm_do_poweroff_cores(kbdev);
 	}
 
 	/* Don't need 'cores_are_available', because we don't return anything */
