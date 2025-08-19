@@ -151,8 +151,8 @@ static void exynos4_mct_write(unsigned int value, unsigned long offset)
 		}
 	}
 
-	/* Wait until written values are applied */
-	for (i = 0; i < 0x1000; i++)
+	/* Wait maximum 1 ms until written values are applied */
+	for (i = 0; i < loops_per_jiffy / 1000 * HZ; i++)
 		if (readl_relaxed(reg_base + stat_addr) & mask) {
 			writel_relaxed(mask, reg_base + stat_addr);
 			return;
