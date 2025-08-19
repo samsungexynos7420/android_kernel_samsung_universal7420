@@ -16,6 +16,7 @@
 #ifndef __CLKSOURCE_ARM_ARCH_TIMER_H
 #define __CLKSOURCE_ARM_ARCH_TIMER_H
 
+#include <linux/clocksource.h>
 #include <linux/timecounter.h>
 #include <linux/types.h>
 
