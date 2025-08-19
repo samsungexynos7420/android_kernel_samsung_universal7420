@@ -57,6 +57,8 @@
 #define MCT_L_TCON_INT_START		(1 << 1)
 #define MCT_L_TCON_TIMER_START		(1 << 0)
 
+#define TICK_BASE_CNT	1
+
 enum {
 	MCT_INT_SPI,
 	MCT_INT_PPI
@@ -183,18 +185,7 @@ static notrace u32 exynos4_read_sched_clock(void)
 	static DEFINE_SPINLOCK(exynos_mct_spinlock);
 	unsigned long flags;
 
-	if (soc_is_exynos5430() && samsung_rev() == EXYNOS5430_REV_0) {
-		local_irq_save(flags);
-		if (spin_trylock(&exynos_mct_spinlock)) {
-			val = readl_relaxed(reg_base + EXYNOS4_MCT_G_CNT_L);
-			spin_unlock(&exynos_mct_spinlock);
-		} else {
-			spin_unlock_wait(&exynos_mct_spinlock);
-		}
-		local_irq_restore(flags);
-	} else {
-		val = readl_relaxed(reg_base + EXYNOS4_MCT_G_CNT_L);
-	}
+	val = readl_relaxed(reg_base + EXYNOS4_MCT_G_CNT_L);
 
 	return val;
 }
@@ -332,7 +323,6 @@ static void exynos4_clockevent_init(void)
 #ifdef CONFIG_LOCAL_TIMERS
 
 static DEFINE_PER_CPU(struct mct_clock_event_device, percpu_mct_tick);
-static int tick_base_cnt;
 
 int exynos4_mct_tick_dump(int timer)
 {
@@ -409,8 +399,7 @@ static inline void exynos4_tick_set_mode(enum clock_event_mode mode,
 		exynos4_mct_tick_start(cycles_per_jiffy, 1, mevt);
 		break;
 	case CLOCK_EVT_MODE_RESUME:
-		if (!soc_is_exynos5433())
-			exynos4_mct_write(tick_base_cnt, mevt->base + MCT_L_TCNTB_OFFSET);
+		exynos4_mct_write(TICK_BASE_CNT, mevt->base + MCT_L_TCNTB_OFFSET);
 		break;
 
 	case CLOCK_EVT_MODE_ONESHOT:
@@ -465,12 +454,8 @@ static int exynos4_local_timer_setup(struct clock_event_device *evt)
 	evt->set_mode = exynos4_tick_set_mode;
 	evt->features = CLOCK_EVT_FEAT_PERIODIC | CLOCK_EVT_FEAT_ONESHOT;
 	evt->rating = 450;
-	tick_base_cnt = 0;
 
-	if (!soc_is_exynos5433()) {
-		tick_base_cnt = 1;
-		exynos4_mct_write(tick_base_cnt, mevt->base + MCT_L_TCNTB_OFFSET);
-	}
+	exynos4_mct_write(TICK_BASE_CNT, mevt->base + MCT_L_TCNTB_OFFSET);
 
 	if (mct_int_type == MCT_INT_SPI) {
 		struct irqaction *mct_irq = this_cpu_ptr(&percpu_mct_irq);
@@ -483,7 +468,7 @@ static int exynos4_local_timer_setup(struct clock_event_device *evt)
 		enable_percpu_irq(mct_irqs[MCT_L0_IRQ], 0);
 	}
 
-	clockevents_config_and_register(evt, clk_rate / (tick_base_cnt + 1),
+	clockevents_config_and_register(evt, clk_rate / (TICK_BASE_CNT + 1),
 					0xf, 0x7fffffff);
 
 	return 0;
