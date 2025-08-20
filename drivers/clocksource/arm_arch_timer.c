@@ -145,34 +145,40 @@ static int arch_timer_set_next_event_phys(unsigned long evt,
 
 static int arch_timer_setup(struct clock_event_device *clk)
 {
-	if (!arch_timer_use_clocksource_only) {
-		clk->features = CLOCK_EVT_FEAT_ONESHOT | CLOCK_EVT_FEAT_C3STOP;
-		clk->name = "arch_sys_timer";
-		clk->rating = 450;
-		if (arch_timer_use_virtual) {
-			clk->irq = arch_timer_ppi[VIRT_PPI];
-			clk->set_mode = arch_timer_set_mode_virt;
-			clk->set_next_event = arch_timer_set_next_event_virt;
-		} else {
-			clk->irq = arch_timer_ppi[PHYS_SECURE_PPI];
-			clk->set_mode = arch_timer_set_mode_phys;
-			clk->set_next_event = arch_timer_set_next_event_phys;
-		}
+	/*
+	 * If arch_timer is used to clocksource only,
+	 * it doesn't need to setup clockevent configuration.
+	 * This is only for Exynos
+	 */
+	if (arch_timer_use_clocksource_only)
+		return;
 
-		clk->cpumask = cpumask_of(smp_processor_id());
+	clk->features = CLOCK_EVT_FEAT_ONESHOT | CLOCK_EVT_FEAT_C3STOP;
+	clk->name = "arch_sys_timer";
+	clk->rating = 450;
+	if (arch_timer_use_virtual) {
+		clk->irq = arch_timer_ppi[VIRT_PPI];
+		clk->set_mode = arch_timer_set_mode_virt;
+		clk->set_next_event = arch_timer_set_next_event_virt;
+	} else {
+		clk->irq = arch_timer_ppi[PHYS_SECURE_PPI];
+		clk->set_mode = arch_timer_set_mode_phys;
+		clk->set_next_event = arch_timer_set_next_event_phys;
+	}
 
-		clk->set_mode(CLOCK_EVT_MODE_SHUTDOWN, clk);
+	clk->cpumask = cpumask_of(smp_processor_id());
 
-		clockevents_config_and_register(clk, arch_timer_rate,
-						0xf, 0x7fffffff);
+	clk->set_mode(CLOCK_EVT_MODE_SHUTDOWN, clk);
 
-		if (arch_timer_use_virtual)
-			enable_percpu_irq(arch_timer_ppi[VIRT_PPI], 0);
-		else {
-			enable_percpu_irq(arch_timer_ppi[PHYS_SECURE_PPI], 0);
-			if (arch_timer_ppi[PHYS_NONSECURE_PPI])
-				enable_percpu_irq(arch_timer_ppi[PHYS_NONSECURE_PPI], 0);
-		}
+	clockevents_config_and_register(clk, arch_timer_rate,
+					0xf, 0x7fffffff);
+
+	if (arch_timer_use_virtual)
+		enable_percpu_irq(arch_timer_ppi[VIRT_PPI], 0);
+	else {
+		enable_percpu_irq(arch_timer_ppi[PHYS_SECURE_PPI], 0);
+		if (arch_timer_ppi[PHYS_NONSECURE_PPI])
+			enable_percpu_irq(arch_timer_ppi[PHYS_NONSECURE_PPI], 0);
 	}
 
 	arch_counter_set_user_access();
@@ -259,19 +265,26 @@ struct timecounter *arch_timer_get_timecounter(void)
 
 static void arch_timer_stop(struct clock_event_device *clk)
 {
-	if (!arch_timer_use_clocksource_only) {
-		pr_debug("arch_timer_teardown disable IRQ%d cpu #%d\n",
-			 clk->irq, smp_processor_id());
+	/*
+	 * If arch_timer is used to clocksource only,
+	 * it doesn't need to stop clockevent configuration.
+	 * This is only for Exynos
+	 */
+	if (arch_timer_use_clocksource_only)
+		return;
 
-		if (arch_timer_use_virtual)
-			disable_percpu_irq(arch_timer_ppi[VIRT_PPI]);
-		else {
-			disable_percpu_irq(arch_timer_ppi[PHYS_SECURE_PPI]);
-			if (arch_timer_ppi[PHYS_NONSECURE_PPI])
-				disable_percpu_irq(arch_timer_ppi[PHYS_NONSECURE_PPI]);
-		}
-		clk->set_mode(CLOCK_EVT_MODE_UNUSED, clk);
+	pr_debug("arch_timer_teardown disable IRQ%d cpu #%d\n",
+		 clk->irq, smp_processor_id());
+
+	if (arch_timer_use_virtual)
+		disable_percpu_irq(arch_timer_ppi[VIRT_PPI]);
+	else {
+		disable_percpu_irq(arch_timer_ppi[PHYS_SECURE_PPI]);
+		if (arch_timer_ppi[PHYS_NONSECURE_PPI])
+			disable_percpu_irq(arch_timer_ppi[PHYS_NONSECURE_PPI]);
 	}
+
+	clk->set_mode(CLOCK_EVT_MODE_UNUSED, clk);
 }
 
 static int arch_timer_cpu_notify(struct notifier_block *self,
