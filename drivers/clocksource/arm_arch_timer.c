@@ -356,36 +356,34 @@ static int __init arch_timer_register(void)
 	/*  56 bits minimum, so we assume worst case rollover */
 	sched_clock_register(arch_timer_read_counter, 56, arch_timer_rate);
 
-	if (!arch_timer_use_clocksource_only) {
-		arch_timer_evt = alloc_percpu(struct clock_event_device);
-		if (!arch_timer_evt) {
-			err = -ENOMEM;
-			goto out;
-		}
+	arch_timer_evt = alloc_percpu(struct clock_event_device);
+	if (!arch_timer_evt) {
+		err = -ENOMEM;
+		goto out;
+	}
 
-		if (arch_timer_use_virtual) {
-			ppi = arch_timer_ppi[VIRT_PPI];
-			err = request_percpu_irq(ppi, arch_timer_handler_virt,
-						 "arch_timer", arch_timer_evt);
-		} else {
-			ppi = arch_timer_ppi[PHYS_SECURE_PPI];
+	if (arch_timer_use_virtual) {
+		ppi = arch_timer_ppi[VIRT_PPI];
+		err = request_percpu_irq(ppi, arch_timer_handler_virt,
+						"arch_timer", arch_timer_evt);
+	} else {
+		ppi = arch_timer_ppi[PHYS_SECURE_PPI];
+		err = request_percpu_irq(ppi, arch_timer_handler_phys,
+						"arch_timer", arch_timer_evt);
+		if (!err && arch_timer_ppi[PHYS_NONSECURE_PPI]) {
+			ppi = arch_timer_ppi[PHYS_NONSECURE_PPI];
 			err = request_percpu_irq(ppi, arch_timer_handler_phys,
-						 "arch_timer", arch_timer_evt);
-			if (!err && arch_timer_ppi[PHYS_NONSECURE_PPI]) {
-				ppi = arch_timer_ppi[PHYS_NONSECURE_PPI];
-				err = request_percpu_irq(ppi, arch_timer_handler_phys,
-							 "arch_timer", arch_timer_evt);
-				if (err)
-					free_percpu_irq(arch_timer_ppi[PHYS_SECURE_PPI],
-							arch_timer_evt);
-			}
+							"arch_timer", arch_timer_evt);
+			if (err)
+				free_percpu_irq(arch_timer_ppi[PHYS_SECURE_PPI],
+						arch_timer_evt);
 		}
+	}
 
-		if (err) {
-			pr_err("arch_timer: can't register interrupt %d (%d)\n",
-			       ppi, err);
-			goto out_free;
-		}
+	if (err) {
+		pr_err("arch_timer: can't register interrupt %d (%d)\n",
+				ppi, err);
+		goto out_free;
 	}
 	err = register_cpu_notifier(&arch_timer_cpu_nb);
 	if (err)
