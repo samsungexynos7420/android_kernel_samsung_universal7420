@@ -7450,8 +7450,6 @@ static void run_rebalance_domains(struct softirq_action *h)
 	enum cpu_idle_type idle = this_rq->idle_balance ?
 						CPU_IDLE : CPU_NOT_IDLE;
 
-	hmp_force_up_migration(this_cpu);
-
 	/*
 	 * If this cpu has a pending nohz_balance_kick, then do the
 	 * balancing on behalf of the other idle cpus whose ticks are
@@ -7462,6 +7460,8 @@ static void run_rebalance_domains(struct softirq_action *h)
 	 */
 	nohz_idle_balance(this_cpu, idle);
 	rebalance_domains(this_cpu, idle);
+
+	hmp_force_up_migration(this_cpu);
 }
 
 static inline int on_null_domain(int cpu)
