@@ -29,6 +29,15 @@
 #include <net/netfilter/nf_conntrack_zones.h>
 
 #define CONNMARK_TAB_MASK     3
+static struct tcf_common *tcf_connmark_ht[CONNMARK_TAB_MASK + 1];
+static u32 connmark_idx_gen;
+static DEFINE_RWLOCK(connmark_lock);
+
+static struct tcf_hashinfo connmark_hash_info = {
+	.htab	= tcf_connmark_ht,
+	.hmask	= CONNMARK_TAB_MASK,
+	.lock	= &connmark_lock,
+};
 
 static int tcf_connmark(struct sk_buff *skb, const struct tc_action *a,
 			struct tcf_result *res)
@@ -91,12 +100,19 @@ static const struct nla_policy connmark_policy[TCA_CONNMARK_MAX + 1] = {
 	[TCA_CONNMARK_PARMS] = { .len = sizeof(struct tc_connmark) },
 };
 
+static int tcf_csum_cleanup(struct tc_action *a, int bind)
+{
+	struct tcf_connmark_info *ca = a->priv;
+	return tcf_hash_release(&ca->common, bind, &connmark_hash_info);
+}
+
 static int tcf_connmark_init(struct net *net, struct nlattr *nla,
 			     struct nlattr *est, struct tc_action *a,
 			     int ovr, int bind)
 {
 	struct nlattr *tb[TCA_CONNMARK_MAX + 1];
 	struct tcf_connmark_info *ci;
+	struct tcf_common *pc;
 	struct tc_connmark *parm;
 	int ret = 0;
 
@@ -109,24 +125,26 @@ static int tcf_connmark_init(struct net *net, struct nlattr *nla,
 
 	parm = nla_data(tb[TCA_CONNMARK_PARMS]);
 
-	if (!tcf_hash_check(parm->index, a, bind)) {
-		ret = tcf_hash_create(parm->index, est, a, sizeof(*ci), bind);
-		if (ret)
-			return ret;
+	pc = tcf_hash_check(parm->index, a, bind, &connmark_hash_info);
+	if(!pc) {
+		pc = tcf_hash_create(parm->index, est, a, sizeof(*ci), bind, &connmark_idx_gen,
+							  &connmark_hash_info);
+		if (IS_ERR(pc))
+			return PTR_ERR(pc);
 
 		ci = to_connmark(a);
 		ci->tcf_action = parm->action;
 		ci->zone = parm->zone;
 
-		tcf_hash_insert(a);
+		tcf_hash_insert(a, &connmark_hash_info);
 		ret = ACT_P_CREATED;
 	} else {
 		ci = to_connmark(a);
-		if (bind)
-			return 0;
-		tcf_hash_release(a, bind);
-		if (!ovr)
+
+		if (!ovr) {
+			tcf_hash_release(a, bind, &connmark_hash_info);
 			return -EEXIST;
+		}
 		/* replacing action and zone */
 		ci->tcf_action = parm->action;
 		ci->zone = parm->zone;
@@ -167,16 +185,20 @@ nla_put_failure:
 
 static struct tc_action_ops act_connmark_ops = {
 	.kind		=	"connmark",
+	.hinfo		= &connmark_hash_info,
 	.type		=	TCA_ACT_CONNMARK,
+	.capab		= TCA_CAP_NONE,
 	.owner		=	THIS_MODULE,
 	.act		=	tcf_connmark,
 	.dump		=	tcf_connmark_dump,
+	.lookup		= tcf_hash_search,
 	.init		=	tcf_connmark_init,
+	.walk		= tcf_generic_walker
 };
 
 static int __init connmark_init_module(void)
 {
-	return tcf_register_action(&act_connmark_ops, CONNMARK_TAB_MASK);
+	return tcf_register_action(&act_connmark_ops);
 }
 
 static void __exit connmark_cleanup_module(void)
