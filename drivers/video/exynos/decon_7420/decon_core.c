@@ -2413,17 +2413,17 @@ static int decon_set_win_buffer(struct decon_device *decon, struct decon_win *wi
 		if (win_config->fd_idma[i] <= 0)
 			continue;
 
-		handle = ion_import_dma_buf(decon->ion_client, win_config->fd_idma[i]);
-		if (IS_ERR(handle)) {
-			decon_err("failed to import fd\n");
-			ret = PTR_ERR(handle);
-			goto err_invalid;
-		}
-
 		buf[i] = dma_buf_get(win_config->fd_idma[i]);
 		if (IS_ERR_OR_NULL(buf[i])) {
 			decon_err("dma_buf_get() failed: %ld\n", PTR_ERR(buf[i]));
 			ret = PTR_ERR(buf[i]);
+			goto err_invalid;
+		}
+
+		handle = ion_import_dma_buf(decon->ion_client, win_config->fd_idma[i]);
+		if (IS_ERR(handle)) {
+			decon_err("failed to import fd\n");
+			ret = PTR_ERR(handle);
 			goto err_buf_get;
 		}
 
@@ -2533,11 +2533,11 @@ err_offset:
 
 	goto err_invalid;
 err_map:
-	for (i = 0; i < plane_cnt; ++i)
-		dma_buf_put(buf[i]);
-err_buf_get:
 	if (handle)
 		ion_free(decon->ion_client, handle);
+err_buf_get:
+	for (i = 0; i < plane_cnt; ++i)
+		dma_buf_put(buf[i]);
 err_invalid:
 	win->fbinfo->var = prev_var;
 	return ret;
