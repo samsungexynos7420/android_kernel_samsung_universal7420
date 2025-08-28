@@ -35,21 +35,13 @@
 #define UNDERRUN_FILTER_INTERVAL_MS    100
 #define UNDERRUN_FILTER_INIT           0
 #define UNDERRUN_FILTER_IDLE           1
-static int underrun_filter_status;
-static struct delayed_work underrun_filter_work;
-
-static void underrun_filter_handler(struct work_struct *ws)
-{
-       msleep(UNDERRUN_FILTER_INTERVAL_MS);
-       underrun_filter_status = UNDERRUN_FILTER_IDLE;
-}
 
 static void decon_oneshot_underrun_log(struct decon_device *decon)
 {
 	DISP_SS_EVENT_LOG(DISP_EVT_UNDERRUN, &decon->sd, ktime_set(0, 0));
 
 	decon->underrun_stat.underrun_cnt++;
-	if (underrun_filter_status++ > UNDERRUN_FILTER_IDLE)
+	if (decon->fifo_irq_status++ > UNDERRUN_FILTER_IDLE)
 		return;
 
 	if (decon->underrun_stat.underrun_cnt > DECON_UNDERRUN_THRESHOLD) {
@@ -68,7 +60,7 @@ static void decon_oneshot_underrun_log(struct decon_device *decon)
 	}
 	decon->underrun_stat.underrun_cnt = 0;
 
-	queue_delayed_work(system_freezable_wq, &underrun_filter_work, 0);
+	queue_work(decon->fifo_irq_wq, &decon->fifo_irq_work);
 }
 
 static void decon_int_get_enabled_win(struct decon_device *decon)
@@ -907,6 +899,14 @@ irqreturn_t decon_fb_isr_for_eint(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
+static void underrun_filter_handler(struct work_struct *work)
+{
+	struct decon_device *decon =
+			container_of(work, struct decon_device, fifo_irq_work);
+	msleep(UNDERRUN_FILTER_INTERVAL_MS);
+	decon->fifo_irq_status = UNDERRUN_FILTER_IDLE;
+}
+
 int decon_int_register_irq(struct platform_device *pdev, struct decon_device *decon)
 {
 	struct device *dev = decon->dev;
@@ -919,7 +919,7 @@ int decon_int_register_irq(struct platform_device *pdev, struct decon_device *de
 	ret = devm_request_irq(dev, res->start, decon_int_irq_handler, 0,
 			pdev->name, decon);
 	if (ret) {
-		decon_err("failed to install irq\n");
+		decon_err("failed to install FIFO irq\n");
 		return ret;
 	}
 
@@ -929,7 +929,7 @@ int decon_int_register_irq(struct platform_device *pdev, struct decon_device *de
 		ret = devm_request_irq(dev, res->start, decon_int_irq_handler,
 				0, pdev->name, decon);
 		if (ret) {
-			decon_err("failed to install irq\n");
+			decon_err("failed to install FrameDOne irq\n");
 			return ret;
 		}
 	} else if (decon->pdata->psr_mode == DECON_VIDEO_MODE) {
@@ -938,15 +938,20 @@ int decon_int_register_irq(struct platform_device *pdev, struct decon_device *de
 		ret = devm_request_irq(dev, res->start, decon_int_irq_handler,
 				0, pdev->name, decon);
 		if (ret) {
-			decon_err("failed to install irq\n");
+			decon_err("failed to install FrameDOne irq\n");
 			return ret;
 		}
 	}
 
-	if (underrun_filter_status++ == UNDERRUN_FILTER_INIT)
-		INIT_DELAYED_WORK(&underrun_filter_work,
-				underrun_filter_handler);
+	if (decon->fifo_irq_status++ == UNDERRUN_FILTER_INIT) {
+		decon->fifo_irq_wq = create_singlethread_workqueue("decon_fifo_irq_wq");
+		if (decon->fifo_irq_wq == NULL) {
+			decon_err("%s:failed to create workqueue for fifo_irq_wq\n", __func__);
+			return -ENOMEM;
+		}
 
+		INIT_WORK(&decon->fifo_irq_work, underrun_filter_handler);
+	}
 	return ret;
 }
 
