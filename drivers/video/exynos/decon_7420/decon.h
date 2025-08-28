@@ -827,6 +827,11 @@ struct decon_device {
 	ktime_t				trig_mask_timestamp;
 	int                             frame_idle;
 	int				eint_status;
+	
+	struct work_struct		fifo_irq_work;
+	struct workqueue_struct		*fifo_irq_wq;
+	int				fifo_irq_status;
+	
 	struct vpp_drm_log vpp_log[MAX_VPP_LOG];
 	int log_cnt;
 	struct decon_regs_data win_regs;
