@@ -179,119 +179,9 @@ err:
 	return ret;
 }
 
-static int m2m1shot_buffer_get_userptr_plane(struct m2m1shot_device *m21dev,
-				struct m2m1shot_buffer_plane_dma *plane,
-				unsigned long start, size_t len, int write)
-{
-	size_t last_size = 0;
-	struct page **pages;
-	int nr_pages = 0;
-	int ret = 0, i;
-	off_t start_off;
-	struct scatterlist *sgl;
-
-	last_size = (start + len) & ~PAGE_MASK;
-	if (last_size == 0)
-		last_size = PAGE_SIZE;
-
-	start_off = offset_in_page(start);
-
-	start = round_down(start, PAGE_SIZE);
-
-	nr_pages = PFN_DOWN(PAGE_ALIGN(len + start_off));
-
-	pages = vmalloc(nr_pages * sizeof(*pages));
-	if (!pages)
-		return -ENOMEM;
-
-	ret = get_user_pages_fast(start, nr_pages, write, pages);
-	if (ret != nr_pages) {
-		dev_err(m21dev->dev,
-			"%s: failed to pin user pages in %#lx ~ %#lx\n",
-			__func__, start, start + len);
-
-		if (ret < 0)
-			goto err_get;
-
-		nr_pages = ret;
-		ret = -EFAULT;
-		goto err_pin;
-	}
-
-	plane->sgt = kmalloc(sizeof(*plane->sgt), GFP_KERNEL);
-	if (!plane->sgt) {
-		dev_err(m21dev->dev,
-			"%s: failed to allocate sgtable\n", __func__);
-		ret = -ENOMEM;
-		goto err_sgtable;
-	}
-
-	ret = sg_alloc_table(plane->sgt, nr_pages, GFP_KERNEL);
-	if (ret) {
-		dev_err(m21dev->dev,
-			"%s: failed to allocate sglist\n", __func__);
-		goto err_sg;
-	}
-
-	sgl = plane->sgt->sgl;
-
-	sg_set_page(sgl, pages[0],
-			(nr_pages == 1) ? len : PAGE_SIZE - start_off,
-			start_off);
-	sg_dma_address(sgl) = page_to_phys(sg_page(sgl));
-
-	sgl = sg_next(sgl);
-
-	/* nr_pages == 1 if sgl == NULL here */
-	for (i = 1; i < (nr_pages - 1); i++) {
-		sg_set_page(sgl, pages[i], PAGE_SIZE, 0);
-		sg_dma_address(sgl) = page_to_phys(sg_page(sgl));
-		sgl = sg_next(sgl);
-	}
-
-	if (sgl) {
-		sg_set_page(sgl, pages[i], last_size, 0);
-		sg_dma_address(sgl) = page_to_phys(sg_page(sgl));
-	}
-
-	vfree(pages);
-
-	return 0;
-err_sg:
-	kfree(plane->sgt);
-err_sgtable:
-err_pin:
-	for (i = 0; i < nr_pages; i++)
-		put_page(pages[i]);
-err_get:
-	vfree(pages);
-
-	return ret;
-}
-
-static void m2m1shot_buffer_put_userptr_plane(
-			struct m2m1shot_buffer_plane_dma *plane, int write)
-{
-	if (plane->dmabuf) {
-		m2m1shot_buffer_put_dma_buf_plane(plane);
-	} else {
-		struct sg_table *sgt = plane->sgt;
-		struct scatterlist *sg;
-		int i;
-
-		for_each_sg(sgt->sgl, sg, sgt->orig_nents, i) {
-			if (write)
-				set_page_dirty_lock(sg_page(sg));
-			put_page(sg_page(sg));
-		}
-
-		sg_free_table(sgt);
-		kfree(sgt);
-	}
-}
-
 static struct dma_buf *m2m1shot_buffer_check_userptr(
-		struct m2m1shot_device *m21dev, unsigned long start, size_t len)
+		struct m2m1shot_device *m21dev, unsigned long start, size_t len,
+		off_t *out_offset)
 {
 	struct dma_buf *dmabuf = NULL;
 	struct vm_area_struct *vma;
@@ -309,6 +199,8 @@ static struct dma_buf *m2m1shot_buffer_check_userptr(
 		goto finish;
 
 	dmabuf = get_dma_buf_file(vma->vm_file);
+	if (dmabuf != NULL)
+		*out_offset = start - vma->vm_start;
 finish:
 	up_read(&current->mm->mmap_sem);
 	return dmabuf;
@@ -321,10 +213,12 @@ static int m2m1shot_buffer_get_userptr(struct m2m1shot_device *m21dev,
 {
 	int i, ret = 0;
 	struct dma_buf *dmabuf;
+	off_t offset;
 
 	for (i = 0; i < buffer->num_planes; i++) {
 		dmabuf = m2m1shot_buffer_check_userptr(m21dev,
-				buffer->plane[i].userptr, buffer->plane[i].len);
+				buffer->plane[i].userptr, buffer->plane[i].len,
+				&offset);
 		if (IS_ERR(dmabuf)) {
 			ret = PTR_ERR(dmabuf);
 			goto err;
@@ -342,6 +236,7 @@ static int m2m1shot_buffer_get_userptr(struct m2m1shot_device *m21dev,
 			dma_buffer->plane[i].dmabuf = dmabuf;
 			dma_buffer->plane[i].attachment = dma_buf_attach(
 							dmabuf, m21dev->dev);
+			dma_buffer->plane[i].offset = offset;
 			if (IS_ERR(dma_buffer->plane[i].attachment)) {
 				dev_err(m21dev->dev,
 					"%s: Failed to attach dmabuf\n",
@@ -350,22 +245,13 @@ static int m2m1shot_buffer_get_userptr(struct m2m1shot_device *m21dev,
 				dma_buf_put(dmabuf);
 				goto err;
 			}
-		} else {
-			ret = m2m1shot_buffer_get_userptr_plane(m21dev,
-						&dma_buffer->plane[i],
-						buffer->plane[i].userptr,
-						buffer->plane[i].len,
-						write);
 		}
-
-		if (ret)
-			goto err;
 	}
 
 	return 0;
 err:
 	while (i-- > 0)
-		m2m1shot_buffer_put_userptr_plane(&dma_buffer->plane[i], write);
+		m2m1shot_buffer_put_dma_buf_plane(&dma_buffer->plane[i]);
 
 	return ret;
 }
@@ -377,7 +263,9 @@ static void m2m1shot_buffer_put_userptr(struct m2m1shot_buffer *buffer,
 	int i;
 
 	for (i = 0; i < buffer->num_planes; i++)
-		m2m1shot_buffer_put_userptr_plane(&dma_buffer->plane[i], write);
+		if (dma_buffer->plane[i].dmabuf)
+			m2m1shot_buffer_put_dma_buf_plane(
+							&dma_buffer->plane[i]);
 }
 
 static int m2m1shot_prepare_get_buffer(struct m2m1shot_context *ctx,
@@ -393,7 +281,16 @@ static int m2m1shot_prepare_get_buffer(struct m2m1shot_context *ctx,
 
 		plane = &dma_buffer->plane[i];
 
-		if (buffer->plane[i].len < plane->bytes_used) {
+		if (plane->bytes_used == 0) {
+			/*
+			 * bytes_used = 0 means that the size of the plane is
+			 * not able to be decided by the driver because it is
+			 * dependent upon the content in the buffer.
+			 * The best example of the buffer is the buffer of JPEG
+			 * encoded stream for decompression.
+			 */
+			plane->bytes_used = buffer->plane[i].len;
+		} else if (buffer->plane[i].len < plane->bytes_used) {
 			dev_err(m21dev->dev,
 				"%s: needs %zx bytes but %zx is given\n",
 				__func__, plane->bytes_used,
@@ -666,7 +563,7 @@ static int m2m1shot_open(struct inode *inode, struct file *filp)
 	if (ret) /* kref_put() is not called not to call .free_context() */
 		kfree(ctx);
 
-	return 0;
+	return ret;
 }
 
 static int m2m1shot_release(struct inode *inode, struct file *filp)
@@ -815,14 +712,11 @@ static long m2m1shot_compat_ioctl32(struct file *filp,
 			return -EFAULT;
 		}
 
-		if (data.buf_out.num_planes > M2M1SHOT_MAX_PLANES) {
-			dev_err(m21dev->dev, "Invalid number of output planes %u.\n",
-				data.buf_out.num_planes);
-			return -EINVAL;
-		}
-
-		if (data.buf_cap.num_planes > M2M1SHOT_MAX_PLANES) {
-			dev_err(m21dev->dev, "Invalid number of capture planes %u.\n",
+		if ((data.buf_out.num_planes > M2M1SHOT_MAX_PLANES) ||
+			(data.buf_cap.num_planes > M2M1SHOT_MAX_PLANES)) {
+			dev_err(m21dev->dev,
+				"%s: Invalid plane number (out %u/cap %u)\n",
+				__func__, data.buf_out.num_planes,
 				data.buf_cap.num_planes);
 			return -EINVAL;
 		}
