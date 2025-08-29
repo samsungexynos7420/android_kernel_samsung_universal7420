@@ -67,10 +67,7 @@ int vpp_hw_set_sw_reset(struct vpp_dev *vpp)
 	u32 cfg = 0;
 	ktime_t start;
 
-	cfg = vpp_hw_read(vpp, VG_ENABLE);
-	cfg |= VG_ENABLE_SRESET;
-
-	writel(cfg, vpp->regs + VG_ENABLE);
+	vpp_hw_write_mask(vpp, VG_ENABLE, ~0, VG_ENABLE_SRESET);
 
 	start = ktime_get();
 	do {
@@ -87,89 +84,47 @@ int vpp_hw_set_sw_reset(struct vpp_dev *vpp)
 
 void vpp_hw_set_realtime_path(struct vpp_dev *vpp)
 {
-	u32 cfg = vpp_hw_read(vpp, VG_ENABLE);
-
-	cfg |= VG_ENABLE_RT_PATH_EN;
-
-	writel(cfg, vpp->regs + VG_ENABLE);
+	vpp_hw_write_mask(vpp, VG_ENABLE, ~0, VG_ENABLE_RT_PATH_EN);
 }
 
 void vpp_hw_set_framedone_irq(struct vpp_dev *vpp, bool enable)
 {
-	u32 cfg = vpp_hw_read(vpp, VG_IRQ);
-
-	if (enable)
-		cfg |= VG_IRQ_FRAMEDONE_MASK;
-	else
-		cfg &= ~VG_IRQ_FRAMEDONE_MASK;
-
-	writel(cfg, vpp->regs + VG_IRQ);
+	u32 val = enable ? ~0 : 0;
+	vpp_hw_write_mask(vpp, VG_IRQ, val, VG_IRQ_FRAMEDONE_MASK);
 }
 
 void vpp_hw_set_deadlock_irq(struct vpp_dev *vpp, bool enable)
 {
-	u32 cfg = vpp_hw_read(vpp, VG_IRQ);
-
-	if (enable)
-		cfg |= VG_IRQ_DEADLOCK_STATUS_MASK;
-	else
-		cfg &= ~VG_IRQ_DEADLOCK_STATUS_MASK;
-
-	writel(cfg, vpp->regs + VG_IRQ);
+	u32 val = enable ? ~0 : 0;
+	vpp_hw_write_mask(vpp, VG_IRQ, val, VG_IRQ_DEADLOCK_STATUS_MASK);
 }
 
 void vpp_hw_set_read_slave_err_irq(struct vpp_dev *vpp, bool enable)
 {
-	u32 cfg = vpp_hw_read(vpp, VG_IRQ);
-
-	if (enable)
-		cfg |= VG_IRQ_READ_SLAVE_ERROR_MASK;
-	else
-		cfg &= ~VG_IRQ_READ_SLAVE_ERROR_MASK;
-
-	writel(cfg, vpp->regs + VG_IRQ);
+	u32 val = enable ? ~0 : 0;
+	vpp_hw_write_mask(vpp, VG_IRQ, val, VG_IRQ_READ_SLAVE_ERROR_MASK);
 }
 
 void vpp_hw_set_sfr_update_done_irq(struct vpp_dev *vpp, bool enable)
 {
-	u32 cfg = vpp_hw_read(vpp, VG_IRQ);
-
-	if (enable)
-		cfg |= VG_IRQ_SFR_UPDATE_DONE_MASK;
-	else
-		cfg &= ~VG_IRQ_SFR_UPDATE_DONE_MASK;
-
-	writel(cfg, vpp->regs + VG_IRQ);
+	u32 val = enable ? ~0 : 0;
+	vpp_hw_write_mask(vpp, VG_IRQ, val, VG_IRQ_SFR_UPDATE_DONE_MASK);
 }
 
 void vpp_hw_set_sfr_update_force(struct vpp_dev *vpp)
 {
-	u32 cfg = vpp_hw_read(vpp, VG_ENABLE);
-
-	cfg |= VG_ENABLE_SFR_UPDATE_FORCE;
-
-	writel(cfg, vpp->regs + VG_ENABLE);
+	vpp_hw_write_mask(vpp, VG_ENABLE, ~0, VG_ENABLE_SFR_UPDATE_FORCE);
 }
 
 void vpp_hw_set_enable_interrupt(struct vpp_dev *vpp)
 {
-	u32 cfg = vpp_hw_read(vpp, VG_IRQ);
-
-	cfg |= VG_IRQ_ENABLE;
-
-	writel(cfg, vpp->regs + VG_IRQ);
+	vpp_hw_write_mask(vpp, VG_IRQ, ~0, VG_IRQ_ENABLE);
 }
 
 void vpp_hw_set_hw_reset_done_mask(struct vpp_dev *vpp, bool enable)
 {
-	u32 cfg = vpp_hw_read(vpp, VG_IRQ);
-
-	if (enable)
-		cfg |= VG_IRQ_HW_RESET_DONE_MASK;
-	else
-		cfg &= ~VG_IRQ_HW_RESET_DONE_MASK;
-
-	writel(cfg, vpp->regs + VG_IRQ);
+	u32 val = enable ? ~0 : 0;
+	vpp_hw_write_mask(vpp, VG_IRQ, val, VG_IRQ_HW_RESET_DONE_MASK);
 }
 
 int vpp_hw_set_in_format(struct vpp_dev *vpp)
@@ -177,8 +132,7 @@ int vpp_hw_set_in_format(struct vpp_dev *vpp)
 	struct decon_win_config *config = vpp->config;
 	u32 cfg = vpp_hw_read(vpp, VG_IN_CON);
 
-	cfg &= ~(VG_IN_CON_IMG_FORMAT_MASK |
-			VG_IN_CON_CHROMINANCE_STRIDE_EN);
+	cfg &= ~(VG_IN_CON_IMG_FORMAT_MASK | VG_IN_CON_CHROMINANCE_STRIDE_EN);
 	switch(config->format) {
 	case DECON_PIXEL_FORMAT_ARGB_8888:
 		cfg |= VG_IN_CON_IMG_FORMAT_ARGB8888;
@@ -226,7 +180,7 @@ int vpp_hw_set_in_format(struct vpp_dev *vpp)
 		return -EINVAL ;
 	}
 
-	writel(cfg, vpp->regs + VG_IN_CON);
+	vpp_hw_write(vpp, VG_IN_CON, cfg);
 
 	return 0;
 }
@@ -253,8 +207,8 @@ void vpp_hw_set_h_coef(struct vpp_dev *vpp, u32 h_ratio)
 	for (i = 0; i < 9; i++) {
 		for (j = 0; j < 8; j++) {
 			for (k = 0; k < 2; k++) {
-				__raw_writel(h_coef_8t[sc_ratio][i][j],
-				       vpp->regs + VG_H_COEF(i, j, k));
+				vpp_hw_write(vpp, VG_H_COEF(i, j, k),
+						h_coef_8t[sc_ratio][i][j]);
 			}
 		}
 	}
@@ -282,8 +236,8 @@ void vpp_hw_set_v_coef(struct vpp_dev *vpp, u32 v_ratio)
 	for (i = 0; i < 9; i++) {
 		for (j = 0; j < 4; j++) {
 			for (k = 0; k < 2; k++) {
-				__raw_writel(v_coef_4t[sc_ratio][i][j],
-				       vpp->regs + VG_V_COEF(i, j, k));
+				vpp_hw_write(vpp, VG_V_COEF(i, j, k),
+						v_coef_4t[sc_ratio][i][j]);
 			}
 		}
 	}
@@ -292,12 +246,8 @@ void vpp_hw_set_v_coef(struct vpp_dev *vpp, u32 v_ratio)
 int vpp_hw_set_rotation(struct vpp_dev *vpp)
 {
 	struct decon_win_config *config = vpp->config;
-	u32 cfg = vpp_hw_read(vpp, VG_IN_CON);
 
-	cfg &= ~VG_IN_CON_IN_ROTATION_MASK;
-	cfg |= config->vpp_parm.rot << 8;
-
-	writel(cfg, vpp->regs + VG_IN_CON);
+	vpp_hw_write_mask(vpp, VG_IN_CON, config->vpp_parm.rot << 8, VG_IN_CON_IN_ROTATION_MASK);
 
 	return 0;
 }
@@ -326,12 +276,12 @@ void vpp_hw_set_scale_ratio(struct vpp_dev *vpp)
 	v_ratio = ((tmp_height << 20) + tmp_fr_h) / config->dst.h;
 
 	if (vpp->h_ratio != h_ratio) {
-		writel(h_ratio, vpp->regs + VG_H_RATIO);
+		vpp_hw_write(vpp, VG_H_RATIO, h_ratio);
 		vpp_hw_set_h_coef(vpp, h_ratio);
 	}
 
 	if (vpp->v_ratio != v_ratio) {
-		writel(v_ratio, vpp->regs + VG_V_RATIO);
+		vpp_hw_write(vpp, VG_V_RATIO, v_ratio);
 		vpp_hw_set_v_coef(vpp, v_ratio);
 	}
 
@@ -351,14 +301,15 @@ void vpp_hw_set_in_buf_addr(struct vpp_dev *vpp)
 
 	dev_dbg(DEV, "y : %pa, cb : %pa, cr : %pa\n",
 		&vpp_parm->addr[0], &vpp_parm->addr[1], &vpp_parm->addr[2]);
-	writel(vpp_parm->addr[0], vpp->regs + VG_BASE_ADDR_Y(0));
-	writel(vpp_parm->addr[1], vpp->regs + VG_BASE_ADDR_CB(0));
+
+	vpp_hw_write(vpp, VG_BASE_ADDR_Y(0), vpp_parm->addr[0]);
+	vpp_hw_write(vpp, VG_BASE_ADDR_CB(0), vpp_parm->addr[1]);
 	if (vpp->id == 2)
 		cb_addr = decon->vgr0_cb_addr;
 	else if (vpp->id == 3)
 		cb_addr = decon->vgr1_cb_addr;
 	if(cb_addr > 0) {
-		addr = readl(vpp->regs + VG_BASE_ADDR_CB(0));
+		addr = vpp_hw_read(vpp, VG_BASE_ADDR_CB(0));
 		if(addr != (u32)cb_addr)
 			dev_err(DEV, "vpp CB_ADDR is incorrect(0x%x, 0x%x\n",
 					addr, (u32)cb_addr);
@@ -371,19 +322,16 @@ void vpp_hw_set_in_size(struct vpp_dev *vpp)
 	u32 cfg = 0;
 
 	/* source offset */
-	cfg = VG_SRC_OFFSET_X(config->src.x);
-	cfg |= VG_SRC_OFFSET_Y(config->src.y);
-	writel(cfg, vpp->regs + VG_SRC_OFFSET);
+	cfg = VG_SRC_OFFSET_X(config->src.x) | VG_SRC_OFFSET_Y(config->src.y);
+	vpp_hw_write(vpp, VG_SRC_OFFSET, cfg);
 
 	/* source full(alloc) size */
-	cfg = VG_SRC_SIZE_WIDTH(config->src.f_w);
-	cfg |= VG_SRC_SIZE_HEIGHT(config->src.f_h);
-	writel(cfg, vpp->regs + VG_SRC_SIZE);
+	cfg = VG_SRC_SIZE_WIDTH(config->src.f_w) | VG_SRC_SIZE_HEIGHT(config->src.f_h);
+	vpp_hw_write(vpp, VG_SRC_SIZE, cfg);
 
 	/* source cropped size */
-	cfg = VG_IMG_SIZE_WIDTH(config->src.w);
-	cfg |= VG_IMG_SIZE_HEIGHT(config->src.h);
-	writel(cfg, vpp->regs + VG_IMG_SIZE);
+	cfg = VG_IMG_SIZE_WIDTH(config->src.w) | VG_IMG_SIZE_HEIGHT(config->src.h);
+	vpp_hw_write(vpp, VG_IMG_SIZE, cfg);
 
 	if (vpp->fract_val.w)
 		config->src.w--;
@@ -391,10 +339,10 @@ void vpp_hw_set_in_size(struct vpp_dev *vpp)
 		config->src.h--;
 
 	/* fraction position */
-	writel(vpp->fract_val.y_x, vpp->regs + VG_YHPOSITION0);
-	writel(vpp->fract_val.y_y, vpp->regs + VG_YVPOSITION0);
-	writel(vpp->fract_val.c_x, vpp->regs + VG_CHPOSITION0);
-	writel(vpp->fract_val.c_y, vpp->regs + VG_CVPOSITION0);
+	vpp_hw_write(vpp, VG_YHPOSITION0, vpp->fract_val.y_x);
+	vpp_hw_write(vpp, VG_YVPOSITION0, vpp->fract_val.y_y);
+	vpp_hw_write(vpp, VG_CHPOSITION0, vpp->fract_val.c_x);
+	vpp_hw_write(vpp, VG_CVPOSITION0, vpp->fract_val.c_y);
 }
 
 void vpp_hw_set_in_block_size(struct vpp_dev *vpp, bool enable)
@@ -403,25 +351,19 @@ void vpp_hw_set_in_block_size(struct vpp_dev *vpp, bool enable)
 	u32 cfg = 0;
 
 	if (!enable) {
-		cfg = vpp_hw_read(vpp, VG_IN_CON);
-		cfg &= ~VG_IN_CON_BLOCKING_FEATURE_EN;
-		writel(cfg, vpp->regs + VG_IN_CON);
+		vpp_hw_write_mask(vpp, VG_IN_CON, 0, VG_IN_CON_BLOCKING_FEATURE_EN);
 		return;
 	}
 
 	/* blocking area offset */
-	cfg = VG_BLK_OFFSET_X(config->block_area.x);
-	cfg |= VG_BLK_OFFSET_Y(config->block_area.y);
-	writel(cfg, vpp->regs + VG_BLK_OFFSET);
+	cfg = VG_BLK_OFFSET_X(config->block_area.x) | VG_BLK_OFFSET_Y(config->block_area.y);
+	vpp_hw_write(vpp, VG_BLK_OFFSET, cfg);
 
 	/* blocking area size */
-	cfg = VG_BLK_SIZE_WIDTH(config->block_area.w);
-	cfg |= VG_BLK_SIZE_HEIGHT(config->block_area.h);
-	writel(cfg, vpp->regs + VG_BLK_SIZE);
+	cfg = VG_BLK_SIZE_WIDTH(config->block_area.w) | VG_BLK_SIZE_HEIGHT(config->block_area.h);
+	vpp_hw_write(vpp, VG_BLK_SIZE, cfg);
 
-	cfg = readl(vpp->regs + VG_IN_CON);
-	cfg |= VG_IN_CON_BLOCKING_FEATURE_EN;
-	writel(cfg, vpp->regs + VG_IN_CON);
+	vpp_hw_write_mask(vpp, VG_IN_CON, ~0, VG_IN_CON_BLOCKING_FEATURE_EN);
 
 	dev_dbg(DEV, "block x : %d, y : %d, w : %d, h : %d\n",
 			config->block_area.x, config->block_area.y,
@@ -434,59 +376,49 @@ void vpp_hw_set_out_size(struct vpp_dev *vpp)
 	u32 cfg = 0;
 
 	/* destination scaled size */
-	cfg = VG_SCALED_SIZE_WIDTH(config->dst.w);
-	cfg |= VG_SCALED_SIZE_HEIGHT(config->dst.h);
-	writel(cfg, vpp->regs + VG_SCALED_SIZE);
+	cfg = VG_SCALED_SIZE_WIDTH(config->dst.w) | VG_SCALED_SIZE_HEIGHT(config->dst.h);
+	vpp_hw_write(vpp, VG_SCALED_SIZE, cfg);
 }
 
 void vpp_hw_set_rgb_type(struct vpp_dev *vpp)
 {
 	u32 cfg = VG_OUT_CON_RGB_TYPE_601_WIDE;
 
-	writel(cfg, vpp->regs + VG_OUT_CON);
+	vpp_hw_write(vpp, VG_OUT_CON, cfg);
 }
 
 void vpp_hw_set_plane_alpha(struct vpp_dev *vpp)
 {
 	struct decon_win_config *config = vpp->config;
-	u32 cfg = vpp_hw_read(vpp, VG_OUT_CON);
 
 	if (config->plane_alpha > 0xFF)
 		dev_warn(DEV, "%d is too much value\n",
 				config->plane_alpha);
-	cfg &= ~VG_OUT_CON_FRAME_ALPHA_MASK;
-	cfg |= VG_OUT_CON_FRAME_ALPHA(config->plane_alpha);
-
-	writel(cfg, vpp->regs + VG_OUT_CON);
+	vpp_hw_write_mask(vpp, VG_OUT_CON, VG_OUT_CON_FRAME_ALPHA(config->plane_alpha),
+			VG_OUT_CON_FRAME_ALPHA_MASK);
 }
 
 void vpp_hw_set_plane_alpha_fixed(struct vpp_dev *vpp)
 {
-	u32 cfg = vpp_hw_read(vpp, VG_OUT_CON);
-
-	cfg &= ~VG_OUT_CON_FRAME_ALPHA_MASK;
-	cfg |= VG_OUT_CON_FRAME_ALPHA(0xFF);
-
-	writel(cfg, vpp->regs + VG_OUT_CON);
+	vpp_hw_write_mask(vpp, VG_OUT_CON, VG_OUT_CON_FRAME_ALPHA(0xFF),
+			VG_OUT_CON_FRAME_ALPHA_MASK);
 }
 
 void vpp_hw_set_smart_if_pix_num(struct vpp_dev *vpp)
 {
 	struct decon_win_config *config = vpp->config;
 
-	u32 cfg = vpp_hw_read(vpp, VG_SMART_IF_PIXEL_NUM);
-	cfg = config->dst.w * config->dst.h;
-	writel(cfg, vpp->regs + VG_SMART_IF_PIXEL_NUM);
+	vpp_hw_write(vpp, VG_SMART_IF_PIXEL_NUM, config->dst.w * config->dst.h);
 }
 
 void vpp_hw_set_lookup_table(struct vpp_dev *vpp)
 {
-	writel(0x44444444, vpp->regs + VG_QOS_LUT07_00);
-	writel(0x44444444, vpp->regs + VG_QOS_LUT15_08);
+	vpp_hw_write(vpp, VG_QOS_LUT07_00, 0x44444444);
+	vpp_hw_write(vpp, VG_QOS_LUT15_08, 0x44444444);
 }
 
 void vpp_hw_set_dynamic_clock_gating(struct vpp_dev *vpp)
 {
-	writel(0x3F, vpp->regs + VG_DYNAMIC_GATING_ENABLE);
+	vpp_hw_write(vpp, VG_DYNAMIC_GATING_ENABLE, 0x3F);
 }
 
