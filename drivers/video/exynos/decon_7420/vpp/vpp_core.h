@@ -129,6 +129,31 @@ struct vpp_dev {
 	u32				sc_h;
 };
 
+static inline u32 vpp_hw_read(struct vpp_dev *vpp, u32 reg_id)
+{
+	return readl(vpp->regs + reg_id);
+}
+
+static inline u32 vpp_hw_read_mask(struct vpp_dev *vpp, u32 reg_id, u32 mask)
+{
+	u32 val = vpp_hw_read(vpp, reg_id);
+	val &= (~mask);
+	return val;
+}
+
+static inline void vpp_hw_write(struct vpp_dev *vpp, u32 reg_id, u32 val)
+{
+	writel(val, vpp->regs + reg_id);
+}
+
+static inline void vpp_hw_write_mask(struct vpp_dev *vpp, u32 reg_id, u32 val, u32 mask)
+{
+	u32 old = vpp_hw_read(id, reg_id);
+
+	val = (val & mask) | (old & ~mask);
+	writel(val, vpp->regs + reg_id);
+}
+
 static inline int vpp_hw_get_irq_status(struct vpp_dev *vpp)
 {
 	u32 cfg = readl(vpp->regs + VG_IRQ);
