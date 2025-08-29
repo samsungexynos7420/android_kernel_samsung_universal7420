@@ -31,14 +31,14 @@ int vpp_hw_wait_op_status(struct vpp_dev *vpp)
 {
 	u32 cfg = 0;
 
-	ktime_t start = ktime_get();
+	unsigned long cnt = 100000;
 
 	do {
 		cfg = vpp_hw_read(vpp, VG_ENABLE);
 		if (!(cfg & (VG_ENABLE_OP_STATUS)))
 			return 0;
 		udelay(10);
-	} while(ktime_us_delta(ktime_get(), start) < 1000000);
+	} while (--cnt);
 
 	dev_err(DEV, "timeout op_status to idle\n");
 
@@ -49,7 +49,7 @@ void vpp_hw_wait_idle(struct vpp_dev *vpp)
 {
 	u32 cfg = 0;
 
-	ktime_t start = ktime_get();
+	unsigned long cnt = 100000;
 
 	do {
 		cfg = vpp_hw_read(vpp, VG_ENABLE);
@@ -57,7 +57,7 @@ void vpp_hw_wait_idle(struct vpp_dev *vpp)
 			return;
 		dev_warn(DEV, "vpp%d is operating...\n", vpp->id);
 		udelay(10);
-	} while(ktime_us_delta(ktime_get(), start) < 1000000);
+	} while (--cnt);
 
 	dev_err(DEV, "timeout op_status to idle\n");
 }
@@ -65,17 +65,16 @@ void vpp_hw_wait_idle(struct vpp_dev *vpp)
 int vpp_hw_set_sw_reset(struct vpp_dev *vpp)
 {
 	u32 cfg = 0;
-	ktime_t start;
 
+	unsigned long cnt = 100000;
 	vpp_hw_write_mask(vpp, VG_ENABLE, ~0, VG_ENABLE_SRESET);
 
-	start = ktime_get();
 	do {
 		cfg = vpp_hw_read(vpp, VG_ENABLE);
 		if (!(cfg & (VG_ENABLE_SRESET)))
 			return 0;
 		udelay(10);
-	} while(ktime_us_delta(ktime_get(), start) < 1000000);
+	} while (--cnt);
 
 	dev_err(DEV, "timeout sw reset\n");
 
