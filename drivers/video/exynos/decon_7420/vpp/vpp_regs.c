@@ -34,7 +34,7 @@ int vpp_hw_wait_op_status(struct vpp_dev *vpp)
 	ktime_t start = ktime_get();
 
 	do {
-		cfg = readl(vpp->regs + VG_ENABLE);
+		cfg = vpp_hw_read(vpp, VG_ENABLE);
 		if (!(cfg & (VG_ENABLE_OP_STATUS)))
 			return 0;
 		udelay(10);
@@ -52,7 +52,7 @@ void vpp_hw_wait_idle(struct vpp_dev *vpp)
 	ktime_t start = ktime_get();
 
 	do {
-		cfg = readl(vpp->regs + VG_ENABLE);
+		cfg = vpp_hw_read(vpp, VG_ENABLE);
 		if (!(cfg & (VG_ENABLE_OP_STATUS)))
 			return;
 		dev_warn(DEV, "vpp%d is operating...\n", vpp->id);
@@ -67,14 +67,14 @@ int vpp_hw_set_sw_reset(struct vpp_dev *vpp)
 	u32 cfg = 0;
 	ktime_t start;
 
-	cfg = readl(vpp->regs + VG_ENABLE);
+	cfg = vpp_hw_read(vpp, VG_ENABLE);
 	cfg |= VG_ENABLE_SRESET;
 
 	writel(cfg, vpp->regs + VG_ENABLE);
 
 	start = ktime_get();
 	do {
-		cfg = readl(vpp->regs + VG_ENABLE);
+		cfg = vpp_hw_read(vpp, VG_ENABLE);
 		if (!(cfg & (VG_ENABLE_SRESET)))
 			return 0;
 		udelay(10);
@@ -87,7 +87,7 @@ int vpp_hw_set_sw_reset(struct vpp_dev *vpp)
 
 void vpp_hw_set_realtime_path(struct vpp_dev *vpp)
 {
-	u32 cfg = readl(vpp->regs + VG_ENABLE);
+	u32 cfg = vpp_hw_read(vpp, VG_ENABLE);
 
 	cfg |= VG_ENABLE_RT_PATH_EN;
 
@@ -96,7 +96,7 @@ void vpp_hw_set_realtime_path(struct vpp_dev *vpp)
 
 void vpp_hw_set_framedone_irq(struct vpp_dev *vpp, bool enable)
 {
-	u32 cfg = readl(vpp->regs + VG_IRQ);
+	u32 cfg = vpp_hw_read(vpp, VG_IRQ);
 
 	if (enable)
 		cfg |= VG_IRQ_FRAMEDONE_MASK;
@@ -108,7 +108,7 @@ void vpp_hw_set_framedone_irq(struct vpp_dev *vpp, bool enable)
 
 void vpp_hw_set_deadlock_irq(struct vpp_dev *vpp, bool enable)
 {
-	u32 cfg = readl(vpp->regs + VG_IRQ);
+	u32 cfg = vpp_hw_read(vpp, VG_IRQ);
 
 	if (enable)
 		cfg |= VG_IRQ_DEADLOCK_STATUS_MASK;
@@ -120,7 +120,7 @@ void vpp_hw_set_deadlock_irq(struct vpp_dev *vpp, bool enable)
 
 void vpp_hw_set_read_slave_err_irq(struct vpp_dev *vpp, bool enable)
 {
-	u32 cfg = readl(vpp->regs + VG_IRQ);
+	u32 cfg = vpp_hw_read(vpp, VG_IRQ);
 
 	if (enable)
 		cfg |= VG_IRQ_READ_SLAVE_ERROR_MASK;
@@ -132,7 +132,7 @@ void vpp_hw_set_read_slave_err_irq(struct vpp_dev *vpp, bool enable)
 
 void vpp_hw_set_sfr_update_done_irq(struct vpp_dev *vpp, bool enable)
 {
-	u32 cfg = readl(vpp->regs + VG_IRQ);
+	u32 cfg = vpp_hw_read(vpp, VG_IRQ);
 
 	if (enable)
 		cfg |= VG_IRQ_SFR_UPDATE_DONE_MASK;
@@ -144,7 +144,7 @@ void vpp_hw_set_sfr_update_done_irq(struct vpp_dev *vpp, bool enable)
 
 void vpp_hw_set_sfr_update_force(struct vpp_dev *vpp)
 {
-	u32 cfg = readl(vpp->regs + VG_ENABLE);
+	u32 cfg = vpp_hw_read(vpp, VG_ENABLE);
 
 	cfg |= VG_ENABLE_SFR_UPDATE_FORCE;
 
@@ -153,7 +153,7 @@ void vpp_hw_set_sfr_update_force(struct vpp_dev *vpp)
 
 void vpp_hw_set_enable_interrupt(struct vpp_dev *vpp)
 {
-	u32 cfg = readl(vpp->regs + VG_IRQ);
+	u32 cfg = vpp_hw_read(vpp, VG_IRQ);
 
 	cfg |= VG_IRQ_ENABLE;
 
@@ -162,7 +162,7 @@ void vpp_hw_set_enable_interrupt(struct vpp_dev *vpp)
 
 void vpp_hw_set_hw_reset_done_mask(struct vpp_dev *vpp, bool enable)
 {
-	u32 cfg = readl(vpp->regs + VG_IRQ);
+	u32 cfg = vpp_hw_read(vpp, VG_IRQ);
 
 	if (enable)
 		cfg |= VG_IRQ_HW_RESET_DONE_MASK;
@@ -175,7 +175,7 @@ void vpp_hw_set_hw_reset_done_mask(struct vpp_dev *vpp, bool enable)
 int vpp_hw_set_in_format(struct vpp_dev *vpp)
 {
 	struct decon_win_config *config = vpp->config;
-	u32 cfg = readl(vpp->regs + VG_IN_CON);
+	u32 cfg = vpp_hw_read(vpp, VG_IN_CON);
 
 	cfg &= ~(VG_IN_CON_IMG_FORMAT_MASK |
 			VG_IN_CON_CHROMINANCE_STRIDE_EN);
@@ -292,7 +292,7 @@ void vpp_hw_set_v_coef(struct vpp_dev *vpp, u32 v_ratio)
 int vpp_hw_set_rotation(struct vpp_dev *vpp)
 {
 	struct decon_win_config *config = vpp->config;
-	u32 cfg = readl(vpp->regs + VG_IN_CON);
+	u32 cfg = vpp_hw_read(vpp, VG_IN_CON);
 
 	cfg &= ~VG_IN_CON_IN_ROTATION_MASK;
 	cfg |= config->vpp_parm.rot << 8;
@@ -403,7 +403,7 @@ void vpp_hw_set_in_block_size(struct vpp_dev *vpp, bool enable)
 	u32 cfg = 0;
 
 	if (!enable) {
-		cfg = readl(vpp->regs + VG_IN_CON);
+		cfg = vpp_hw_read(vpp, VG_IN_CON);
 		cfg &= ~VG_IN_CON_BLOCKING_FEATURE_EN;
 		writel(cfg, vpp->regs + VG_IN_CON);
 		return;
@@ -449,7 +449,7 @@ void vpp_hw_set_rgb_type(struct vpp_dev *vpp)
 void vpp_hw_set_plane_alpha(struct vpp_dev *vpp)
 {
 	struct decon_win_config *config = vpp->config;
-	u32 cfg = readl(vpp->regs + VG_OUT_CON);
+	u32 cfg = vpp_hw_read(vpp, VG_OUT_CON);
 
 	if (config->plane_alpha > 0xFF)
 		dev_warn(DEV, "%d is too much value\n",
@@ -462,7 +462,7 @@ void vpp_hw_set_plane_alpha(struct vpp_dev *vpp)
 
 void vpp_hw_set_plane_alpha_fixed(struct vpp_dev *vpp)
 {
-	u32 cfg = readl(vpp->regs + VG_OUT_CON);
+	u32 cfg = vpp_hw_read(vpp, VG_OUT_CON);
 
 	cfg &= ~VG_OUT_CON_FRAME_ALPHA_MASK;
 	cfg |= VG_OUT_CON_FRAME_ALPHA(0xFF);
@@ -474,7 +474,7 @@ void vpp_hw_set_smart_if_pix_num(struct vpp_dev *vpp)
 {
 	struct decon_win_config *config = vpp->config;
 
-	u32 cfg = readl(vpp->regs + VG_SMART_IF_PIXEL_NUM);
+	u32 cfg = vpp_hw_read(vpp, VG_SMART_IF_PIXEL_NUM);
 	cfg = config->dst.w * config->dst.h;
 	writel(cfg, vpp->regs + VG_SMART_IF_PIXEL_NUM);
 }
