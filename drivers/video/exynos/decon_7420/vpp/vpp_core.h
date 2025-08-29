@@ -148,7 +148,7 @@ static inline void vpp_hw_write(struct vpp_dev *vpp, u32 reg_id, u32 val)
 
 static inline void vpp_hw_write_mask(struct vpp_dev *vpp, u32 reg_id, u32 val, u32 mask)
 {
-	u32 old = vpp_hw_read(id, reg_id);
+	u32 old = vpp_hw_read(vpp, reg_id);
 
 	val = (val & mask) | (old & ~mask);
 	writel(val, vpp->regs + reg_id);
