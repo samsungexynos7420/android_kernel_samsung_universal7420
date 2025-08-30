@@ -77,7 +77,6 @@ obj-$(CONFIG_ARM_SA1100_CPUFREQ)	+= sa1100-cpufreq.o
 obj-$(CONFIG_ARM_SA1110_CPUFREQ)	+= sa1110-cpufreq.o
 obj-$(CONFIG_ARM_SPEAR_CPUFREQ)		+= spear-cpufreq.o
 obj-$(CONFIG_EXYNOS7580_DYNAMIC_CLUSTER_HOTPLUG)	+= dm_cluster_hotplug_7580.o
-obj-$(CONFIG_PMU_COREMEM_RATIO)		+= pmu_count.o coremem_ratio.o
 obj-$(CONFIG_PXA25x)			+= pxa2xx-cpufreq.o
 obj-$(CONFIG_PXA27x)			+= pxa2xx-cpufreq.o
 obj-$(CONFIG_PXA3xx)			+= pxa3xx-cpufreq.o
