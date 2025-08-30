@@ -234,9 +234,3 @@ config ARM_VEXPRESS_BL_CPUFREQ
 	help
 	  This enables the CPUfreq driver for ARM Vexpress big.LITTLE platform.
 	  If in doubt, say N.
-
-config PMU_COREMEM_RATIO
-	bool "support coremem ratio by pmu count"
-	depends on ARCH_EXYNOS
-	help
-	  This supports coremem ratio region by pmu count
