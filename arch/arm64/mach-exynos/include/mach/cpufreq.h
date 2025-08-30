@@ -81,10 +81,6 @@ struct exynos_dvfs_info {
 	const unsigned int	*max_op_freqs;
 	struct cpufreq_frequency_table	*freq_table;
 	struct regulator *regulator;
-#ifdef CONFIG_PMU_COREMEM_RATIO
-	int		(*region_bus_table)[6];
-	int		region;
-#endif
 	void (*set_freq)(unsigned int, unsigned int);
 	void (*set_ema)(unsigned int);
 	bool (*need_apll_change)(unsigned int, unsigned int);
@@ -220,14 +216,5 @@ static inline bool is_cluster1_hotplugged(void) {return 0;}
 #else
 	#warning "Should define CONFIG_ARM_EXYNOS_(MP_)CPUFREQ\n"
 #endif
-#if defined(CONFIG_PMU_COREMEM_RATIO)
-void coremem_region_bus_lock(int region, struct cpufreq_policy *policy);
-#else
-static inline
-void coremem_region_bus_lock(int region, struct cpufreq_policy *policy)
-{
-	return;
-}
-#endif	/* CONFIG_PMU_COREMEM_RATIO */
 #endif
 #endif /* __ARCH_CPUFREQ_H */

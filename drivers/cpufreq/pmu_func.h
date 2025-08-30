@@ -246,45 +246,6 @@ struct pmu_count_value {
 #define __start_timer_resume(x) (enable_pmu(), enable_ccnt())
 #define __stop_timer(x) read_ccnt()
 
-#if defined(CONFIG_PMU_COREMEM_RATIO)
-int is_alive_cpu(int cpu);
-int start_counter_cpu(int cpu);
-int stop_counter_cpu(int cpu);
-int read_pmu_one(void *data);
-void read_counter_value(struct pmu_count_value *data);
-int coremem_ratio (u32 instcnt, u32 linefcnt);
-#else
-static inline int is_alive_cpu(int cpu)
-{
-	return 1;
-}
-
-static inline int start_counter_cpu(int cpu)
-{
-	return 0;
-}
-
-static inline int stop_counter_cpu(int cpu)
-{
-	return 0;
-}
-
-static inline int read_pmu_one(void *data)
-{
-	return 0;
-}
-
-static inline void read_counter_value(struct pmu_count_value *data);
-{
-	return;
-}
-
-static inline int coremem_ratio (u32 instcnt, u32 linefcnt)
-{
-	return 0;
-}
-#endif
-
 #define REGION_C100_M000_C080_M020	0x1
 #define REGION_C080_M020_C060_M040	0x2
 #define REGION_C060_M040_C040_M060	0x3
