@@ -12,6 +12,8 @@
 #ifndef _UFS_EXYNOS_H_
 #define _UFS_EXYNOS_H_
 
+#include <linux/pm_qos.h>
+
 /*
  * Exynos's Vendor specific registers for UFSHCI
  */
@@ -89,6 +91,12 @@
 /* TXPRDT defines */
 #define PRDT_PREFECT_EN		BIT(31)
 #define PRDT_SET_SIZE(x)	((x) & 0x1F)
+
+/* Throughput Monitor Period */
+#define TP_MON_PERIOD	HZ
+
+/* PM QoS Expiration Time in TP mon */
+#define TP_MON_PM_QOS_LIFETIME	2000000
 
 enum {
 	UNIP_PA_LYR = 0,
@@ -405,6 +413,15 @@ struct uic_pwr_mode {
 	u32 remote_l2_timer[3];
 };
 
+struct exynos_ufs_tp_mon_table {
+	u32	threshold;
+	s32     cluster1_value;
+#ifdef CONFIG_ARM_EXYNOS_MP_CPUFREQ
+	s32     cluster0_value;
+#endif
+	s32     mif_value;
+};
+
 struct exynos_ufs_clk_info {
 	struct list_head list;
 	struct clk *clk;
@@ -484,6 +501,19 @@ struct exynos_ufs {
 	u32 opts;
 #define EXYNOS_UFS_OPTS_SKIP_CONNECTION_ESTAB	BIT(0)
 
+	/* Performance */
+	struct exynos_ufs_tp_mon_table *tp_mon_tbl;
+	struct delayed_work	tp_mon;
+	struct pm_qos_request	pm_qos_cluster1;
+	struct pm_qos_request	pm_qos_cluster0;
+	struct pm_qos_request	pm_qos_mif;
+	u32 last_threshold;
+	struct pm_qos_request	pm_qos_int;
+	s32			pm_qos_int_value;
+
+	/* Support system power mode */
+	int idle_ip_index;
+	
 	/* for miscellaneous control */
 	u32 misc_flags;
 #define EXYNOS_UFS_MISC_TOGGLE_LOG	BIT(0)

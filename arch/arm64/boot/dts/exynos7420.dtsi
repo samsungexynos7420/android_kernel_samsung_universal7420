@@ -3430,6 +3430,8 @@
 		ufs,pmd-local-l2-timer = <8000 28000 20000>;
 		ufs,pmd-remote-l2-timer = <12000 32000 16000>;
 
+		ufs-pm-qos-int = <266000>;
+
 		ufs-phy {
 			#address-cells = <1>;
 			#size-cells = <1>;

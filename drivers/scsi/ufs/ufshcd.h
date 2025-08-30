@@ -297,6 +297,7 @@ struct ufs_hba_variant_ops {
 					int, struct scsi_cmnd *);
 	void	(*set_nexus_t_task_mgmt)(struct ufs_hba *, int, u8);
 	void	(*hibern8_notify)(struct ufs_hba *, u8, bool);
+	void	(*clock_control_notify)(struct ufs_hba *, bool, bool);
 	void	(*get_debug_info)(struct ufs_hba *);
 	int     (*suspend)(struct ufs_hba *, enum ufs_pm_op);
 	int     (*resume)(struct ufs_hba *, enum ufs_pm_op);
@@ -478,6 +479,9 @@ struct ufs_hba {
 	struct workqueue_struct *ufshcd_workq;
 	struct work_struct eh_work;
 	struct work_struct eeh_work;
+
+	/* Performance */
+	u32 tp_per_period;
 
 	/* HBA Errors */
 	u32 errors;
