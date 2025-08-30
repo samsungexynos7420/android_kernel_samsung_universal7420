@@ -1190,7 +1190,7 @@ static int ufshcd_map_sg(struct ufs_hba *hba, struct ufshcd_lrb *lrbp)
 		prd_table = (struct ufshcd_sg_entry *)lrbp->ucd_prdt_ptr;
 
 		scsi_for_each_sg(cmd, sg, sg_segments, i) {
-			prd_table[i].size  =
+			hba->tp_per_period += prd_table[i].size  =
 				cpu_to_le32(((u32) sg_dma_len(sg))-1);
 			prd_table[i].base_addr =
 				cpu_to_le32(lower_32_bits(sg->dma_address));
@@ -5629,9 +5629,15 @@ static int __ufshcd_setup_clocks(struct ufs_hba *hba, bool on,
 	struct list_head *head = &hba->clk_list_head;
 	const char *ref_clk = "ref_clk";
 	unsigned long flags;
+	bool internal_control = ufshcd_is_link_hibern8(hba);
 
 	if (!head || list_empty(head))
 		goto out;
+
+	if (internal_control) {
+		if (hba->vops && hba->vops->clock_control_notify)
+			hba->vops->clock_control_notify(hba, on, PRE_CHANGE);
+	}
 
 	list_for_each_entry(clki, head, list) {
 		if (!IS_ERR_OR_NULL(clki->clk)) {
@@ -5653,6 +5659,11 @@ static int __ufshcd_setup_clocks(struct ufs_hba *hba, bool on,
 			dev_dbg(hba->dev, "%s: clk: %s %sabled\n", __func__,
 					clki->name, on ? "en" : "dis");
 		}
+	}
+
+	if (internal_control) {
+		if (hba->vops && hba->vops->clock_control_notify)
+			hba->vops->clock_control_notify(hba, on, POST_CHANGE);
 	}
 
 	if (hba->vops && hba->vops->setup_clocks)
