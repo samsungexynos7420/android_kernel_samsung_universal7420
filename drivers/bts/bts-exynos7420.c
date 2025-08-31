@@ -1721,10 +1721,10 @@ void exynos7_update_media_scenario(enum bts_media_type media_type,
 
 	switch (media_type) {
 	case TYPE_DECON_INT:
-		decon_int_bw = bw;
+		decon_int_bw = bw * 2;
 		break;
 	case TYPE_DECON_EXT:
-		decon_ext_bw = bw;
+		decon_ext_bw = bw * 2;
 		break;
 	case TYPE_VPP0:
 	case TYPE_VPP1:
