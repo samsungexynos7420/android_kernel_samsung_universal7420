@@ -1338,7 +1338,6 @@ int decon_tui_protection(struct decon_device *decon, bool tui_en)
 #ifdef CONFIG_DECON_SYSTRACE
 		SYSTRACE_C_BEGIN( "pm_qos_update_request" );
 #endif
-		pm_qos_update_request(&decon->mif_qos, 543000);
 #ifdef CONFIG_DECON_SYSTRACE
 		SYSTRACE_C_FINISH( "pm_qos_update_request" );
 #endif
@@ -1515,7 +1514,6 @@ int decon_enable(struct decon_device *decon)
 #endif
 		pm_qos_update_request(&decon->disp_qos, 167000);
 		pm_qos_update_request(&decon->int_qos, 167000);
-		pm_qos_update_request(&decon->mif_qos, 543000);
 #ifdef CONFIG_DECON_SYSTRACE
 		SYSTRACE_C_FINISH( "pm_qos_update_request" );
 #endif
@@ -1771,7 +1769,6 @@ int decon_disable(struct decon_device *decon)
 #endif
 		pm_qos_update_request(&decon->disp_qos, 0);
 		pm_qos_update_request(&decon->int_qos, 0);
-		pm_qos_update_request(&decon->mif_qos, 0);
 #ifdef CONFIG_DECON_SYSTRACE
 		SYSTRACE_C_FINISH( "pm_qos_update_request" );
 #endif
@@ -6434,8 +6431,6 @@ decon_rest_init:
 						PM_QOS_DEVICE_THROUGHPUT, 0);
 			pm_qos_add_request(&decon->disp_qos,
 						PM_QOS_DISPLAY_THROUGHPUT, 0);
-			pm_qos_add_request(&decon->mif_qos,
-						PM_QOS_BUS_THROUGHPUT, 0);
 		} else {
 			/*PIX_BYTES = 4 */
 			decon->default_bw = vclk_rate * 4;
