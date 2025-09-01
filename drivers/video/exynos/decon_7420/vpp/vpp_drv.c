@@ -69,6 +69,11 @@
 #define MEM_FAULT_PROT_EXCEPT_2         4
 #define MEM_FAULT_PROT_EXCEPT_3         5
 
+#define HALF_MIC 		2
+#define PIX_PER_CLK 	2
+#define ROTATION 		4
+#define NOT_ROT 		1
+
 static struct vpp_dev *vpp_for_decon;
 
 static void vpp_dump_cfw_register(void)
@@ -560,7 +565,9 @@ static void vpp_get_min_mif_lock(struct vpp_dev *vpp)
 {
 	struct decon_win_config *config = vpp->config;
 	struct decon_device *decon = get_decon_drvdata(0);
-	u32 vclk_mic = (u32) ((clk_get_rate(decon->res.vclk) / MHZ) * 2);
+	u32 vclk = (u32) (clk_get_rate(decon->res.vclk) * PIX_PER_CLK / MHZ);
+	/* TODO, parse mic factor automatically at dt */
+	u32 mic_factor = HALF_MIC; /* 1/2 MIC */
 	u8 bpl, rot_factor = 0;
 	u32 scale_factor = 0;
 
@@ -571,13 +578,12 @@ static void vpp_get_min_mif_lock(struct vpp_dev *vpp)
 	else if (is_yuv422(config))
 		bpl = 4;
 	else
-		bpl = 3;
+		bpl = 4;
 
 	vpp_get_bts_scale_factor(vpp, true);
 
-	scale_factor = ((vclk_mic * vpp->sc_w * vpp->sc_h) /
-			(MULTI_FACTOR *	MULTI_FACTOR) * bpl) / 2;
-	vpp->cur_bw = scale_factor * rot_factor * KHZ;
+	vpp->cur_bw = vclk * mic_factor * bpl * vpp->sc_w * vpp->sc_h
+		* rot_factor * KHZ / (MULTI_FACTOR * MULTI_FACTOR);
 
 	dev_dbg(DEV, "vpp-%d bw get: %d\n", vpp->id, vpp->cur_bw);
 }

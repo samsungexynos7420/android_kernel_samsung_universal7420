@@ -6422,9 +6422,12 @@ decon_rest_init:
 #if defined(CONFIG_DECON_DEVFREQ)
 		vclk_rate = clk_get_rate(decon->res.vclk) / KHZ;
 		vclk_rate = (vclk_rate <= 0) ? 133000 : vclk_rate;
+		u32 mic_factor = 2;
+		u32 bpl = 4;
+		
 		if (!decon->id) {
 			/* MIC_FACT = 2, PIX_BYTES = 4 */
-			decon->default_bw = vclk_rate * 2 * 4;
+			decon->default_bw = vclk_rate * mic_factor * bpl;
 			exynos7_update_media_scenario(TYPE_DECON_INT,
 							decon->default_bw, 0);
 			pm_qos_add_request(&decon->int_qos,
