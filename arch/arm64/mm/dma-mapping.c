@@ -91,6 +91,11 @@ static void *__dma_alloc_coherent(struct device *dev, size_t size,
 				  dma_addr_t *dma_handle, gfp_t flags,
 				  struct dma_attrs *attrs)
 {
+	if (dev == NULL) {
+		WARN_ONCE(1, "Use an actual device structure for DMA allocation\n");
+		return NULL;
+	}
+
 	if (IS_ENABLED(CONFIG_ZONE_DMA) &&
 	    dev->coherent_dma_mask <= DMA_BIT_MASK(32))
 		flags |= GFP_DMA;
@@ -205,11 +210,6 @@ static void __dma_free_noncoherent(struct device *dev, size_t size,
 	if (__free_from_pool(vaddr, size))
 		return;
 	vunmap(vaddr);
-
-	if (dev == NULL) {
-		WARN_ONCE(1, "Use an actual device structure for DMA allocation\n");
-		return;
-	}
 
 	if (IS_ENABLED(CONFIG_DMA_CMA)) {
 		phys_addr_t paddr = dma_to_phys(dev, dma_handle);
