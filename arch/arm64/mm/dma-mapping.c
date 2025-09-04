@@ -270,9 +270,11 @@ static void __swiotlb_unmap_sg_attrs(struct device *dev,
 	struct scatterlist *sg;
 	int i;
 
-	for_each_sg(sgl, sg, nelems, i)
-		__dma_unmap_area(phys_to_virt(dma_to_phys(dev, sg->dma_address)),
-				 sg->length, dir);
+	if (!dma_get_attr(DMA_ATTR_SKIP_CPU_SYNC, attrs)) {
+		for_each_sg(sgl, sg, nelems, i)
+			__dma_unmap_area(phys_to_virt(dma_to_phys(dev, sg->dma_address)),
+					sg->length, dir);
+	}
 	swiotlb_unmap_sg_attrs(dev, sgl, nelems, dir, attrs);
 }
 
