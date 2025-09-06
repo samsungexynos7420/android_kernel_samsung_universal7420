@@ -298,7 +298,7 @@ void fixup_lower_ownership(struct dentry *dentry, const char *name)
 		mutex_lock(&inode->i_mutex);
 		error = security_path_chown(&path, newattrs.ia_uid, newattrs.ia_gid);
 		if (!error)
-			error = notify_change2(path.mnt, path.dentry, &newattrs);
+			error = notify_change2(path.mnt, path.dentry, &newattrs, NULL);
 		mutex_unlock(&inode->i_mutex);
 		if (error)
 			pr_debug("sdcardfs: Failed to touch up lower fs gid/uid for %s\n", name);

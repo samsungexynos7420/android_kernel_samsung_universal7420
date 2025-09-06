@@ -165,7 +165,7 @@ static int ovl_set_timestamps(struct dentry *upperdentry, struct kstat *stat)
 		.ia_mtime = stat->mtime,
 	};
 
-	return notify_change(upperdentry, &attr);
+	return notify_change(upperdentry, &attr, NULL);
 }
 
 int ovl_set_attr(struct dentry *upperdentry, struct kstat *stat)
@@ -177,7 +177,7 @@ int ovl_set_attr(struct dentry *upperdentry, struct kstat *stat)
 			.ia_valid = ATTR_MODE,
 			.ia_mode = stat->mode,
 		};
-		err = notify_change(upperdentry, &attr);
+		err = notify_change(upperdentry, &attr, NULL);
 	}
 	if (!err) {
 		struct iattr attr = {
@@ -185,7 +185,7 @@ int ovl_set_attr(struct dentry *upperdentry, struct kstat *stat)
 			.ia_uid = stat->uid,
 			.ia_gid = stat->gid,
 		};
-		err = notify_change(upperdentry, &attr);
+		err = notify_change(upperdentry, &attr, NULL);
 	}
 	if (!err)
 		ovl_set_timestamps(upperdentry, stat);
@@ -241,7 +241,7 @@ static int ovl_copy_up_locked(struct dentry *workdir, struct dentry *upperdir,
 	mutex_lock(&newdentry->d_inode->i_mutex);
 	err = ovl_set_attr(newdentry, stat);
 	if (!err && attr)
-		err = notify_change(newdentry, attr);
+		err = notify_change(newdentry, attr, NULL);
 	mutex_unlock(&newdentry->d_inode->i_mutex);
 	if (err)
 		goto out_cleanup;
@@ -350,7 +350,7 @@ int ovl_copy_up_one(struct dentry *parent, struct dentry *dentry,
 		/* Raced with another copy-up?  Do the setattr here */
 		if (attr) {
 			mutex_lock(&upperdentry->d_inode->i_mutex);
-			err = notify_change(upperdentry, attr);
+			err = notify_change(upperdentry, attr, NULL);
 			mutex_unlock(&upperdentry->d_inode->i_mutex);
 		}
 		goto out_put_cred;
