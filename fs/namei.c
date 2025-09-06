@@ -3821,9 +3821,9 @@ out:
 }
 EXPORT_SYMBOL(vfs_unlink2);
 
-int vfs_unlink(struct inode *dir, struct dentry *dentry)
+int vfs_unlink(struct inode *dir, struct dentry *dentry, struct inode **delegated_inode)
 {
-	return vfs_unlink2(NULL, dir, dentry);
+	return vfs_unlink2(NULL, dir, dentry, delegated_inode);
 }
 EXPORT_SYMBOL(vfs_unlink);
 
@@ -4075,9 +4075,9 @@ int vfs_link2(struct vfsmount *mnt, struct dentry *old_dentry, struct inode *dir
 }
 EXPORT_SYMBOL(vfs_link2);
 
-int vfs_link(struct dentry *old_dentry, struct inode *dir, struct dentry *new_dentry)
+int vfs_link(struct dentry *old_dentry, struct inode *dir, struct dentry *new_dentry, struct inode **delegated_inode)
 {
-	return vfs_link2(NULL, old_dentry, dir, new_dentry);
+	return vfs_link2(NULL, old_dentry, dir, new_dentry, delegated_inode);
 }
 EXPORT_SYMBOL(vfs_link);
 
@@ -4214,21 +4214,21 @@ int vfs_rename2(struct vfsmount *mnt,
 {
 	int error;
 	bool is_dir = d_is_dir(old_dentry);
-	const unsigned char *old_name;
 	struct inode *source = old_dentry->d_inode;
 	struct inode *target = new_dentry->d_inode;
+	struct name_snapshot old_name;
 
 	if (source == target)
 		return 0;
 
-	error = may_delete(old_dir, old_dentry, is_dir);
+	error = may_delete(mnt, old_dir, old_dentry, is_dir);
 	if (error)
 		return error;
 
 	if (!target)
-		error = may_create(new_dir, new_dentry);
+		error = may_create(mnt, new_dir, new_dentry);
 	else
-		error = may_delete(new_dir, new_dentry, is_dir);
+		error = may_delete(mnt, new_dir, new_dentry, is_dir);
 	if (error)
 		return error;
 
@@ -4253,7 +4253,7 @@ int vfs_rename2(struct vfsmount *mnt,
 	if (error)
 		return error;
 
-	old_name = fsnotify_oldname_init(old_dentry->d_name.name);
+	take_dentry_name_snapshot(&old_name, old_dentry);
 	dget(new_dentry);
 	if (!is_dir)
 		lock_two_nondirectories(source, target);
@@ -4310,9 +4310,9 @@ out:
 	dput(new_dentry);
 
 	if (!error)
-		fsnotify_move(old_dir, new_dir, old_name, is_dir,
-			      target, old_dentry);
-	fsnotify_oldname_free(old_name);
+		fsnotify_move(old_dir, new_dir, old_name.name, is_dir,
+			      new_dentry->d_inode, old_dentry);
+	release_dentry_name_snapshot(&old_name);
 
 	return error;
 }
@@ -4419,8 +4419,8 @@ retry_deleg:
 	if (error)
 		goto exit5;
 	error = vfs_rename2(oldnd.path.mnt, old_dir->d_inode, old_dentry,
-				   new_dir->d_inode, new_dentry,
-				   &delegated_inode, flags);
+			   new_dir->d_inode, new_dentry,
+			   &delegated_inode, flags);
 exit5:
 	dput(new_dentry);
 exit4:
