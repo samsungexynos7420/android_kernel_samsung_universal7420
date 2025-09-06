@@ -19788,11 +19788,7 @@ dhd_schedule_pktlog_dump(dhd_pub_t *dhdp)
 #define DHD_VFS_INODE(dir) d_inode(dir)
 #endif /* LINUX_VERSION_CODE < KERNEL_VERSION(3, 19, 0) */
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(3, 13, 0))
-#define DHD_VFS_UNLINK(dir, b, c) vfs_unlink(DHD_VFS_INODE(dir), b)
-#else
 #define DHD_VFS_UNLINK(dir, b, c) vfs_unlink(DHD_VFS_INODE(dir), b, c)
-#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(3, 13, 0) */
 
 static int
 dhd_file_delete(char *path)
