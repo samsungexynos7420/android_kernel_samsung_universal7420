@@ -52,7 +52,7 @@ int ovl_setattr(struct dentry *dentry, struct iattr *attr)
 	upperdentry = ovl_dentry_upper(dentry);
 	if (upperdentry) {
 		mutex_lock(&upperdentry->d_inode->i_mutex);
-		err = notify_change(upperdentry, attr);
+		err = notify_change(upperdentry, attr, NULL);
 		mutex_unlock(&upperdentry->d_inode->i_mutex);
 	} else {
 		err = ovl_copy_up_last(dentry, attr, false);
