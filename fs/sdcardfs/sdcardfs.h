@@ -602,7 +602,7 @@ static inline int prepare_dir(const char *path_s, uid_t uid, gid_t gid, mode_t m
 	attrs.ia_gid = make_kgid(&init_user_ns, gid);
 	attrs.ia_valid = ATTR_UID | ATTR_GID;
 	mutex_lock(&dent->d_inode->i_mutex);
-	notify_change2(parent.mnt, dent, &attrs);
+	notify_change2(parent.mnt, dent, &attrs, NULL);
 	mutex_unlock(&dent->d_inode->i_mutex);
 
 out_dput:
