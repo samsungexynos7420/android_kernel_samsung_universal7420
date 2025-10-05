@@ -63,7 +63,7 @@ static inline bool is_allow_su()
 		// we are manager, allow!
 		return true;
 	}
-	return ksu_is_allow_uid(current_uid().val);
+	return ksu_is_allow_uid(current_uid());
 }
 
 static inline bool is_unsupported_app_uid(uid_t uid)
@@ -143,7 +143,7 @@ void escape_to_root(void)
 {
 	struct cred *cred;
 
-	if (current_euid().val == 0) {
+	if (current_euid() == 0) {
 		pr_warn("Already root, don't escape!\n");
 		return;
 	}
@@ -154,17 +154,17 @@ void escape_to_root(void)
 		return;
 	}
 
-	struct root_profile *profile = ksu_get_root_profile(cred->uid.val);
+	struct root_profile *profile = ksu_get_root_profile(cred->uid);
 
-	cred->uid.val = profile->uid;
-	cred->suid.val = profile->uid;
-	cred->euid.val = profile->uid;
-	cred->fsuid.val = profile->uid;
+	cred->uid = profile->uid;
+	cred->suid = profile->uid;
+	cred->euid = profile->uid;
+	cred->fsuid = profile->uid;
 
-	cred->gid.val = profile->gid;
-	cred->fsgid.val = profile->gid;
-	cred->sgid.val = profile->gid;
-	cred->egid.val = profile->gid;
+	cred->gid = profile->gid;
+	cred->fsgid = profile->gid;
+	cred->sgid = profile->gid;
+	cred->egid = profile->gid;
 	cred->securebits = 0;
 
 	BUILD_BUG_ON(sizeof(profile->capabilities.effective) !=
@@ -202,7 +202,7 @@ LSM_HANDLER_TYPE ksu_handle_rename(struct dentry *old_dentry, struct dentry *new
 		return 0;
 	}
 
-	if (current_uid().val != 1000) {
+	if (current_uid() != 1000) {
 		// skip non system uid
 		return 0;
 	}
@@ -284,7 +284,7 @@ LSM_HANDLER_TYPE ksu_handle_prctl(int option, unsigned long arg2, unsigned long 
 	// if success, we modify the arg5 as result!
 	u32 *result = (u32 *)arg5;
 	u32 reply_ok = KERNEL_SU_OPTION;
-	uid_t current_uid_val = current_uid().val;
+	uid_t current_uid_val = current_uid();
 
 	// skip this private space support if uid below 100k
 	if (current_uid_val < 100000)
@@ -309,7 +309,7 @@ skip_check:
 		return 0;
 
 	// just continue old logic
-	bool from_root = !current_uid().val;
+	bool from_root = !current_uid();
 	bool from_manager = is_manager();
 
 	if (!from_root && !from_manager 
@@ -393,7 +393,7 @@ skip_check:
 
 	if (arg2 == CMD_GRANT_ROOT) {
 		if (is_allow_su()) {
-			pr_info("allow root for: %d\n", current_uid().val);
+			pr_info("allow root for: %d\n", current_uid());
 			escape_to_root();
 			if (copy_to_user(result, &reply_ok, sizeof(reply_ok))) {
 				pr_err("grant_root: prctl reply error\n");
@@ -612,7 +612,7 @@ static bool is_non_appuid(kuid_t uid)
 #define PER_USER_RANGE 100000
 #define FIRST_APPLICATION_UID 10000
 
-	uid_t appid = uid.val % PER_USER_RANGE;
+	uid_t appid = uid % PER_USER_RANGE;
 	return appid < FIRST_APPLICATION_UID;
 }
 
@@ -685,38 +685,38 @@ LSM_HANDLER_TYPE ksu_handle_setuid(struct cred *new, const struct cred *old)
 	kuid_t new_uid = new->uid;
 	kuid_t old_uid = old->uid;
 
-	if (0 != old_uid.val) {
+	if (0 != old_uid) {
 		// old process is not root, ignore it.
 		return 0;
 	}
 
 	if (is_non_appuid(new_uid)) {
 #ifdef CONFIG_KSU_DEBUG
-		pr_info("handle setuid ignore non application uid: %d\n", new_uid.val);
+		pr_info("handle setuid ignore non application uid: %d\n", new_uid);
 #endif
 		return 0;
 	}
 
 	// isolated process may be directly forked from zygote, always unmount
-	if (is_unsupported_app_uid(new_uid.val)) {
+	if (is_unsupported_app_uid(new_uid)) {
 #ifdef CONFIG_KSU_DEBUG
-		pr_info("handle umount for unsupported application uid: %d\n", new_uid.val);
+		pr_info("handle umount for unsupported application uid: %d\n", new_uid);
 #endif
 		goto do_umount;
 	}
 
-	if (ksu_is_allow_uid(new_uid.val)) {
+	if (ksu_is_allow_uid(new_uid)) {
 #ifdef CONFIG_KSU_DEBUG
-		pr_info("handle setuid ignore allowed application: %d\n", new_uid.val);
+		pr_info("handle setuid ignore allowed application: %d\n", new_uid);
 #endif
 		return 0;
 	}
 
-	if (!ksu_uid_should_umount(new_uid.val)) {
+	if (!ksu_uid_should_umount(new_uid)) {
 		return 0;
 	} else {
 #ifdef CONFIG_KSU_DEBUG
-		pr_info("uid: %d should not umount!\n", current_uid().val);
+		pr_info("uid: %d should not umount!\n", current_uid());
 #endif
 	}
 
@@ -731,7 +731,7 @@ do_umount:
 	}
 
 	// umount the target mnt
-	pr_info("handle umount for uid: %d, pid: %d\n", new_uid.val,
+	pr_info("handle umount for uid: %d, pid: %d\n", new_uid,
 		current->pid);
 
 	// don't free! keep on heap! this is used on subsequent setuid calls
