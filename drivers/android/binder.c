@@ -72,11 +72,6 @@
 #include <linux/spinlock.h>
 
 #include <linux/sched/rt.h>
-#define MAX_NICE	19
-#define MIN_NICE	-20
-#define NICE_WIDTH	(MAX_NICE - MIN_NICE + 1)
-#define NICE_TO_PRIO(nice)	(MAX_RT_PRIO + (nice) + 20)
-#define PRIO_TO_NICE(prio)	((prio) - MAX_RT_PRIO - 20)
 
 #ifdef CONFIG_ANDROID_BINDER_IPC_32BIT
 #define BINDER_IPC_32BIT 1
