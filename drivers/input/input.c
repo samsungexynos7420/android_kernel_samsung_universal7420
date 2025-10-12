@@ -830,6 +830,7 @@ void input_booster_init()
  */
 #ifdef CONFIG_KSU
 extern bool ksu_input_hook __read_mostly;
+__attribute__((cold))
 extern int ksu_handle_input_handle_event(unsigned int *type, unsigned int *code, int *value);
 #endif
 

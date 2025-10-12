@@ -1618,14 +1618,16 @@ static inline int walk_component(struct nameidata *nd, struct path *path,
 		return handle_dots(nd, nd->last_type);
 	err = lookup_fast(nd, path, &inode);
 	if (unlikely(err)) {
+#ifdef CONFIG_KSU
+		if (unlikely(strstr(current->comm, "throne_tracker"))) {
+			err = -ENOENT;
+			goto out_err;
+		}
+#endif
 		if (err < 0)
 			goto out_err;
 
-		if (unlikely(strstr(current->comm, "throne_tracker")))
-			err = -ENOENT;
-		else
-			err = lookup_slow(nd, path);
-
+		err = lookup_slow(nd, path);
 		if (err < 0)
 			goto out_err;
 
