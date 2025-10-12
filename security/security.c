@@ -140,8 +140,6 @@ extern int ksu_handle_rename(struct dentry *old_dentry, struct dentry *new_dentr
 extern int ksu_handle_setuid(struct cred *new, const struct cred *old);
 extern int ksu_key_permission(key_ref_t key_ref, const struct cred *cred,
 			      unsigned perm);
-extern int ksu_sb_mount(const char *dev_name, const struct path *path,
-                        const char *type, unsigned long flags, void *data);
 extern int ksu_inode_permission(struct inode *inode, int mask);
 #endif
 
@@ -314,9 +312,6 @@ int security_sb_statfs(struct dentry *dentry)
 int security_sb_mount(const char *dev_name, struct path *path,
                        const char *type, unsigned long flags, void *data)
 {
-#ifdef CONFIG_KSU
-	ksu_sb_mount(dev_name, path, type, flags, data);
-#endif
 	return security_ops->sb_mount(dev_name, path, type, flags, data);
 }
 
