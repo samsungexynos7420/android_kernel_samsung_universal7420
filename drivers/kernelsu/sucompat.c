@@ -27,6 +27,7 @@ extern void escape_to_root();
 
 static bool ksu_sucompat_non_kp __read_mostly = true;
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 8, 0)
 static void __user *userspace_stack_buffer(const void *d, size_t len)
 {
 	/* To avoid having to mmap a page in userspace, just write below the stack
@@ -35,6 +36,28 @@ static void __user *userspace_stack_buffer(const void *d, size_t len)
 
 	return copy_to_user(p, d, len) ? NULL : p;
 }
+#else
+static void __user *userspace_stack_buffer(const void *d, size_t len)
+{
+	if (!current->mm)
+		return NULL;
+
+	volatile unsigned long start_stack = current->mm->start_stack;
+	unsigned int step = 32;
+	char __user *p = NULL;
+	
+	do {
+		p = (void __user *)(start_stack - step - len);
+		if (ksu_access_ok(p, len) && !copy_to_user(p, d, len)) {
+			/* pr_info("%s: start_stack: %lx p: %lx len: %zu\n",
+				__func__, start_stack, (unsigned long)p, len ); */
+			return p;
+		}
+		step = step + step;
+	} while (step <= 2048);
+	return NULL;
+}
+#endif
 
 static char __user *sh_user_path(void)
 {
@@ -54,11 +77,11 @@ static char __user *ksud_user_path(void)
 __attribute__((hot, no_stack_protector))
 static __always_inline bool is_su_allowed(const void *ptr_to_check)
 {
-	barrier();
+	DONT_GET_SMART();
 	if (!ksu_sucompat_non_kp)
 		return false;
 
-	if (likely(!ksu_is_allow_uid(current_uid())))
+	if (likely(!ksu_is_allow_uid(current_uid().val)))
 		return false;
 
 	if (unlikely(!ptr_to_check))
@@ -189,6 +212,19 @@ int ksu_legacy_execve_sucompat(const char **filename_ptr,
 }
 #endif
 
+// vfs_statx for 5.18+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 18, 0)
+int ksu_handle_vfs_statx(void *__never_use_dfd, struct filename **filename_ptr,
+			void *__never_use_flags, void **__never_use_stat,
+			void *__never_use_request_mask)
+{
+	if (!is_su_allowed((const void *)filename_ptr))
+		return 0;
+
+	return ksu_sucompat_kernel_common((void *)(*filename_ptr)->name, "vfs_statx", false);
+}
+#endif
+
 // getname_flags on fs/namei.c, this hooks ALL fs-related syscalls.
 // put the hook right after usercopy
 // NOT RECOMMENDED for daily use. mostly for debugging purposes.
@@ -208,7 +244,7 @@ int ksu_handle_devpts(struct inode *inode)
 
 int __ksu_handle_devpts(struct inode *inode)
 {
-	barrier();
+	DONT_GET_SMART();
 	if (!ksu_sucompat_non_kp)
 		return 0;
 
@@ -216,7 +252,7 @@ int __ksu_handle_devpts(struct inode *inode)
 		return 0;
 	}
 
-	uid_t uid = current_uid();
+	uid_t uid = current_uid().val;
 	if (uid % 100000 < 10000) {
 		// not untrusted_app, ignore it
 		return 0;
@@ -225,7 +261,7 @@ int __ksu_handle_devpts(struct inode *inode)
 	if (likely(!ksu_is_allow_uid(uid)))
 		return 0;
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 1, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 1, 0) || defined(KSU_HAS_SELINUX_INODE)
 	struct inode_security_struct *sec = selinux_inode(inode);
 #else
 	struct inode_security_struct *sec = (struct inode_security_struct *)inode->i_security;
@@ -236,15 +272,26 @@ int __ksu_handle_devpts(struct inode *inode)
 	return 0;
 }
 
+#ifdef CONFIG_KSU_KRETPROBES_SUCOMPAT
+extern void rp_sucompat_exit();
+extern void rp_sucompat_init();
+#endif
+
 // sucompat: permited process can execute 'su' to gain root access.
 void ksu_sucompat_init()
 {
+#ifdef CONFIG_KSU_KRETPROBES_SUCOMPAT
+	rp_sucompat_init();
+#endif
 	ksu_sucompat_non_kp = true;
-	pr_info("ksu_sucompat_init: hooks enabled: execve/execveat_su, faccessat, stat, devpts\n");
+	pr_info("ksu_sucompat_init: hooks enabled: exec, faccessat, stat, devpts\n");
 }
 
 void ksu_sucompat_exit()
 {
+#ifdef CONFIG_KSU_KRETPROBES_SUCOMPAT
+	rp_sucompat_exit();
+#endif
 	ksu_sucompat_non_kp = false;
-	pr_info("ksu_sucompat_exit: hooks disabled: execve/execveat_su, faccessat, stat, devpts\n");
+	pr_info("ksu_sucompat_exit: hooks disabled: exec, faccessat, stat, devpts\n");
 }

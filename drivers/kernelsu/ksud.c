@@ -83,7 +83,7 @@ void on_post_fs_data(void)
 // since _ksud handler only uses argv and envp for comparisons
 // this can probably work
 // adapted from ksu_handle_execveat_ksud
-static int ksu_handle_bprm_ksud(const char *filename, const char *argv1, const char *envp, size_t envp_len)
+int ksu_handle_bprm_ksud(const char *filename, const char *argv1, const char *envp, size_t envp_len)
 {
 	static const char app_process[] = "/system/bin/app_process";
 	static bool first_app_process = true;
@@ -101,9 +101,18 @@ static int ksu_handle_bprm_ksud(const char *filename, const char *argv1, const c
 	if (!filename)
 		return 0;
 
-
 	// debug! remove me!
 	pr_info("%s: filename: %s argv1: %s envp_len: %zu\n", __func__, filename, argv1, envp_len);
+
+#ifdef CONFIG_KSU_DEBUG
+	const char *envp_n = envp;
+	unsigned int envc = 1;
+	do {
+		pr_info("%s: envp[%d]: %s\n", __func__, envc, envp_n);
+		envp_n += strlen(envp_n) + 1;
+		envc++;
+	} while (envp_n < envp + 256);
+#endif
 
 	if (init_second_stage_executed)
 		goto first_app_process;
@@ -129,6 +138,9 @@ static int ksu_handle_bprm_ksud(const char *filename, const char *argv1, const c
 			ksu_android_ns_fs_check();
 		}
 	}
+
+	if (!envp || !envp_len)
+		goto first_app_process;
 
 	// /init without argv1/useless-argv1 but usable envp
 	// untested! TODO: test and debug me!
@@ -208,16 +220,6 @@ int ksu_handle_pre_ksud(const char *filename)
 
 	args[ARGV_MAX - 1] = '\0';
 	envp[ENVP_MAX - 1] = '\0';
-
-#ifdef CONFIG_KSU_DEBUG
-	char *envp_n = envp;
-	unsigned int envc = 1;
-	do {
-		pr_info("%s: envp[%d]: %s\n", __func__, envc, envp_n);
-		envp_n += strlen(envp_n) + 1;
-		envc++;
-	} while (envp_n < envp + envp_copy_len);
-#endif
 
 	// we only need argv1 !
 	// abuse strlen here since it only gets length up to \0

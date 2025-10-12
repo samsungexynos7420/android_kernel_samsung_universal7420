@@ -6,6 +6,14 @@
 #include "linux/version.h"
 #include "linux/key.h"
 
+#if defined(CONFIG_ARM) || defined(CONFIG_ARM64)
+// arch/arm64/include/asm/barrier.h, adding dsb probably unneeded
+#define DONT_GET_SMART() do { barrier(); isb(); } while (0)
+#else
+// well, compiler atleast, and not our targets
+#define DONT_GET_SMART() barrier()
+#endif
+
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 10, 0) || defined(CONFIG_KSU_ALLOWLIST_WORKAROUND)
 extern struct key *init_session_keyring;
 #endif
@@ -51,5 +59,22 @@ static int iterate_dir(struct file *file, struct dir_context *ctx)
 	return vfs_readdir(file, ctx->actor, ctx);
 }
 #endif // KSU_HAS_ITERATE_DIR
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 18, 0)
+__weak char *bin2hex(char *dst, const void *src, size_t count)
+{
+	const unsigned char *_src = src;
+	while (count--)
+		dst = pack_hex_byte(dst, *_src++);
+	return dst;
+}
+#endif
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 3, 0)
+__weak ssize_t strscpy(char *dest, const char *src, size_t count)
+{
+    return strlcpy(dest, src, count);
+}
+#endif
 
 #endif
