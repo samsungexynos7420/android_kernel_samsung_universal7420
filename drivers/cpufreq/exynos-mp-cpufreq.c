@@ -1882,6 +1882,7 @@ static int __init exynos_cpufreq_init(void)
 
 		freq_max[cluster] = exynos_info[cluster]->
 			freq_table[exynos_info[cluster]->max_support_idx].frequency;
+
 		freq_min[cluster] = exynos_info[cluster]->
 			freq_table[exynos_info[cluster]->min_support_idx].frequency;
 
@@ -1991,26 +1992,27 @@ static int __init exynos_cpufreq_init(void)
 	mutex_unlock(&cpufreq_lock);
 #endif
 
-    /*
-     * forced call cpufreq target function.
-     * If target function is called by interactive governor when blocked cpufreq scale,
-     * interactive governor's target_freq is updated to new_freq. But, frequency is
-     * not changed because blocking cpufreq scale. And if governor request same frequency
-     * after unblocked scale, speedchange_task is not wakeup because new_freq and target_freq
-     * is same.
-     */
-    policy = cpufreq_cpu_get(NR_CLUST0_CPUS);
-    if (!policy)
-        goto err_policy;
+	/*
+	 * forced call cpufreq target function.
+	 * If target function is called by interactive governor when blocked cpufreq scale,
+	 * interactive governor's target_freq is updated to new_freq. But, frequency is
+	 * not changed because blocking cpufreq scale. And if governor request same frequency
+	 * after unblocked scale, speedchange_task is not wakeup because new_freq and target_freq
+	 * is same.
+	 */
 
-    if (!policy->user_policy.governor) {
-        cpufreq_cpu_put(policy);
-        goto err_policy;
-    }
+	policy = cpufreq_cpu_get(NR_CLUST0_CPUS);
+	if (!policy)
+		goto err_policy;
 
-    smp_call_function_single(NR_CLUST0_CPUS, exynos_qos_nop, NULL, 0);
-    __cpufreq_driver_target(policy, policy->min, CPUFREQ_RELATION_H);
-    cpufreq_cpu_put(policy);
+	if (!policy->user_policy.governor) {
+		cpufreq_cpu_put(policy);
+		goto err_policy;
+	}
+
+	smp_call_function_single(NR_CLUST0_CPUS, exynos_qos_nop, NULL, 0);
+	__cpufreq_driver_target(policy, policy->min, CPUFREQ_RELATION_H);
+	cpufreq_cpu_put(policy);
 
 	ret = sysfs_create_group(cpufreq_global_kobject, &mp_attr_group);
 	if (ret) {
