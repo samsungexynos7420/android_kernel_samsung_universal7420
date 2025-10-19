@@ -414,6 +414,7 @@ static int exynos_set_voltage(unsigned int cur_index,
 		if (ret)
 			goto out;
 
+		exynos_info[cluster]->cur_volt = volt;
 	}
 
 	if (exynos_info[cluster]->abb_table)
@@ -423,9 +424,10 @@ static int exynos_set_voltage(unsigned int cur_index,
 		ret = regulator_set_voltage(regulator, volt, volt + VOLT_RANGE_STEP);
 		if (ret)
 			goto out;
+
+		exynos_info[cluster]->cur_volt = volt;
 	}
 
-	exynos_info[cluster]->cur_volt = volt;
 out:
 	return ret;
 }
@@ -478,10 +480,9 @@ static int exynos_cpufreq_scale(unsigned int target_freq, unsigned int cpu)
 	/* Update policy current frequency */
 	cpufreq_notify_transition(policy, freqs[cur], CPUFREQ_PRECHANGE);
 
-	if (freqs[cur]->new > freqs[cur]->old) {
+	if (old_index > new_index)
 		if (exynos_info[cur]->set_int_skew)
 			exynos_info[cur]->set_int_skew(new_index);
-	}
 
 #ifdef CONFIG_EXYNOS_CL_DVFS_CPU
 	if (!volt_offset)
@@ -489,7 +490,7 @@ static int exynos_cpufreq_scale(unsigned int target_freq, unsigned int cpu)
 #endif
 
 	/* When the new frequency is higher than current frequency */
-	if ((freqs[cur]->new > freqs[cur]->old) && !safe_volt){
+	if ((old_index > new_index) && !safe_volt) {
 		/* Firstly, voltage up to increase frequency */
 		ret = exynos_set_voltage(old_index, new_index, volt, cur);
 		if (ret)
@@ -518,12 +519,6 @@ static int exynos_cpufreq_scale(unsigned int target_freq, unsigned int cpu)
 
 	exynos_info[cur]->set_freq(old_index, new_index);
 
-	if (old_index < new_index) {
-		if (pm_qos_request_active(&exynos_mif_qos[cur]))
-			pm_qos_update_request(&exynos_mif_qos[cur],
-					exynos_info[cur]->bus_table[new_index]);
-	}
-
 #ifdef CONFIG_SMP
 	if (!global_lpj_ref.freq) {
 		global_lpj_ref.ref = loops_per_jiffy;
@@ -539,8 +534,7 @@ static int exynos_cpufreq_scale(unsigned int target_freq, unsigned int cpu)
 	cpufreq_notify_transition(policy, freqs[cur], CPUFREQ_POSTCHANGE);
 
 	/* When the new frequency is lower than current frequency */
-	if ((freqs[cur]->new < freqs[cur]->old) ||
-		((freqs[cur]->new > freqs[cur]->old) && safe_volt)) {
+	if ((old_index < new_index) || ((old_index > new_index) && safe_volt)) {
 		/* down the voltage after frequency change */
 		if (exynos_info[cur]->set_ema)
 			 exynos_info[cur]->set_ema(volt);
@@ -553,10 +547,15 @@ static int exynos_cpufreq_scale(unsigned int target_freq, unsigned int cpu)
 		}
 	}
 
-	if (freqs[cur]->new < freqs[cur]->old) {
+	if (old_index < new_index) {
+		if (pm_qos_request_active(&exynos_mif_qos[cur]))
+			pm_qos_update_request(&exynos_mif_qos[cur],
+					exynos_info[cur]->bus_table[new_index]);
+	}
+
+	if (old_index < new_index)
 		if (exynos_info[cur]->set_int_skew)
 			exynos_info[cur]->set_int_skew(new_index);
-	}
 
 #ifdef CONFIG_EXYNOS_CL_DVFS_CPU
 	if (!volt_offset)
@@ -725,6 +724,8 @@ static int exynos_target(struct cpufreq_policy *policy,
 	}
 
 	target_freq = freq_table[index].frequency;
+	if (target_freq > policy->max)
+		target_freq = policy->max;
 
 	pr_debug("%s[%d]: new_freq[%d], index[%d]\n",
 				__func__, cur, target_freq, index);
@@ -813,10 +814,14 @@ static int exynos_cpufreq_suspend(struct cpufreq_policy *policy)
 
 static int exynos_cpufreq_resume(struct cpufreq_policy *policy)
 {
-	int cl;
+	int cl, cur;
 
 	for (cl = 0; cl < CL_END; cl++)
 		freqs[cl]->old = exynos_getspeed_cluster(cl);
+
+	/* Update policy->cur value to resume frequency */
+	cur = get_cur_cluster(policy->cpu);
+	policy->cur = exynos_getspeed_cluster(cur);
 
 	return 0;
 }
