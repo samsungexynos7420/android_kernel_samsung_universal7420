@@ -888,7 +888,6 @@ static int exynos_cpufreq_pm_notifier(struct notifier_block *notifier,
 		mutex_lock(&cpufreq_lock);
 		exynos_info[CL_ZERO]->blocked = true;
 		exynos_info[CL_ONE]->blocked = true;
-		mutex_unlock(&cpufreq_lock);
 
 		for (cl = 0; cl < CL_END; cl++) {
 			bootfreq = get_resume_freq(cl);
@@ -939,6 +938,7 @@ static int exynos_cpufreq_pm_notifier(struct notifier_block *notifier,
 		}
 
 		suspend_prepared = true;
+		mutex_unlock(&cpufreq_lock);
 
 		pr_debug("PM_SUSPEND_PREPARE for CPUFREQ\n");
 
