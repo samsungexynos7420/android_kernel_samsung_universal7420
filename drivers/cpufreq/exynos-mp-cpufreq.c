@@ -428,8 +428,7 @@ out:
 	return ret;
 }
 
-static int exynos_cpufreq_scale(unsigned int target_freq,
-				unsigned int curr_freq, unsigned int cpu)
+static int exynos_cpufreq_scale(unsigned int target_freq, unsigned int cpu)
 {
 	unsigned int cur = get_cur_cluster(cpu);
 	struct cpufreq_frequency_table *freq_table = exynos_info[cur]->freq_table;
@@ -438,6 +437,7 @@ static int exynos_cpufreq_scale(unsigned int target_freq,
 	unsigned int new_index, old_index;
 	unsigned int volt, safe_volt = 0;
 	int ret = 0;
+	unsigned int current_freq = freqs[cur]->old;
 
 	if (!policy) {
 		ret = -EINVAL;
@@ -448,7 +448,7 @@ static int exynos_cpufreq_scale(unsigned int target_freq,
 	freqs[cur]->new = target_freq;
 
 	if (exynos5_frequency_table_target(policy, freq_table,
-				curr_freq, CPUFREQ_RELATION_L, &old_index)) {
+				freqs[cur]->old, CPUFREQ_RELATION_L, &old_index)) {
 		ret = -EINVAL;
 		goto out;
 	}
@@ -729,7 +729,7 @@ static int exynos_target(struct cpufreq_policy *policy,
 
 	exynos_ss_freq(cur, freqs[cur]->old, ESS_FLAG_IN);
 	/* frequency and volt scaling */
-	ret = exynos_cpufreq_scale(target_freq, freqs[cur]->old, policy->cpu);
+	ret = exynos_cpufreq_scale(target_freq, policy->cpu);
 	exynos_ss_freq(cur, target_freq, ESS_FLAG_OUT);
 	if (ret < 0)
 		goto out;
