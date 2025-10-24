@@ -1505,14 +1505,15 @@ SYSCALL_DEFINE1(newuname, struct new_utsname __user *, name)
 	down_read(&uts_sem);
 
 	memcpy(&tmp, utsname(), sizeof(tmp));
-	if (!strncmp(current->comm, "zygote", 6) ||
+	if (!strncmp(current->comm, "bpfloader", 6) ||
+	    !strncmp(current->comm, "zygote", 6) ||
 	    !strncmp(current->comm, "zygote64", 8) ||
 	    !strncmp(current->comm, "perfetto", 8) ||
 	    !strncmp(current->comm, "system_server", 12) ||
 	    !strncmp(current->comm, "vendor_init", 11) ||
 	    !strncmp(current->comm, "main", 4) ||
 	    !strncmp(current->comm, "init", 4)) {
-		strcpy(tmp.release, "3.18.140");
+		strcpy(tmp.release, "4.9.337");
 		pr_debug("fake uname: %s/%d release=%s\n",
 			 current->comm, current->pid, tmp.release);
 	}
