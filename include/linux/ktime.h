@@ -473,4 +473,5 @@ static inline ktime_t ms_to_ktime(u64 ms)
 	return ktime_add_ms(ktime_zero, ms);
 }
 
+u64 notrace ktime_get_boot_fast_ns(void);
 #endif
