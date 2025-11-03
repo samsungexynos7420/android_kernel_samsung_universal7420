@@ -293,7 +293,7 @@ static unsigned long global_dirtyable_memory(void)
  */
 void global_dirty_limits(unsigned long *pbackground, unsigned long *pdirty)
 {
-	const unsigned long available_memory = global_dirtyable_memory();
+	unsigned long available_memory = global_dirtyable_memory();
 	unsigned long background;
 	unsigned long dirty;
 	struct task_struct *tsk;
@@ -303,6 +303,14 @@ void global_dirty_limits(unsigned long *pbackground, unsigned long *pdirty)
 	else
 		dirty = (vm_dirty_ratio * available_memory) / 100;
 
+#if defined(CONFIG_MAX_DIRTY_THRESH_PAGES) && CONFIG_MAX_DIRTY_THRESH_PAGES > 0
+	if (!vm_dirty_bytes && dirty > CONFIG_MAX_DIRTY_THRESH_PAGES) {
+		dirty = CONFIG_MAX_DIRTY_THRESH_PAGES;
+		/* reduce available memory not to make bg_thresh too high */
+		available_memory = dirty * 100 / vm_dirty_ratio;
+	}
+#endif
+	
 	if (dirty_background_bytes)
 		background = DIV_ROUND_UP(dirty_background_bytes, PAGE_SIZE);
 	else
