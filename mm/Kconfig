@@ -542,7 +542,7 @@ config PGTABLE_MAPPING
 
 config DIRECT_RECLAIM_FILE_PAGES_ONLY
 	bool "Reclaim file pages only on direct reclaim path"
-	depends on ZSWAP
+	depends on SWAP
 	default n
 
 config INCREASE_MAXIMUM_SWAPPINESS
