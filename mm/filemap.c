@@ -39,6 +39,10 @@
 #include <sdp/cache_cleanup.h>
 #endif
 
+#ifdef CONFIG_PAGE_BOOST_RECORDING
+#include <linux/io_record.h>
+#endif
+
 #define CREATE_TRACE_POINTS
 #include <trace/events/filemap.h>
 
@@ -1267,7 +1271,9 @@ static void do_generic_file_read(struct file *filp, loff_t *ppos,
 	prev_offset = ra->prev_pos & (PAGE_CACHE_SIZE-1);
 	last_index = (*ppos + desc->count + PAGE_CACHE_SIZE-1) >> PAGE_CACHE_SHIFT;
 	offset = *ppos & ~PAGE_CACHE_MASK;
-
+#ifdef CONFIG_PAGE_BOOST_RECORDING
+	record_io_info(filp, index, last_index - index);
+#endif
 	for (;;) {
 		struct page *page;
 		pgoff_t end_index;
