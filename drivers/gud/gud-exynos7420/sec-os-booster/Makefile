@@ -7,5 +7,6 @@ obj-$(CONFIG_SECURE_OS_BOOSTER_API) += sec_os_booster.o
 GUD_ROOT_FOLDER := drivers/gud/gud-exynos7420
 
 # Includes MobiCore kernel driver
+ccflags-y += -I$(GUD_ROOT_FOLDER)/sec-os-booster
 ccflags-y += -I$(GUD_ROOT_FOLDER)/MobiCoreDriver
 ccflags-y += -I$(GUD_ROOT_FOLDER)/MobiCoreDriver/public
