@@ -601,8 +601,17 @@ endif # $(dot-config)
 all: vmlinux
 
 include $(srctree)/arch/$(SRCARCH)/Makefile
-
 ifeq ($(cc-name),clang)
+ifeq ($(CONFIG_SOC_EXYNOS7420), y)
+KBUILD_CFLAGS	+= -march=armv8-a+crypto+crc -mcpu=cortex-a53 -mtune=cortex-a53
+KBUILD_AFLAGS	+= -march=armv8-a+crypto+crc -mcpu=cortex-a53 -mtune=cortex-a53
+KBUILD_LDFLAGS  += -mllvm -march=armv8-a+crypto+crc\
+        -mllvm -mcpu=cortex-a53 \
+
+KBUILD_CFLAGS  += -mfloat-abi=hard
+KBUILD_AFLAGS  += -mfloat-abi=hard
+KBUILD_LDFLAGS  += -mllvm -float-abi=hard
+endif
 ifneq ($(CROSS_COMPILE),)
 CLANG_TRIPLE ?= $(CROSS_COMPILE)
 CLANG_FLAGS := --target=$(notdir $(CLANG_TRIPLE:%-=%))
