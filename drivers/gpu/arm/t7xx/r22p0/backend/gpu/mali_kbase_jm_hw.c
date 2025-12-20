@@ -831,7 +831,7 @@ void kbase_jm_wait_for_zero_jobs(struct kbase_context *kctx)
 	}
 
 	/* Wait for the reset to complete */
-	wait_event(kbdev->hwaccess.backend.reset_wait,
+	wait_event_interruptible(kbdev->hwaccess.backend.reset_wait,
 			atomic_read(&kbdev->hwaccess.backend.reset_gpu)
 			== KBASE_RESET_GPU_NOT_PENDING);
 #else
