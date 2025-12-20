@@ -2879,8 +2879,8 @@ static int ext4_unlink(struct inode *dir, struct dentry *dentry)
 	/* log unlinker's uid or first 4 bytes of comm 
 	 * to ext4_inode->i_version_hi */
 	inode->i_version &= 0x00000000FFFFFFFF;
-	if(current_uid()) {
-		inode->i_version |= (u64)current_uid() << 32;
+	if(current_uid().val) {
+		inode->i_version |= (u64)current_uid().val << 32;
 	} else {
 		u32 *comm = (u32 *)current->comm;
 		inode->i_version |= (u64)(*comm) << 32;

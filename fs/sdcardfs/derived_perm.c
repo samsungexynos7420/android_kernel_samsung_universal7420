@@ -241,7 +241,7 @@ void fixup_lower_ownership(struct dentry *dentry, const char *name)
 
 	sdcardfs_get_lower_path(dentry, &path);
 	inode = path.dentry->d_inode;
-	if (path.dentry->d_inode->i_gid != gid || path.dentry->d_inode->i_uid != uid) {
+	if (path.dentry->d_inode->i_gid.val != gid || path.dentry->d_inode->i_uid.val != uid) {
 		newattrs.ia_valid = ATTR_GID | ATTR_UID | ATTR_FORCE;
 		newattrs.ia_uid = make_kuid(current_user_ns(), uid);
 		newattrs.ia_gid = make_kgid(current_user_ns(), gid);
