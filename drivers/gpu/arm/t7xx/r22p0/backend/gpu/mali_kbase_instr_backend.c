@@ -401,7 +401,7 @@ void kbasep_cache_clean_worker(struct work_struct *data)
 				kbdev->hwcnt.backend.state = KBASE_INSTR_STATE_IDLE;
 		} else
 #endif
-		wait_event(kbdev->hwcnt.backend.cache_clean_wait,
+		wait_event_interruptible(kbdev->hwcnt.backend.cache_clean_wait,
 				kbdev->hwcnt.backend.state !=
 						KBASE_INSTR_STATE_CLEANING);
 		spin_lock_irqsave(&kbdev->hwcnt.lock, flags);
@@ -489,7 +489,7 @@ int kbase_instr_hwcnt_wait_for_dump(struct kbase_context *kctx)
 		}
 	} else
 #endif
-	wait_event(kbdev->hwcnt.backend.wait,
+	wait_event_interruptible(kbdev->hwcnt.backend.wait,
 					kbdev->hwcnt.backend.triggered != 0);
 
 	spin_lock_irqsave(&kbdev->hwcnt.lock, flags);
