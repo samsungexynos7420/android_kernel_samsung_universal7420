@@ -72,7 +72,7 @@ int dek_is_sdp_uid(uid_t uid) {
 EXPORT_SYMBOL(dek_is_sdp_uid);
 
 int is_system_server(void) {
-	uid_t uid = current_uid();
+	uid_t uid = from_kuid(&init_user_ns, current_uid());
 
 	switch(uid) {
 #if 0
@@ -89,7 +89,7 @@ int is_system_server(void) {
 }
 
 int is_root(void) {
-	uid_t uid = current_uid();
+	uid_t uid = from_kuid(&init_user_ns, current_uid());
 
 	switch(uid) {
 	case 0: //root

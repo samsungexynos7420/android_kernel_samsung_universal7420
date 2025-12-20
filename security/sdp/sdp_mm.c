@@ -89,7 +89,7 @@ int32_t sdp_mm_set_process_sensitive(unsigned int proc_id)
 	/* current.task.sensitive = 1 */
 	task = pid_task(find_vpid(proc_id), PIDTYPE_PID);
 	if (task) {
-		uid = task_uid(task);
+		uid = from_kuid(&init_user_ns, task_uid(task));
 		if (((uid/PER_USER_RANGE) <= 199)  && ((uid/PER_USER_RANGE) >= 100)) {
 			if (dek_is_sdp_uid(uid)) {
 				task->sensitive = SENSITIVE;

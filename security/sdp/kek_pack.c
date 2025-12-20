@@ -255,7 +255,7 @@ kek_t *get_kek(int engine_id, int kek_type, int *rc) {
 	kek_pack_t *pack;
 	kek_item_t *item;
 	kek_t *kek;
-    int userid = current_uid() / PER_USER_RANGE;
+	int userid = from_kuid(&init_user_ns, current_uid()) / PER_USER_RANGE;
 
 	KEK_PACK_LOGD("entered [%d]\n", current_uid());
 
