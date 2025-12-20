@@ -1340,7 +1340,7 @@ out_nopush:
 	release_sock(sk);
 
 	if (copied + copied_syn)
-		uid_stat_tcp_snd(current_uid(), copied + copied_syn);
+		uid_stat_tcp_snd(current_uid().val, copied + copied_syn);
 	return copied + copied_syn;
 
 do_fault:
@@ -1653,7 +1653,7 @@ int tcp_read_sock(struct sock *sk, read_descriptor_t *desc,
 #else
 		tcp_cleanup_rbuf(sk, copied);
 #endif
-		uid_stat_tcp_rcv(current_uid(), copied);
+		uid_stat_tcp_rcv(current_uid().val, copied);
 	}
 	return copied;
 }
@@ -2080,7 +2080,7 @@ skip_copy:
 	release_sock(sk);
 
 	if (copied > 0)
-		uid_stat_tcp_rcv(current_uid(), copied);
+		uid_stat_tcp_rcv(current_uid().val, copied);
 	return copied;
 
 out:
@@ -2090,7 +2090,7 @@ out:
 recv_urg:
 	err = tcp_recv_urg(sk, msg, len, flags);
 	if (err > 0)
-		uid_stat_tcp_rcv(current_uid(), err);
+		uid_stat_tcp_rcv(current_uid().val, err);
 	goto out;
 
 recv_sndq:

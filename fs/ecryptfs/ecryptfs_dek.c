@@ -175,7 +175,7 @@ int write_dek_packet(char *dest,
 	memcpy(dest + *written, current->comm, PKG_NAME_SIZE);
 	(*written) += PKG_NAME_SIZE;
 
-	put_unaligned_be32(current_euid(), dest + *written);
+	put_unaligned_be32(from_kuid(&init_user_ns, current_euid()), dest + *written);
 	(*written) += 4;
 
 	memset(dest + *written, 0, DEK_MAXLEN);
