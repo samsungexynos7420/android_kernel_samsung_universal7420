@@ -145,7 +145,7 @@ EXPORT_SYMBOL(insert_data_kfifo_kthread);
 
 /* The function is used to check if the caller is system server or not; */
 static int is_system_server(void) {
-    uid_t uid = current_uid();
+    uid_t uid = from_kuid(&init_user_ns, current_uid());
     switch(uid) {
         case 1000:
             return 1;
