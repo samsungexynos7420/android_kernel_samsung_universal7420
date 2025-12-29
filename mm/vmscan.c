@@ -83,6 +83,8 @@ struct scan_control {
 
 	/* Scan (total_size >> priority) pages at once */
 	int priority;
+	
+	int swappiness;
 
 	/*
 	 * The memory cgroup that hit its limit and as a result is the
