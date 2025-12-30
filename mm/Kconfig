@@ -629,6 +629,17 @@ config CMA_PINPAGE_MIGRATION
 	help
 	  Turns on cma page migration for pinned page.
 
+config CMA_AREAS
+	int "Maximum count of the CMA areas"
+	depends on CMA
+	default 7
+	help
+	  CMA allows to create CMA areas for particular purpose, mainly,
+	  used as device private area. This parameter sets the maximum
+	  number of CMA area in the system.
+
+	  If unsure, leave the default value "7".
+
 config MIN_DIRTY_THRESH_PAGES
 	int "The lower bound of VM dirty_thresh value in number of pages"
 	default 2560
