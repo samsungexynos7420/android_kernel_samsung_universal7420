@@ -105,7 +105,6 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 	int other_free = global_page_state(NR_FREE_PAGES);
 	int other_file = global_page_state(NR_FILE_PAGES) -
 						global_page_state(NR_SHMEM) -
-						global_page_state(NR_UNEVICTABLE) -
 						total_swapcache_pages();
 	struct reclaim_state *reclaim_state = current->reclaim_state;
 #ifdef CONFIG_CMA
