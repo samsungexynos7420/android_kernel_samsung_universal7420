@@ -121,9 +121,7 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 						global_page_state(NR_UNEVICTABLE) -
 						total_swapcache_pages();
 	struct reclaim_state *reclaim_state = current->reclaim_state;
-#ifdef CONFIG_CMA
-	other_free -= global_page_state(NR_FREE_CMA_PAGES);
-#endif
+
 #ifdef CONFIG_ZSWAP
 	/* to prevent other_file underflow and then be negative */
 	if (other_file > total_swapcache_pages())
