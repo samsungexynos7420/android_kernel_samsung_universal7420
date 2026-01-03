@@ -907,13 +907,8 @@ static ssize_t sec_nfc_test_show(struct class *class,
 					struct class_attribute *attr,
 					char *buf)
 {
-	char cmd[2][8] = {
-			{0x0, 0x1, 0x0, 0x0,}, /*bootloader fw check*/
-			{0x20, 0x03, 0x02, 0x01, 0x00,} /*check status on ON*/
-			};
+	char cmd[8] = {0x0, 0x1, 0x0, 0x0,}; /*bootloader fw check*/
 	char *msg[2] = {"FW_VER", "ON :"};
-	char cmd_len = 4;
-	int sel = 0;
 	enum sec_nfc_mode old_mode = g_nfc_info->mode;
 	int size;
 	int ret = 0;
@@ -921,18 +916,8 @@ static ssize_t sec_nfc_test_show(struct class *class,
 	on_nfc_test = true;
 	pr_info("NFC_TEST: mode = %d\n", old_mode);
 
-#if 0/* TODO */
-	if (old_mode == SEC_NFC_MODE_FIRMWARE)
-	{
-		sel = 0;
-		cmd_len = 4;
-	}
-	else
-#endif
-	{
-		sec_nfc_set_mode(g_nfc_info, SEC_NFC_MODE_BOOTLOADER);
-	}
-	ret = sec_nfc_i2c_write(cmd[sel], cmd_len);
+	sec_nfc_set_mode(g_nfc_info, SEC_NFC_MODE_BOOTLOADER);
+	ret = sec_nfc_i2c_write(cmd, 4);
 	if (ret < 0)
 	{
 		pr_info("NFC_TEST: i2c write error %d\n", ret);
@@ -947,9 +932,9 @@ static ssize_t sec_nfc_test_show(struct class *class,
 		size = sprintf(buf, "NFC_TEST: i2c read error %d\n", ret);
 		goto exit;
 	}
-	pr_info("NFC_TEST: %s: %02X %02X %02X %02X, mode: %d\n", msg[sel], buf[0], buf[1],
+	pr_info("NFC_TEST: %s: %02X %02X %02X %02X, mode: %d\n", msg[0], buf[0], buf[1],
 						buf[2], buf[3], g_nfc_info->mode);
-	size = sprintf(buf, "%s: %02X.%02X.%02X.%02X\n", msg[sel], buf[0], buf[1], buf[2],
+	size = sprintf(buf, "%s: %02X.%02X.%02X.%02X\n", msg[0], buf[0], buf[1], buf[2],
 						buf[3]);
 
 exit:
