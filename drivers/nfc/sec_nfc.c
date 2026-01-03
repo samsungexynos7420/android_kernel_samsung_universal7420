@@ -41,11 +41,9 @@
 #include <asm/uaccess.h>
 #include <linux/nfc/sec_nfc.h>
 #ifdef CONFIG_SEC_NFC_CLK_REQ
-#if defined(CONFIG_SOC_EXYNOS5430) || defined(CONFIG_SOC_EXYNOS5433) || \
-	defined(CONFIG_SOC_EXYNOS7420)
 #include <mach/exynos-fimc-is.h>
 #include <linux/clk-provider.h>
-#endif
+
 #include <linux/interrupt.h>
 #endif
 #include <linux/wakelock.h>
@@ -54,9 +52,7 @@
 #ifdef CONFIG_SEC_NFC_LDO_CONTROL
 #include <linux/regulator/consumer.h>
 #endif
-#if defined(CONFIG_SOC_EXYNOS5433)
-#include <mach/regs-clock-exynos5433.h>
-#elif defined(CONFIG_SOC_EXYNOS7420)
+#if defined(CONFIG_SOC_EXYNOS7420)
 #include <mach/regs-clock-exynos7420.h>
 #endif
 
@@ -108,10 +104,8 @@ struct sec_nfc_info {
 #ifdef	CONFIG_SEC_NFC_CLK_REQ
 	bool clk_ctl;
 	bool clk_state;
-#if defined(CONFIG_SOC_EXYNOS5430) || defined(CONFIG_SOC_EXYNOS5433) || \
-	defined(CONFIG_SOC_EXYNOS7420)
+
 	struct platform_device *pdev;
-#endif
 #endif
 };
 
@@ -180,8 +174,7 @@ static ssize_t sec_nfc_read(struct file *file, char __user *buf,
 	}
 
 	mutex_lock(&info->i2c_info.read_mutex);
-	if(count == 0)
-	{
+	if (count == 0) {
 		if (info->i2c_info.read_irq >= SEC_NFC_INT)
 			info->i2c_info.read_irq--;
 		mutex_unlock(&info->i2c_info.read_mutex);
@@ -457,28 +450,14 @@ static irqreturn_t sec_nfc_clk_irq_thread(int irq, void *dev_id)
         dev_dbg(info->dev, "[NFC]Clock Interrupt is occurred!\n");
 	value = gpio_get_value(pdata->clk_req) > 0 ? true : false;
 
-#if defined(CONFIG_SOC_EXYNOS5430) || defined(CONFIG_SOC_EXYNOS5433) || \
-	defined(CONFIG_SOC_EXYNOS7420)
 	if (value == info->clk_state)
 		return IRQ_HANDLED;
-	if (value)
-	{
-#ifdef CONFIG_SOC_EXYNOS5433
-		clk_prepare_enable(pdata->gate_top_cam1);
-#endif
+
+	if (value) {
 		clk_prepare_enable(pdata->clk);
-	}
-	else
-	{
+	} else {
 		clk_disable_unprepare(pdata->clk);
-#ifdef CONFIG_SOC_EXYNOS5433
-		clk_disable_unprepare(pdata->gate_top_cam1);
-#endif
 	}
-#else
-	value = gpio_get_value(pdata->clk_req) > 0 ? 1 : 0;
-	gpio_set_value(pdata->clk, value);
-#endif
 
 	info->clk_state = value;
 
@@ -515,9 +494,6 @@ void sec_nfc_clk_ctl_disable(struct sec_nfc_info *info)
 	if (info->clk_state)
 	{
 		clk_disable_unprepare(pdata->clk);
-#ifdef CONFIG_SOC_EXYNOS5433
-		clk_disable_unprepare(pdata->gate_top_cam1);
-#endif
 	}
 	info->clk_state = false;
 	info->clk_ctl = false;
@@ -553,8 +529,7 @@ static void sec_nfc_set_mode(struct sec_nfc_info *info,
 	if (mode == SEC_NFC_MODE_BOOTLOADER)
 		if (pdata->firm) gpio_set_value(pdata->firm, SEC_NFC_FW_ON);
 
-	if (mode != SEC_NFC_MODE_OFF) 
-	{
+	if (mode != SEC_NFC_MODE_OFF) {
 		msleep(SEC_NFC_VEN_WAIT_TIME);
 		gpio_set_value(pdata->ven, SEC_NFC_PW_ON);
 		sec_nfc_clk_ctl_enable(info);
@@ -757,8 +732,6 @@ static int sec_nfc_parse_dt(struct device *dev,
 }
 
 #ifdef CONFIG_SEC_NFC_CLK_REQ
-#if defined(CONFIG_SOC_EXYNOS5430) || defined(CONFIG_SOC_EXYNOS5433) || \
-	defined(CONFIG_SOC_EXYNOS7420)
 static int sec_nfc_clk_parse_dt(struct sec_nfc_info *info)
 {
 	struct sec_nfc_platform_data *pdata = info->pdata;
@@ -788,16 +761,8 @@ static int sec_nfc_clk_parse_dt(struct sec_nfc_info *info)
 		pr_err("%s: clk not found\n",__func__);
 		return -EPERM;
 	}
-#ifdef CONFIG_SOC_EXYNOS5433
-	pdata->gate_top_cam1 = samsung_clk_get_by_reg((unsigned long)EXYNOS5430_ENABLE_IP_TOP,6);
-	if(IS_ERR(pdata->gate_top_cam1)){
-		 pr_err("%s : cam1 clk not found\n", __func__);
-		 return -ENODEV;
-	}
-#endif
 	return 0;
 }
-#endif
 #endif
 #else
 static int sec_nfc_parse_dt(struct device *dev,
@@ -918,16 +883,14 @@ static ssize_t sec_nfc_test_show(struct class *class,
 
 	sec_nfc_set_mode(g_nfc_info, SEC_NFC_MODE_BOOTLOADER);
 	ret = sec_nfc_i2c_write(cmd, 4);
-	if (ret < 0)
-	{
+	if (ret < 0) {
 		pr_info("NFC_TEST: i2c write error %d\n", ret);
 		size = sprintf(buf, "NFC_TEST: i2c write error %d\n", ret);
 		goto exit;
 	}
 	msleep(10);/* need wait? */
 	ret = sec_nfc_i2c_read(buf, 16);
-	if (ret < 0)
-	{
+	if (ret < 0) {
 		pr_info("NFC_TEST: i2c read error %d\n", ret);
 		size = sprintf(buf, "NFC_TEST: i2c read error %d\n", ret);
 		goto exit;
@@ -1007,8 +970,6 @@ static int __devinit __sec_nfc_probe(struct device *dev)
 	}
 
 #ifdef CONFIG_SEC_NFC_CLK_REQ
-#if defined(CONFIG_SOC_EXYNOS5430) || defined(CONFIG_SOC_EXYNOS5433) || \
-	defined(CONFIG_SOC_EXYNOS7420)
 	info->pdev = kzalloc(sizeof(struct platform_device), GFP_KERNEL);
 	if (info->pdev == NULL) {
 		dev_err(dev, "failed to allocate memory for module data\n");
@@ -1022,7 +983,6 @@ static int __devinit __sec_nfc_probe(struct device *dev)
 		ret = -ENOMEM;
 		goto err_gpio_clk_parse;
 	}
-#endif
 #endif
 
 	ret = gpio_request(pdata->ven, "nfc_ven");
@@ -1065,12 +1025,9 @@ err_gpio_firm:
 err_gpio_ven:
 	misc_deregister(&info->miscdev);
 #ifdef CONFIG_SEC_NFC_CLK_REQ
-#if defined(CONFIG_SOC_EXYNOS5430) || defined(CONFIG_SOC_EXYNOS5433) || \
-	defined(CONFIG_SOC_EXYNOS7420)
 err_gpio_clk_parse:
 	kfree(info->pdev);
 err_get_pdev:
-#endif
 #endif
 err_dev_reg:
 	mutex_destroy(&info->mutex);
@@ -1099,10 +1056,7 @@ static int __devexit __sec_nfc_remove(struct device *dev)
 	wake_lock_destroy(&info->nfc_wake_lock);
 
 #ifdef CONFIG_SEC_NFC_CLK_REQ
-#if defined(CONFIG_SOC_EXYNOS5430) || defined(CONFIG_SOC_EXYNOS5433) || \
-	defined(CONFIG_SOC_EXYNOS7420)
 	kfree(info->pdev);
-#endif
 #endif
 	kfree(info);
 
