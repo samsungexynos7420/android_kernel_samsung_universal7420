@@ -235,7 +235,7 @@ static unsigned long lowmem_scan(struct shrinker *s, struct shrink_control *sc)
 		rcu_read_unlock();
 	}
 
-	lowmem_print(4, "lowmem_shrink %lu, %x, return %d\n",
+	lowmem_print(4, "lowmem_scan %lu, %x, return %d\n",
 		     sc->nr_to_scan, sc->gfp_mask, rem);
 	return rem;
 }
