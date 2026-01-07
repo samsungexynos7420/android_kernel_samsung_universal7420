@@ -215,7 +215,7 @@ static int bpf_obj_do_pin(const struct filename *pathname, void *raw,
 	if (ret)
 		goto out;
 
-	dir = path.dentry->d_inode;
+	dir = d_inode(path.dentry);
 	if (dir->i_op != &bpf_dir_iops) {
 		ret = -EPERM;
 		goto out;
@@ -266,7 +266,7 @@ static void *bpf_obj_do_get(const struct filename *pathname,
 	if (ret)
 		return ERR_PTR(ret);
 
-	inode = path.dentry->d_inode;
+	inode = d_backing_inode(path.dentry);
 	ret = inode_permission(inode, ACC_MODE(flags));
 	if (ret)
 		goto out;
@@ -350,7 +350,7 @@ struct bpf_prog *bpf_prog_get_type_path(const char *name, enum bpf_prog_type typ
 	int ret = kern_path(name, LOOKUP_FOLLOW, &path);
 	if (ret)
 		return ERR_PTR(ret);
-	prog = __get_prog_inode(path.dentry->d_inode, type);
+	prog = __get_prog_inode(d_backing_inode(path.dentry), type);
 	if (!IS_ERR(prog))
 		touch_atime(&path);
 	path_put(&path);
@@ -362,7 +362,7 @@ static void bpf_evict_inode(struct inode *inode)
 {
 	enum bpf_type type;
 
-	truncate_inode_pages(&inode->i_data, 0);
+	truncate_inode_pages_final(&inode->i_data);
 	clear_inode(inode);
 
 	if (!bpf_inode_type(inode, &type))
