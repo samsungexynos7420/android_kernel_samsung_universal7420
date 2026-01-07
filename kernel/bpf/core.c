@@ -1208,21 +1208,9 @@ EXPORT_SYMBOL_GPL(bpf_prog_free);
 /* RNG for unpriviledged user space with separated state from prandom_u32(). */
 static DEFINE_PER_CPU(struct rnd_state, bpf_user_rnd_state);
 
-static struct static_key randInit = STATIC_KEY_INIT_FALSE;
-
-static int __init rand_key_init(void)
-{
-	static_key_enable(&randInit);
-	return 0;
-}
-pure_initcall(rand_key_init);
-
 void bpf_user_rnd_init_once(void)
 {
-       if(static_key_false(&randInit)){
-	       prandom_seed_full_state(&bpf_user_rnd_state);
-	       static_key_disable(&randInit);
-       }
+	prandom_init_once(&bpf_user_rnd_state);
 }
 
 BPF_CALL_0(bpf_user_rnd_u32)
