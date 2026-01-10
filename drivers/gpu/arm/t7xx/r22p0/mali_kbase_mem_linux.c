@@ -396,7 +396,6 @@ out_unlock:
 	return freed;
 }
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 12, 0)
 static int kbase_mem_evictable_reclaim_shrink(struct shrinker *s,
 		struct shrink_control *sc)
 {
@@ -405,7 +404,6 @@ static int kbase_mem_evictable_reclaim_shrink(struct shrinker *s,
 
 	return kbase_mem_evictable_reclaim_scan_objects(s, sc);
 }
-#endif
 
 int kbase_mem_evictable_init(struct kbase_context *kctx)
 {
@@ -413,12 +411,8 @@ int kbase_mem_evictable_init(struct kbase_context *kctx)
 	mutex_init(&kctx->jit_evict_lock);
 
 	/* Register shrinker */
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 12, 0)
-	kctx->reclaim.shrink = kbase_mem_evictable_reclaim_shrink;
-#else
 	kctx->reclaim.count_objects = kbase_mem_evictable_reclaim_count_objects;
 	kctx->reclaim.scan_objects = kbase_mem_evictable_reclaim_scan_objects;
-#endif
 	kctx->reclaim.seeks = DEFAULT_SEEKS;
 	/* Kernel versions prior to 3.1 :
 	 * struct shrinker does not define batch */
