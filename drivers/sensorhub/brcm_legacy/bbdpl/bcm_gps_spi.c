@@ -864,7 +864,7 @@ static bcm4773_stat_t bcm4773_transfer( struct bcm4773_uart_port *bport, unsigne
 	transfer.len=length + 1;  // + 1 byte is for cmd_stat
 
 #ifdef CONFIG_SPI_DMA_BITS_PER_WORD
-    if ( (cmd_stat == (SSI_MODE_HALF_DUPLEX | SSI_WRITE_TRANS))  
+    if (cmd_stat == (SSI_MODE_HALF_DUPLEX | SSI_WRITE_TRANS)
 #ifdef  CONFIG_SPI_NO_FULL_DUPLEX	
 	      &&  
 	     (length >= SSI_MAX_RW_BYTE_COUNT) 
