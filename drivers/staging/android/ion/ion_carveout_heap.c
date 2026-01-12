@@ -130,7 +130,7 @@ static int ion_carveout_heap_allocate(struct ion_heap *heap,
 	buffer->priv_virt = table;
 
 	if (buffer->flags & ION_FLAG_PROTECTED)
-		ion_secure_protect(heap);
+		ion_secure_protect(buffer);
 
 	return 0;
 
