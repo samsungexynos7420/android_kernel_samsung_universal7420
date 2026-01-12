@@ -18,7 +18,6 @@
  * Defines to control Audience routing in Audio FW (HAL) for Zero/Zero-F ATT, TMO, BMC model.
  * This header file should be copied in 'android/device/samsung/[productname]/AudioData/include/es705-routes.h' and then included by HAL.
  */
-typedef unsigned int u32; /* define for platform build */
 #define SYSFS_PATH_PRESET   "/sys/class/earsmart/control/route_value"
 #define SYSFS_PATH_VEQ	"/sys/class/earsmart/control/veq_control_set"
 #define SYSFS_PATH_EXTRAVOLUME	"/sys/class/earsmart/control/extra_volume"
