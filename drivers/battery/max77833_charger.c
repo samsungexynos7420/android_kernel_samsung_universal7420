@@ -2054,11 +2054,11 @@ static void wpc_detect_work(struct work_struct *work)
 		if (!charger->is_charging)
 			max77833_set_charger_state(charger, false);
 
-			value.intval = 0;
-			psy_do_property("wireless", set,
-					POWER_SUPPLY_PROP_ONLINE, value);
-			pr_info("%s: wpc deactivated, set V_INT as PD\n",
-					__func__);
+		value.intval = 0;
+		psy_do_property("wireless", set,
+				POWER_SUPPLY_PROP_ONLINE, value);
+		pr_info("%s: wpc deactivated, set V_INT as PD\n",
+				__func__);
 	}
 
 	pr_info("%s: w(%d to %d)\n", __func__,
