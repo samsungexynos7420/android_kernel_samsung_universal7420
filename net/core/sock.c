@@ -727,7 +727,7 @@ int sock_setsockopt(struct socket *sock, int level, int optname,
 
     /* START_OF_KNOX_VPN */
     if (optname == SO_SET_DOMAIN_NAME)
-        return sock_set_domain_name(sk, optval, optlen);
+		return sock_set_domain_name(sk, optval, optlen);
     /* END_OF_KNOX_VPN */
 
 	if (optlen < sizeof(int))
