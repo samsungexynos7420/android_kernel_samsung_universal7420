@@ -177,8 +177,8 @@ unsigned int ion_exynos_contig_region_mask(char *region_name);
 int ion_exynos_contig_heap_info(int region_id, phys_addr_t *phys, size_t *size);
 int ion_exynos_contig_heap_isolate(int region_id);
 void ion_exynos_contig_heap_deisolate(int region_id);
-int ion_secure_protect(struct ion_heap *heap);
-int ion_secure_unprotect(struct ion_heap *heap);
+int ion_secure_protect(struct ion_buffer *buffer);
+int ion_secure_unprotect(struct ion_buffer *buffer);
 bool ion_is_heap_available(struct ion_heap *heap, unsigned long flags, void *data);
 #else
 #define exynos_ion_sync_dmabuf_for_device(dev, dmabuf, size, dir) \
@@ -190,8 +190,8 @@ bool ion_is_heap_available(struct ion_heap *heap, unsigned long flags, void *dat
 #define exynos_ion_sync_vaddr_for_cpu(dev, vaddr, size, offset, dir) \
 							do { } while (0)
 #define exynos_ion_sync_sg_for_cpu(dev, size, sgt, dir) do { } while (0)
-#define ion_secure_protect(heap) do { } while (0)
-#define ion_secure_unprotect(heap) do { } while (0)
+#define ion_secure_protect(buffer) do { } while (0)
+#define ion_secure_unprotect(buffer) do { } while (0)
 #define ion_is_heap_available(heap, flags, data) (1)
 
 static inline int ion_exynos_contig_region_mask(char *region_name)
