@@ -616,8 +616,6 @@ endif # $(dot-config)
 # Defaults to vmlinux, but the arch makefile usually adds further targets
 all: vmlinux
 
-include $(srctree)/arch/$(SRCARCH)/Makefile
-
 ifeq ($(cc-name),clang)
 ifneq ($(CROSS_COMPILE),)
 CLANG_TRIPLE ?= $(CROSS_COMPILE)
@@ -640,6 +638,8 @@ KBUILD_AFLAGS += $(CLANG_FLAGS)
 KBUILD_CFLAGS += $(CLANG_FLAGS)
 export CLANG_FLAGS
 endif
+
+include $(srctree)/arch/$(SRCARCH)/Makefile
 
 KBUILD_CFLAGS += $(call cc-option,-fno-delete-null-pointer-checks,)
 KBUILD_CFLAGS += $(call cc-disable-warning,frame-address,)
