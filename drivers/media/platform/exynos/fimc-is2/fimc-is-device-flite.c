@@ -943,11 +943,11 @@ static inline int flite_s_use_buffer(struct fimc_is_device_flite *flite,
 			target_time = jiffies +
 				msecs_to_jiffies(flite->buf_done_wait_time);
 			while ((target_time > jiffies) &&
-					(flite_hw_get_status1(flite->base_reg) && (7 << 20)))
+					(flite_hw_get_status1(flite->base_reg) & (7 << 20)))
 				pr_debug("over vblank (early buffer done)");
 		}
 
-		if (flite_hw_get_status1(flite->base_reg) && (7 << 20)) {
+		if (flite_hw_get_status1(flite->base_reg) & (7 << 20)) {
 			merr("over vblank (buf-mode : %d)", flite, flite->buf_done_mode);
 			ret = -EINVAL;
 			goto p_err;
@@ -978,11 +978,11 @@ static inline int flite_s_unuse_buffer(struct fimc_is_device_flite *flite,
 			target_time = jiffies +
 				msecs_to_jiffies(flite->buf_done_wait_time);
 			while ((target_time > jiffies) &&
-					(flite_hw_get_status1(flite->base_reg) && (7 << 20)))
+					(flite_hw_get_status1(flite->base_reg) & (7 << 20)))
 				pr_debug("over vblank (early buffer done)");
 		}
 
-		if (flite_hw_get_status1(flite->base_reg) && (7 << 20)) {
+		if (flite_hw_get_status1(flite->base_reg) & (7 << 20)) {
 			merr("over vblank (buf-mode : %d)", flite, flite->buf_done_mode);
 			ret = -EINVAL;
 			goto p_err;
@@ -1464,7 +1464,7 @@ static void tasklet_flite_end1(unsigned long data)
                         /* 2. next frame ready */
                         fimc_is_frame_request_head(framemgr, &frame);
                         if (frame) {
-                                if (flite_hw_get_status1(flite->base_reg) && (7 << 20)) {
+                                if (flite_hw_get_status1(flite->base_reg) & (7 << 20)) {
                                         merr("over vblank", flite);
                                 } else {
                                         flite_s_buffer_addr(flite, 0, frame->dvaddr_buffer[0]);
