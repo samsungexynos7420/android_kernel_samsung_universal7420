@@ -244,8 +244,8 @@ struct ufs_clk_info {
 	bool enabled;
 };
 
-#define PRE_CHANGE      0
-#define POST_CHANGE     1
+#define PRE_CHANGE      false
+#define POST_CHANGE     true
 
 struct ufs_pa_layer_attr {
 	u32 gear_rx;
