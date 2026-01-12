@@ -1145,7 +1145,7 @@ static int exynos_pm_notifier(struct notifier_block *notifier,
 			cal_tmu_interrupt(data->cal_data, i, false);
 
 		exynos_tmu_call_notifier(TMU_COLD, 0);
-		exynos_gpu_call_notifier(TMU_COLD);
+		exynos_gpu_call_notifier(GPU_COLD);
 		mutex_unlock(&tmudata->lock);
 		break;
 	case PM_POST_SUSPEND:
