@@ -546,27 +546,27 @@ int dsim_panel_set_brightness(struct dsim_device *dsim, int force)
 		if (dynamic_lcd_type ==	LCD_TYPE_S6E3HA2_WQHD)
 			goto set_br_exit;
 
-			mutex_lock(&panel->lock);
+		mutex_lock(&panel->lock);
 
-			dsim_panel_aid_interpolation(dsim);
+		dsim_panel_aid_interpolation(dsim);
 
-			ret = dsim_write_hl_data(dsim, SEQ_TEST_KEY_ON_F0, ARRAY_SIZE(SEQ_TEST_KEY_ON_F0));
-			if (ret < 0) {
-				dsim_err("%s : fail to write CMD : SEQ_TEST_KEY_ON_F0\n", __func__);
-				mutex_unlock(&panel->lock);
-				goto set_br_exit;
-			}
-
-			dsim_panel_set_acl(dsim, 1);
-
-			ret = dsim_write_hl_data(dsim, SEQ_TEST_KEY_OFF_F0, ARRAY_SIZE(SEQ_TEST_KEY_OFF_F0));
-			if (ret < 0) {
-				dsim_err("%s : fail to write CMD : SEQ_TEST_KEY_ON_F0\n", __func__);
-				mutex_unlock(&panel->lock);
-				goto set_br_exit;
-			}
-
+		ret = dsim_write_hl_data(dsim, SEQ_TEST_KEY_ON_F0, ARRAY_SIZE(SEQ_TEST_KEY_ON_F0));
+		if (ret < 0) {
+			dsim_err("%s : fail to write CMD : SEQ_TEST_KEY_ON_F0\n", __func__);
 			mutex_unlock(&panel->lock);
+			goto set_br_exit;
+		}
+
+		dsim_panel_set_acl(dsim, 1);
+
+		ret = dsim_write_hl_data(dsim, SEQ_TEST_KEY_OFF_F0, ARRAY_SIZE(SEQ_TEST_KEY_OFF_F0));
+		if (ret < 0) {
+			dsim_err("%s : fail to write CMD : SEQ_TEST_KEY_ON_F0\n", __func__);
+			mutex_unlock(&panel->lock);
+			goto set_br_exit;
+		}
+
+		mutex_unlock(&panel->lock);
 
 		goto set_br_exit;
 	}
