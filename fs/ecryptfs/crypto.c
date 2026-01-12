@@ -667,7 +667,7 @@ int ecryptfs_encrypt_page(struct page *page)
 #ifdef CONFIG_SDP
 	if (!(crypt_stat->flags & ECRYPTFS_KEY_SET) ||
 			!(crypt_stat->flags & ECRYPTFS_KEY_VALID)) {
-		if((crypt_stat->flags & ECRYPTFS_DEK_SDP_ENABLED) &&
+		if ((crypt_stat->flags & ECRYPTFS_DEK_SDP_ENABLED) &&
 			(crypt_stat->flags & ECRYPTFS_DEK_IS_SENSITIVE)) {
 			rc = ecryptfs_get_sdp_dek(crypt_stat);
 			if (rc) {
@@ -805,7 +805,7 @@ out:
 	}
 #endif
 #ifdef CONFIG_SDP
-	if(cmd) {
+	if (cmd) {
 		sdp_fs_request(cmd, NULL);
 		sdp_fs_command_free(cmd);
 	}
@@ -892,7 +892,7 @@ int ecryptfs_decrypt_page(struct page *page)
 #ifdef CONFIG_SDP
 	if (!(crypt_stat->flags & ECRYPTFS_KEY_SET) ||
 			!(crypt_stat->flags & ECRYPTFS_KEY_VALID)) {
-		if((crypt_stat->flags & ECRYPTFS_DEK_SDP_ENABLED) &&
+		if ((crypt_stat->flags & ECRYPTFS_DEK_SDP_ENABLED) &&
 			(crypt_stat->flags & ECRYPTFS_DEK_IS_SENSITIVE)) {
 			rc = ecryptfs_get_sdp_dek(crypt_stat);
 			if (rc) {
@@ -1018,7 +1018,7 @@ out:
 	}
 #endif
 #ifdef CONFIG_SDP
-	if(cmd) {
+	if (cmd) {
 		sdp_fs_request(cmd, NULL);
 		sdp_fs_command_free(cmd);
 	}

@@ -53,7 +53,7 @@ typedef struct __chamber_info {
 chamber_info_t *alloc_chamber_info(int partition_id, int engine_id, const unsigned char *path) {
 	chamber_info_t *new_chamber = kmalloc(sizeof(chamber_info_t), GFP_KERNEL);
 
-	if(new_chamber == NULL) {
+	if (new_chamber == NULL) {
 		CHAMBER_LOGE("can't alloc memory for chamber_info\n");
 		return NULL;
 	}
@@ -70,7 +70,7 @@ int add_chamber_directory(struct ecryptfs_mount_crypt_stat *mount_crypt_stat,
 	chamber_info_t *new_chamber = NULL;
 
 #if NO_DIRECTORY_SEPARATOR_IN_CHAMBER_PATH
-	if(strchr(path, '/') != NULL) {
+	if (strchr(path, '/') != NULL) {
 		CHAMBER_LOGE("Chamber directory cannot contain '/'\n");
 		return -EINVAL;
 	}
@@ -78,7 +78,7 @@ int add_chamber_directory(struct ecryptfs_mount_crypt_stat *mount_crypt_stat,
 
 	new_chamber = alloc_chamber_info(mount_crypt_stat->partition_id, engine_id, path);
 
-	if(new_chamber == NULL) {
+	if (new_chamber == NULL) {
 		return -ENOMEM;
 	}
 
@@ -103,7 +103,7 @@ chamber_info_t *find_chamber_info(struct ecryptfs_mount_crypt_stat *mount_crypt_
 		info = list_entry(entry, chamber_info_t, list);
 
 		// Check path
-		if(!strncmp(path, info->path, CHAMBER_PATH_MAX)) {
+		if (!strncmp(path, info->path, CHAMBER_PATH_MAX)) {
 			CHAMBER_LOGD("Found %s from chamber list\n", info->path);
 
 			spin_unlock(&(mount_crypt_stat->chamber_dir_list_lock));
@@ -120,7 +120,7 @@ chamber_info_t *find_chamber_info(struct ecryptfs_mount_crypt_stat *mount_crypt_
 void del_chamber_directory(struct ecryptfs_mount_crypt_stat *mount_crypt_stat,
         const unsigned char *path) {
 	chamber_info_t *info = find_chamber_info(mount_crypt_stat, path);
-	if(info == NULL) {
+	if (info == NULL) {
 		CHAMBER_LOGD("nothing to remove\n");
 		return;
 	}
@@ -137,17 +137,17 @@ int is_chamber_directory(struct ecryptfs_mount_crypt_stat *mount_crypt_stat,
 		const unsigned char *path, int *engineid) {
     chamber_info_t *info;
 #if NO_DIRECTORY_SEPARATOR_IN_CHAMBER_PATH
-	if(strchr(path, '/') != NULL) {
+	if (strchr(path, '/') != NULL) {
 		CHAMBER_LOGD("%s containes '/'\n", path);
 		return 0;
 	}
 #endif
 
 	info = find_chamber_info(mount_crypt_stat, path);
-	if(info == NULL)
+	if (info == NULL)
 		return 0;
 
-	if(engineid) *engineid = info->engine_id;
+	if (engineid) *engineid = info->engine_id;
 
 	return 1;
 }
@@ -155,7 +155,7 @@ int is_chamber_directory(struct ecryptfs_mount_crypt_stat *mount_crypt_stat,
 void set_chamber_flag(int engineid, struct inode *inode) {
 	struct ecryptfs_crypt_stat *crypt_stat;
 
-	if(inode == NULL) {
+	if (inode == NULL) {
 		CHAMBER_LOGE("invalid inode\n");
 		return;
 	}
@@ -170,7 +170,7 @@ void set_chamber_flag(int engineid, struct inode *inode) {
 void clr_chamber_flag(struct inode *inode) {
     struct ecryptfs_crypt_stat *crypt_stat;
 
-    if(inode == NULL) {
+    if (inode == NULL) {
         CHAMBER_LOGE("invalid inode\n");
         return;
     }

@@ -585,7 +585,7 @@ static int ecryptfs_parse_options(struct ecryptfs_sb_info *sbi, char *options,
 			 */
 			printk("%s : chamber dirs : %s\n", __func__, chamber_dirs);
 			while ((token = strsep(&chamber_dirs, "|")) != NULL)
-				if(!is_chamber_directory(mount_crypt_stat, (const unsigned char *)token, NULL))
+				if (!is_chamber_directory(mount_crypt_stat, (const unsigned char *)token, NULL))
 					add_chamber_directory(mount_crypt_stat,
 					        mount_crypt_stat->userid, (const unsigned char *)token);
 		}

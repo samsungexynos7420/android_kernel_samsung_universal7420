@@ -254,7 +254,7 @@ static int read_or_initialize_metadata(struct dentry *dentry)
 out:
 	mutex_unlock(&crypt_stat->cs_mutex);
 #ifdef CONFIG_SDP
-	if(!rc)
+	if (!rc)
 	{
 		/*
 		 * SDP v2.0 : sensitive directory (SDP vault)
@@ -460,7 +460,7 @@ static int ecryptfs_open(struct inode *inode, struct file *file)
 	rc = read_or_initialize_metadata(ecryptfs_dentry);
 	if (rc) {
 #ifdef CONFIG_SDP
-		if(file->f_flags & O_SDP){
+		if (file->f_flags & O_SDP){
 			printk("Failed to initialize metadata, "
 					"but let it continue cause current call is from SDP API\n");
 			mutex_lock(&crypt_stat->cs_mutex);
@@ -493,7 +493,7 @@ static int ecryptfs_open(struct inode *inode, struct file *file)
 	if (crypt_stat->flags & ECRYPTFS_DEK_IS_SENSITIVE) {
 #ifdef CONFIG_SDP_KEY_DUMP
 		if (S_ISREG(ecryptfs_dentry->d_inode->i_mode)) {
-			if(get_sdp_sysfs_key_dump()) {
+			if (get_sdp_sysfs_key_dump()) {
 				printk("FEK[%s] : ", ecryptfs_dentry->d_name.name);
 				key_dump(crypt_stat->key, 32);
 			}
@@ -512,7 +512,7 @@ static int ecryptfs_open(struct inode *inode, struct file *file)
 			int dek_type = crypt_stat->sdp_dek.type;
 
 			ecryptfs_printk(KERN_INFO, "ecryptfs_open: persona is unlocked, rc=%d\n", rc);
-			if(dek_type != DEK_TYPE_AES_ENC) {
+			if (dek_type != DEK_TYPE_AES_ENC) {
 				ecryptfs_printk(KERN_DEBUG, "converting dek...\n");
 				rc = ecryptfs_sdp_convert_dek(ecryptfs_dentry);
 				ecryptfs_printk(KERN_DEBUG, "conversion ready, rc=%d\n", rc);
@@ -528,7 +528,7 @@ static int ecryptfs_open(struct inode *inode, struct file *file)
 #endif
 
 #ifdef CONFIG_DLP
-	if(crypt_stat->flags & ECRYPTFS_DLP_ENABLED) {
+	if (crypt_stat->flags & ECRYPTFS_DLP_ENABLED) {
 #if DLP_DEBUG
 		printk("DLP %s: try to open %s [%lu] with crypt_stat->flags %d\n",
 				__func__, ecryptfs_dentry->d_name.name, inode->i_ino, crypt_stat->flags);
@@ -539,7 +539,7 @@ static int ecryptfs_open(struct inode *inode, struct file *file)
 			KNOX_DLP_XATTR_NAME,
 			&dlp_data, sizeof(dlp_data));
 
-		if(dlp_data.expiry_time.tv_sec <= 0){
+		if (dlp_data.expiry_time.tv_sec <= 0){
 #if DLP_DEBUG
 			printk("[LOG] %s: DLP flag is set but it is not DLP file -> media created file but not DLP [%s]\n",
 				__func__, ecryptfs_dentry->d_name.name);
@@ -553,7 +553,7 @@ static int ecryptfs_open(struct inode *inode, struct file *file)
 			goto out_put;
 		}
 
-		if(in_egroup_p(AID_KNOX_DLP) || in_egroup_p(AID_KNOX_DLP_RESTRICTED) || in_egroup_p(AID_KNOX_DLP_MEDIA)) {
+		if (in_egroup_p(AID_KNOX_DLP) || in_egroup_p(AID_KNOX_DLP_RESTRICTED) || in_egroup_p(AID_KNOX_DLP_MEDIA)) {
 			if (dlp_len == sizeof(dlp_data)) {
 				getnstimeofday(&ts);
 #if DLP_DEBUG
@@ -563,7 +563,7 @@ static int ecryptfs_open(struct inode *inode, struct file *file)
 				if ((ts.tv_sec > dlp_data.expiry_time.tv_sec) &&
 						dlp_isInterestedFile(mount_crypt_stat->userid, ecryptfs_dentry->d_name.name)==0) {
 					
-					if(in_egroup_p(AID_KNOX_DLP_MEDIA)) { //ignore media notifications
+					if (in_egroup_p(AID_KNOX_DLP_MEDIA)) { //ignore media notifications
 					/* Command to delete expired file  */
 					cmd = sdp_fs_command_alloc(FSOP_DLP_FILE_REMOVE_MEDIA,
 							current->tgid, mount_crypt_stat->userid, mount_crypt_stat->partition_id,
@@ -592,11 +592,11 @@ static int ecryptfs_open(struct inode *inode, struct file *file)
 			printk("DLP %s: DLP file [%s] opened with tgid %d, %d\n" ,
 					__func__, ecryptfs_dentry->d_name.name, current->tgid, in_egroup_p(AID_KNOX_DLP_RESTRICTED));
 #endif
-			if(in_egroup_p(AID_KNOX_DLP_RESTRICTED)) {
+			if (in_egroup_p(AID_KNOX_DLP_RESTRICTED)) {
 				cmd = sdp_fs_command_alloc(FSOP_DLP_FILE_OPENED,
 						current->tgid, mount_crypt_stat->userid, mount_crypt_stat->partition_id,
 						inode->i_ino, GFP_KERNEL);
-			} else if(in_egroup_p(AID_KNOX_DLP)) {
+			} else if (in_egroup_p(AID_KNOX_DLP)) {
 				cmd = sdp_fs_command_alloc(FSOP_DLP_FILE_OPENED_CREATOR,
 						current->tgid, mount_crypt_stat->userid, mount_crypt_stat->partition_id,
 						inode->i_ino, GFP_KERNEL);
@@ -629,7 +629,7 @@ out_free:
 			ecryptfs_file_to_private(file));
 out:
 #ifdef CONFIG_DLP
-	if(cmd) {
+	if (cmd) {
 		sdp_fs_request(cmd, NULL);
 		sdp_fs_command_free(cmd);
 	}
@@ -639,7 +639,7 @@ out:
 		cmd = sdp_fs_command_alloc(FSOP_AUDIT_FAIL_ACCESS,
 				current->tgid, mount_crypt_stat->userid, mount_crypt_stat->partition_id,
 				inode->i_ino, GFP_KERNEL);
-		if(cmd) {
+		if (cmd) {
 			sdp_fs_request(cmd, NULL);
 			sdp_fs_command_free(cmd);
 		}
@@ -686,7 +686,7 @@ static int ecryptfs_release(struct inode *inode, struct file *file)
 	kmem_cache_free(ecryptfs_file_info_cache,
 			ecryptfs_file_to_private(file));
 #ifdef CONFIG_DLP
-//	if(cmd) {
+//	if (cmd) {
 //	    sdp_fs_request(cmd, NULL);
 //	    sdp_fs_command_free(cmd);
 //	}

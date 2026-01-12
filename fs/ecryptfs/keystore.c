@@ -2024,7 +2024,7 @@ found_matching_auth_tok:
 	}
 
 #ifdef CONFIG_SDP
-	if((crypt_stat->flags & ECRYPTFS_DEK_IS_SENSITIVE)) {
+	if ((crypt_stat->flags & ECRYPTFS_DEK_IS_SENSITIVE)) {
 		rc = ecryptfs_get_sdp_dek(crypt_stat);
 		if (rc) {
 			ecryptfs_printk(KERN_ERR, "Error setting sdp key after parse\n");

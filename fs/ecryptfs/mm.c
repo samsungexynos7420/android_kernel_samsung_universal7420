@@ -46,18 +46,18 @@ static unsigned long invalidate_mapping_pages_retry(struct address_space *mappin
 		pgoff_t start, pgoff_t end, int retries) {
 	unsigned long ret;
 
-	if(ecryptfs_mm_debug)
+	if (ecryptfs_mm_debug)
 		printk("freeing [%s] sensitive inode[mapped pagenum = %lu]\n",
 				mapping->host->i_sb->s_type->name,
 				mapping->nrpages);
 retry:
 	ret = invalidate_mapping_pages(mapping, start, end);
-	if(ecryptfs_mm_debug)
+	if (ecryptfs_mm_debug)
 		printk("invalidate_mapping_pages ret = %lu, [%lu] remained\n",
 				ret, mapping->nrpages);
 
-	if(mapping->nrpages != 0) {
-		if(retries > 0) {
+	if (mapping->nrpages != 0) {
+		if (retries > 0) {
 			printk("[%lu] mapped pages remained in sensitive inode, retry..\n",
 					mapping->nrpages);
 			retries--;
@@ -77,7 +77,7 @@ static unsigned long invalidate_lower_mapping_pages_retry(struct file *lower_fil
 
 	mapping = lower_file->f_mapping;
 
-	if(ecryptfs_mm_debug)
+	if (ecryptfs_mm_debug)
 		printk("%s:freeing [%s] sensitive inode[mapped pagenum = %lu]\n",__func__,
 				mapping->host->i_sb->s_type->name,mapping->nrpages);
 
@@ -89,7 +89,7 @@ static unsigned long invalidate_lower_mapping_pages_retry(struct file *lower_fil
 		ret = do_vfs_ioctl(lower_file,0, FS_IOC_INVAL_MAPPING, 0); // lower_file is sdcardfs file
 		invalidated += ret;
 
-		if(ecryptfs_mm_debug)
+		if (ecryptfs_mm_debug)
 			printk("invalidate_mapping_pages ret = %lu, [%lu] remained\n",
 					ret, mapping->nrpages);
 
@@ -113,19 +113,19 @@ void ecryptfs_mm_do_sdp_cleanup(struct inode *inode) {
 	mount_crypt_stat = &ecryptfs_superblock_to_private(inode->i_sb)->mount_crypt_stat;
 	inode_info = ecryptfs_inode_to_private(inode);
 
-	if(crypt_stat->flags & ECRYPTFS_DEK_IS_SENSITIVE) {
+	if (crypt_stat->flags & ECRYPTFS_DEK_IS_SENSITIVE) {
 		int rc;
-		if(S_ISDIR(inode->i_mode)) {
+		if (S_ISDIR(inode->i_mode)) {
 			DEK_LOGD("%s: inode: %p is dir, return\n",__func__, inode);
 			return;
 		}
 
 		DEK_LOGD("%s: inode: %p  clean up start\n",__func__, inode);
 		rc = vfs_fsync(inode_info->lower_file, 0);
-		if(rc)
+		if (rc)
 			DEK_LOGE("%s: vfs_sync returned error rc: %d\n", __func__, rc);
 
-		if(ecryptfs_is_sdp_locked(crypt_stat->engine_id)) {
+		if (ecryptfs_is_sdp_locked(crypt_stat->engine_id)) {
 			DEK_LOGD("%s: persona locked inode: %lu useid: %d\n",
 			        __func__, inode->i_ino, crypt_stat->engine_id);
 			invalidate_mapping_pages_retry(inode->i_mapping, 0, -1, 3);
@@ -136,7 +136,7 @@ void ecryptfs_mm_do_sdp_cleanup(struct inode *inode) {
 			invalidate_lower_mapping_pages_retry(inode_info->lower_file, 3);
 		}
 #endif
-		if(ecryptfs_is_sdp_locked(crypt_stat->engine_id)) {
+		if (ecryptfs_is_sdp_locked(crypt_stat->engine_id)) {
 			ecryptfs_clean_sdp_dek(crypt_stat);
 		}
 		DEK_LOGD("%s: inode: %p clean up stop\n",__func__, inode);
@@ -149,11 +149,11 @@ static unsigned long drop_inode_pagecache(struct inode *inode) {
 
 	spin_lock(&inode->i_lock);
 	
-	if(ecryptfs_mm_debug)
+	if (ecryptfs_mm_debug)
 		printk("%s() cleaning [%s] pages: %lu\n", __func__,
 				inode->i_sb->s_type->name,inode->i_mapping->nrpages);
 
-	if ((inode->i_mapping->nrpages == 0)) {
+	if (inode->i_mapping->nrpages == 0) {
 		spin_unlock(&inode->i_lock);
 		printk("%s inode having zero nrpages\n", __func__);
 		return 0;
@@ -165,7 +165,7 @@ static unsigned long drop_inode_pagecache(struct inode *inode) {
 	 * flush mapped dirty pages.
 	 */
 	rc = filemap_write_and_wait(inode->i_mapping);
-	if(rc)
+	if (rc)
 		printk("filemap_flush failed, rc=%d\n", rc);
 
 	if (inode->i_mapping->nrpages != 0)
@@ -174,7 +174,7 @@ static unsigned long drop_inode_pagecache(struct inode *inode) {
 	rc = invalidate_mapping_pages_retry(inode->i_mapping, 0, -1,
 			INVALIDATE_MAPPING_RETRY_CNT);
 
-	if(inode->i_mapping->nrpages)
+	if (inode->i_mapping->nrpages)
 			printk("%s() uncleaned [%s] pages: %lu\n", __func__,
 					inode->i_sb->s_type->name,inode->i_mapping->nrpages);
 
@@ -188,7 +188,7 @@ static void ecryptfs_mm_drop_pagecache(struct super_block *sb, void *arg)
 	struct ecryptfs_mount_crypt_stat *mount_crypt_stat;
 	struct ecryptfs_mm_drop_cache_param *param = arg;
 	
-	if(strcmp("ecryptfs", sb->s_type->name)) {
+	if (strcmp("ecryptfs", sb->s_type->name)) {
 		printk("%s sb:%s is not ecryptfs superblock\n", __func__,
 				sb->s_type->name);
 		return;
@@ -200,7 +200,7 @@ static void ecryptfs_mm_drop_pagecache(struct super_block *sb, void *arg)
 			sb->s_type->name, mount_crypt_stat->userid, param->user_id);
 	
 	if (param->user_id >= 100 && param->user_id < 200) {
-		if(mount_crypt_stat->userid != param->user_id)
+		if (mount_crypt_stat->userid != param->user_id)
 			return;
 	}
 	
@@ -209,10 +209,10 @@ static void ecryptfs_mm_drop_pagecache(struct super_block *sb, void *arg)
 	{	
         struct ecryptfs_crypt_stat *crypt_stat = &ecryptfs_inode_to_private(inode)->crypt_stat;
 
-        if(crypt_stat == NULL)
+        if (crypt_stat == NULL)
             continue;
 
-        if(crypt_stat->engine_id != param->engine_id) {
+        if (crypt_stat->engine_id != param->engine_id) {
 			continue;
 		}
 
@@ -225,10 +225,10 @@ static void ecryptfs_mm_drop_pagecache(struct super_block *sb, void *arg)
 			spin_unlock(&inode->i_lock);
 			spin_unlock(&inode_sb_list_lock);
 			
-			if(ecryptfs_mm_debug)
+			if (ecryptfs_mm_debug)
 				printk("%s() ecryptfs inode [ino:%lu]\n",__func__, inode->i_ino);
 				
-			if((crypt_stat->flags & ECRYPTFS_DEK_IS_SENSITIVE) &&
+			if ((crypt_stat->flags & ECRYPTFS_DEK_IS_SENSITIVE) &&
 					!atomic_read(&ecryptfs_inode_to_private(inode)->lower_file_count))
 				ecryptfs_clean_sdp_dek(crypt_stat);
 
@@ -239,19 +239,19 @@ static void ecryptfs_mm_drop_pagecache(struct super_block *sb, void *arg)
 
 		spin_unlock(&inode_sb_list_lock);
 
-		if(ecryptfs_mm_debug)
+		if (ecryptfs_mm_debug)
 			printk(KERN_ERR "inode number: %lu i_mapping: %p [%s] userid:%d\n",inode->i_ino,
 					inode->i_mapping,inode->i_sb->s_type->name,inode->i_mapping->userid);
 
-		if(mapping_sensitive(inode->i_mapping) &&
+		if (mapping_sensitive(inode->i_mapping) &&
 				!atomic_read(&ecryptfs_inode_to_private(inode)->lower_file_count)) {
 			drop_inode_pagecache(inode);
 				
-			if(ecryptfs_mm_debug)
+			if (ecryptfs_mm_debug)
 					printk(KERN_ERR "lower inode: %p lower inode: %p nrpages: %lu\n",ecryptfs_inode_to_lower(inode),
 							ecryptfs_inode_to_private(inode), ecryptfs_inode_to_lower(inode)->i_mapping->nrpages);
 			
-			if(crypt_stat->flags & ECRYPTFS_DEK_IS_SENSITIVE)
+			if (crypt_stat->flags & ECRYPTFS_DEK_IS_SENSITIVE)
 				ecryptfs_clean_sdp_dek(crypt_stat);	
 		}
 		spin_lock(&inode_sb_list_lock);
@@ -266,8 +266,8 @@ static int ecryptfs_mm_task(void *arg)
 	
 	type = get_fs_type("ecryptfs");
 	
-	if(type) {
-		if(ecryptfs_mm_debug)
+	if (type) {
+		if (ecryptfs_mm_debug)
 			printk("%s type name: %s flags: %d\n", __func__, type->name, type->fs_flags);
 		
 		mutex_lock(&ecryptfs_mm_mutex);
@@ -339,7 +339,7 @@ static void __page_dump(unsigned char *buf, int len, const char* str)
 void page_dump (struct page *p) {
 	void *d;
 	d = kmap_atomic(p);
-	if(d) {
+	if (d) {
 		__page_dump((unsigned char *)d, PAGE_SIZE, "freeing");
 		kunmap_atomic(d);
 	}
