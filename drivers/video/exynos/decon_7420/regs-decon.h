@@ -54,13 +54,8 @@
 #define VCLKCON_CLKVAL_F_MASK			(0xff << 16)
 
 #define SHADOWCON				0x0030
-#ifdef CONFIG_SOC_EXYNOS7580
-#define SHADOWCON_WIN_PROTECT(_win)		(1 << (8 + (_win)))
-#define SHADOWCON_AUTO_PROTECT			(1 << 0)
-#else
 #define SHADOWCON_WIN_PROTECT(_win)		(1 << (10 + (_win)))
 #define SHADOWCON_STANDALONE_UPDATE_ALWAYS	(1 << 0)
-#endif
 
 #define WINCHMAP0				0x0040
 #define WINCHMAP_MASK(_win)			(0x7 << ((_win) * 4))
@@ -86,14 +81,9 @@
 #define WINCON_OUTSTAND_MAX_DEFAULT		(0x10)
 #define WINCON_OUTSTAND_MAX_POS			(13)
 #define WINCON_OUTSTAND_MAX_MASK		(0x1F << 13)
-#ifdef CONFIG_SOC_EXYNOS7580
-#define WINCON_BURSTLEN_16WORD			(0x0 << 10)
-#define WINCON_BURSTLEN_8WORD			(0x1 << 10)
-#define WINCON_BURSTLEN_4WORD			(0x2 << 10)
-#else
 #define WINCON_BURSTLEN_16WORD			(0x0 << 11)
 #define WINCON_BURSTLEN_8WORD			(0x1 << 11)
-#endif
+#define WINCON_INTERPOLATION_EN			(1 << 9)
 #define WINCON_BLD_PLANE			(0 << 8)
 #define WINCON_BLD_PIX				(1 << 8)
 #define WINCON_ALPHA_MUL			(1 << 7)
@@ -106,24 +96,20 @@
 #define WINCON_BPPMODE_RGBX8888			(0x6 << 2)
 #define WINCON_BPPMODE_BGRX8888			(0x7 << 2)
 #define WINCON_BPPMODE_RGB565			(0x8 << 2)
-#define WINCON_BPPMODE_NV12			(0x18 << 2)
-#define WINCON_BPPMODE_NV21			(0x19 << 2)
+/*
+ * Todo: both formats are working but if 0x18 is passed for NV21
+ * and 0x19 is passed as NV12. This information is reversed in
+ * user manual. Need to check with Hardware team.
+ */
+#define WINCON_BPPMODE_NV21			(0x18 << 2)
+#define WINCON_BPPMODE_NV12			(0x19 << 2)
 #define WINCON_ALPHA_SEL			(1 << 1)
 #define WINCON_ENWIN				(1 << 0)
 
 #define OPE_VIDW0_ADD(_win)			(0x0100 + ((_win) * 4))
 
-#ifdef CONFIG_SOC_EXYNOS7580
-#define VIDW_ADD0(_win)				(0x0880 + ((_win) * 0x10))
-#define VIDW_ADD2(_win)				(0x1020 + ((_win) * 0x20))
-#define VIDW_ADD3(_win)				(0x1030 + ((_win) * 0x20))
-
-#define OPE_VIDW0_ADD2(_win)				(0x1000 + ((_win) * 8))
-#define OPE_VIDW0_ADD3(_win)				(0x1004 + ((_win) * 8))
-#else
 #define VIDW_ADD0(_win)				(0x0080 + ((_win) * 0x10))
 #define VIDW_ADD2(_win)				(0x0088 + ((_win) * 0x10))
-#endif
 
 #define VIDW_WHOLE_X(_win)			(0x0130 + ((_win) * 8))
 #define VIDW_WHOLE_Y(_win)			(0x0134 + ((_win) * 8))
@@ -211,11 +197,7 @@
 #define RDMA_WHOLE_SIZE(_x)			(0x04A8 + ((_x) * 0x30))
 #define RDMA_IMG_OFFSET(_x)			(0x04AC + ((_x) * 0x30))
 #define RDMA_IMG_SIZE(_x)			(0x04B0 + ((_x) * 0x30))
-#ifdef CONFIG_SOC_EXYNOS7580
-#define RDMA_FIFO_LEVEL(_x)			(0x04B4 + ((_x) * 0x30))
-#else
 #define RDMA_FIFO_LEVEL(_x)			(0x04BC + ((_x) * 0x30))
-#endif
 
 #define VIDINTCON0				0x0500
 #define VIDINTCON0_INT_EXTRA_EN			(1 << 21)

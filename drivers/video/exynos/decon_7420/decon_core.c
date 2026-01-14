@@ -65,8 +65,8 @@
 
 #ifdef CONFIG_OF
 static const struct of_device_id decon_device_table[] = {
-	        { .compatible = "samsung,exynos5-decon_driver" },
-		{},
+	{ .compatible = "samsung,exynos5-decon_driver" },
+	{},
 };
 MODULE_DEVICE_TABLE(of, decon_device_table);
 #endif
@@ -88,7 +88,7 @@ EXPORT_SYMBOL(decon_ext_drvdata);
 static int decon_runtime_resume(struct device *dev);
 static int decon_runtime_suspend(struct device *dev);
 static void decon_set_protected_content(struct decon_device *decon,
-                struct decon_reg_data *reg);
+				struct decon_reg_data *reg);
 
 #ifdef CONFIG_USE_VSYNC_SKIP
 static atomic_t extra_vsync_wait;
@@ -96,15 +96,15 @@ static atomic_t extra_vsync_wait;
 
 #ifdef CONFIG_DECON_SYSTRACE
 #define SYSTRACE_C_BEGIN(a) do { \
-	decon->tracing_mark_write( decon->systrace_pid, 'C', a, 1 );	\
+	decon->tracing_mark_write(decon->systrace_pid, 'C', a, 1);	\
 	} while(0)
 
 #define SYSTRACE_C_FINISH(a) do { \
-	decon->tracing_mark_write( decon->systrace_pid, 'C', a, 0 );	\
+	decon->tracing_mark_write(decon->systrace_pid, 'C', a, 0);	\
 	} while(0)
 
 #define SYSTRACE_C_MARK(a,b) do { \
-	decon->tracing_mark_write( decon->systrace_pid, 'C', a, (b) );	\
+	decon->tracing_mark_write(decon->systrace_pid, 'C', a, (b));	\
 	} while(0)
 
 /*----------------- function for systrace ---------------------------------*/
@@ -229,11 +229,21 @@ static u32 vidosd_d(u8 r1, u8 g1, u8 b1)
 		VIDOSD_D_ALPHA1_B_F(b1);
 }
 
-static u32 wincon(u32 bits_per_pixel, u32 transp_length)
+static u32 wincon(u32 bits_per_pixel, u32 transp_length, int format)
 {
 	u32 data = 0;
 
 	switch (bits_per_pixel) {
+	case 12:
+		if (format == DECON_PIXEL_FORMAT_NV12 ||
+			format == DECON_PIXEL_FORMAT_NV12M)
+			data |= WINCON_BPPMODE_NV12;
+		else if (format == DECON_PIXEL_FORMAT_NV21 ||
+			format == DECON_PIXEL_FORMAT_NV21M)
+			data |= WINCON_BPPMODE_NV21;
+
+		data |= WINCON_INTERPOLATION_EN;
+		break;
 	case 16:
 		data |= WINCON_BPPMODE_RGB565;
 		break;
@@ -247,7 +257,7 @@ static u32 wincon(u32 bits_per_pixel, u32 transp_length)
 		}
 		break;
 	default:
-		pr_err("%d bpp doesn't support\n", bits_per_pixel);
+		decon_err("%d bpp doesn't support\n", bits_per_pixel);
 		break;
 	}
 
@@ -385,6 +395,12 @@ static u32 decon_red_offset(int format)
 	case DECON_PIXEL_FORMAT_XBGR_8888:
 		return 24;
 
+	case DECON_PIXEL_FORMAT_NV12:
+	case DECON_PIXEL_FORMAT_NV21:
+	case DECON_PIXEL_FORMAT_NV12M:
+	case DECON_PIXEL_FORMAT_NV21M:
+		return 0;
+
 	default:
 		decon_warn("unrecognized pixel format %u\n", format);
 		return 0;
@@ -410,6 +426,12 @@ static u32 decon_green_length(int format)
 	case DECON_PIXEL_FORMAT_RGB_565:
 		return 6;
 
+	case DECON_PIXEL_FORMAT_NV12:
+	case DECON_PIXEL_FORMAT_NV21:
+	case DECON_PIXEL_FORMAT_NV12M:
+	case DECON_PIXEL_FORMAT_NV21M:
+		return 0;
+
 	default:
 		decon_warn("unrecognized pixel format %u\n", format);
 		return 0;
@@ -434,6 +456,13 @@ static u32 decon_green_offset(int format)
 	case DECON_PIXEL_FORMAT_RGBA_5551:
 	case DECON_PIXEL_FORMAT_RGB_565:
 		return 5;
+
+	case DECON_PIXEL_FORMAT_NV12:
+	case DECON_PIXEL_FORMAT_NV21:
+	case DECON_PIXEL_FORMAT_NV12M:
+	case DECON_PIXEL_FORMAT_NV21M:
+		return 0;
+
 	default:
 		decon_warn("unrecognized pixel format %u\n", format);
 		return 0;
@@ -468,6 +497,12 @@ static u32 decon_blue_offset(int format)
 	case DECON_PIXEL_FORMAT_BGRX_8888:
 		return 0;
 
+	case DECON_PIXEL_FORMAT_NV12:
+	case DECON_PIXEL_FORMAT_NV21:
+	case DECON_PIXEL_FORMAT_NV12M:
+	case DECON_PIXEL_FORMAT_NV21M:
+		return 0;
+
 	default:
 		decon_warn("unrecognized pixel format %u\n", format);
 		return 0;
@@ -487,6 +522,12 @@ static u32 decon_transp_length(int format)
 	case DECON_PIXEL_FORMAT_RGBX_8888:
 	case DECON_PIXEL_FORMAT_RGB_565:
 	case DECON_PIXEL_FORMAT_BGRX_8888:
+		return 0;
+
+	case DECON_PIXEL_FORMAT_NV12:
+	case DECON_PIXEL_FORMAT_NV21:
+	case DECON_PIXEL_FORMAT_NV12M:
+	case DECON_PIXEL_FORMAT_NV21M:
 		return 0;
 
 	default:
@@ -514,6 +555,12 @@ static u32 decon_transp_offset(int format)
 	case DECON_PIXEL_FORMAT_RGB_565:
 		return 0;
 
+	case DECON_PIXEL_FORMAT_NV12:
+	case DECON_PIXEL_FORMAT_NV21:
+	case DECON_PIXEL_FORMAT_NV12M:
+	case DECON_PIXEL_FORMAT_NV21M:
+		return 0;
+
 	default:
 		decon_warn("unrecognized pixel format %u\n", format);
 		return 0;
@@ -531,6 +578,12 @@ static u32 decon_padding(int format)
 	case DECON_PIXEL_FORMAT_RGBA_5551:
 	case DECON_PIXEL_FORMAT_RGB_565:
 	case DECON_PIXEL_FORMAT_BGRA_8888:
+		return 0;
+
+	case DECON_PIXEL_FORMAT_NV12:
+	case DECON_PIXEL_FORMAT_NV21:
+	case DECON_PIXEL_FORMAT_NV12M:
+	case DECON_PIXEL_FORMAT_NV21M:
 		return 0;
 
 	default:
@@ -563,6 +616,12 @@ static u32 decon_rgborder(int format)
 		return WINCON_BPPMODE_BGRX8888;
 	case DECON_PIXEL_FORMAT_XBGR_8888:
 		return WINCON_BPPMODE_RGBX8888;
+
+	case DECON_PIXEL_FORMAT_NV12:
+	case DECON_PIXEL_FORMAT_NV21:
+	case DECON_PIXEL_FORMAT_NV12M:
+	case DECON_PIXEL_FORMAT_NV21M:
+		return 0;
 
 	default:
 		decon_warn("unrecognized pixel format %u\n", format);
@@ -613,28 +672,6 @@ static bool is_vpp_type(enum decon_idma_type idma_type)
 		return false;
 	}
 }
-
-#ifdef CONFIG_CPU_IDLE
-static int exynos_decon_lpc_event(struct notifier_block *notifier,
-		unsigned long pm_event, void *v)
-{
-	struct decon_device *decon = get_decon_drvdata(0);
-	int err = NOTIFY_DONE;
-
-	switch (pm_event) {
-	case LPC_PREPARE:
-		if (decon->state != DECON_STATE_LPD)
-			err = -EBUSY;
-		break;
-	}
-
-	return notifier_from_errno(err);
-}
-
-static struct notifier_block exynos_decon_lpc_nb = {
-	.notifier_call = exynos_decon_lpc_event,
-};
-#endif
 
 /* ---------- OVERLAP COUNT CALCULATION ----------- */
 static inline int rect_width(struct decon_rect *r)
@@ -1419,7 +1456,6 @@ int decon_enable(struct decon_device *decon)
 {
 	struct decon_psr_info psr;
 	struct decon_init_param p;
-	struct irq_desc *desc;
 	int state = decon->state;
 	int ret = 0;
 	unsigned int te_pending = 0;
@@ -1616,14 +1652,13 @@ int decon_enable(struct decon_device *decon)
 		decon_esd_enable_interrupt(decon);
 
 	if (!decon->id && !decon->eint_status) {
-		if (decon->eint_pend) {
-			te_pending = readl(decon->eint_pend);
-			writel(te_pending | decon->eint_pend_mask, decon->eint_pend);
-			desc = irq_to_desc(decon->irq);
+		struct irq_desc *desc = irq_to_desc(decon->irq);
+		/* Pending IRQ clear */
+		if (desc->irq_data.chip->irq_ack) {
+			desc->irq_data.chip->irq_ack(&desc->irq_data);
 			desc->istate &= ~IRQS_PENDING;
 		}
 		enable_irq(decon->irq);
-		DISP_SS_EVENT_LOG(DISP_EVT_GIC_TE_ENABLE, &decon->sd, ktime_set(0, 0));
 		decon->eint_status = 1;
 	}
 
@@ -1699,7 +1734,6 @@ int decon_disable(struct decon_device *decon)
 	if (!decon->id && (decon->vsync_info.irq_refcount <= 0) &&
 			decon->eint_status) {
 		disable_irq(decon->irq);
-		DISP_SS_EVENT_LOG(DISP_EVT_GIC_TE_DISABLE, &decon->sd, ktime_set(0, 0));
 		decon->eint_status = 0;
 	}
 
@@ -2509,7 +2543,7 @@ static int decon_set_win_buffer(struct decon_device *decon, struct decon_win *wi
 	}
 
 	regs->wincon[win_no] = wincon(win->fbinfo->var.bits_per_pixel,
-			win->fbinfo->var.transp.length);
+			win->fbinfo->var.transp.length, WINCON_BPPMODE_ARGB8888);
 	regs->wincon[win_no] |= decon_rgborder(format);
 	regs->protection[win_no] = win_config->protection;
 	decon_set_alpha_blending(win_config, regs, win_no,
@@ -2915,11 +2949,11 @@ static void decon_set_win_update_config(struct decon_device *decon,
 		decon_intersection(&r1, &r2, &r2);
 		if (((r2.right - r2.left) != 0) ||
 			((r2.bottom - r2.top) != 0)) {
-			if (is_decon_rgb32(config->format)) {
-			/*
-			 * Platform requested for win_update mode. But, the win_update is
-			 * smaller than the VPP min size. So, change the mode to normal mode
-			 */
+			if (decon_get_plane_cnt(config->format) == 1) {
+				/*
+				 * Platform requested for win_update mode. But, the win_update is
+				 * smaller than the VPP min size. So, change the mode to normal mode
+				 */
 				if (((r2.right - r2.left) < 32) ||
 					((r2.bottom - r2.top) < 16)) {
 					decon_update_2_full(decon, regs, lcd_info, need_update);
@@ -4588,7 +4622,6 @@ int decon_doze_enable(struct decon_device *decon)
 {
 	struct decon_psr_info psr;
 	struct decon_init_param p;
-	struct irq_desc *desc;
 	int ret = 0;
 	unsigned int te_pending = 0;
 
@@ -4675,14 +4708,14 @@ int decon_doze_enable(struct decon_device *decon)
 		decon_esd_enable_interrupt(decon);
 
 	if (!decon->id && !decon->eint_status) {
-		if (decon->eint_pend) {
-			te_pending = readl(decon->eint_pend);
-			writel(te_pending | decon->eint_pend_mask, decon->eint_pend);
-			desc = irq_to_desc(decon->irq);
+		struct irq_desc *desc = irq_to_desc(decon->irq);
+		/* Pending IRQ clear */
+		if (desc->irq_data.chip->irq_ack) {
+			desc->irq_data.chip->irq_ack(&desc->irq_data);
 			desc->istate &= ~IRQS_PENDING;
 		}
+
 		enable_irq(decon->irq);
-		DISP_SS_EVENT_LOG(DISP_EVT_GIC_TE_ENABLE, &decon->sd, ktime_set(0, 0));
 		decon->eint_status = 1;
 	}
 
@@ -6439,10 +6472,6 @@ decon_rest_init:
 	for (i = 0; i < MAX_VPP_SUBDEV; i++)
 		decon->vpp_used[i] = false;
 
-#ifdef CONFIG_CPU_IDLE
-	decon->lpc_nb = exynos_decon_lpc_nb;
-	exynos_pm_register_notifier(&decon->lpc_nb);
-#endif
 	if (decon->id == 0)
 		decon_esd_enable_interrupt(decon);
 

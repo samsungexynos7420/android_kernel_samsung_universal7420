@@ -36,12 +36,20 @@
 #define UNDERRUN_FILTER_INIT           0
 #define UNDERRUN_FILTER_IDLE           1
 
+static void underrun_filter_handler(struct work_struct *ws)
+{
+	struct decon_device *decon =
+			container_of(ws, struct decon_device, fifo_irq_work);
+	msleep(UNDERRUN_FILTER_INTERVAL_MS);
+	decon->int_fifo_status = UNDERRUN_FILTER_IDLE;
+}
+
 static void decon_oneshot_underrun_log(struct decon_device *decon)
 {
 	DISP_SS_EVENT_LOG(DISP_EVT_UNDERRUN, &decon->sd, ktime_set(0, 0));
 
 	decon->underrun_stat.underrun_cnt++;
-	if (decon->fifo_irq_status++ > UNDERRUN_FILTER_IDLE)
+	if (decon->int_fifo_status++ > UNDERRUN_FILTER_IDLE)
 		return;
 
 	if (decon->underrun_stat.underrun_cnt > DECON_UNDERRUN_THRESHOLD) {
@@ -97,8 +105,6 @@ irqreturn_t decon_int_irq_handler(int irq, void *dev_data)
 		wake_up_interruptible_all(&decon->vsync_info.wait);
 	}
 	if (irq_sts_reg & VIDINTCON1_INT_FIFO) {
-		/* TODO: false underrun check only for EVT0. This will be removed in EVT1 */
-		fifo_level = FRAMEFIFO_FIFO0_VALID_SIZE_GET(decon_read(decon->id, FRAMEFIFO_REG7));
 		decon->underrun_stat.fifo_level = fifo_level;
 		decon->underrun_stat.prev_bw = decon->prev_bw;
 		decon->underrun_stat.prev_int_bw = decon->prev_int_bw;
@@ -112,8 +118,6 @@ irqreturn_t decon_int_irq_handler(int irq, void *dev_data)
 		decon_int_get_enabled_win(decon);
 		decon_oneshot_underrun_log(decon);
 		decon_write_mask(decon->id, VIDINTCON1, ~0, VIDINTCON1_INT_FIFO);
-		/* TODO: underrun function */
-//		s3c_fb_log_fifo_underflow_locked(decon, timestamp);
 	}
 	if (irq_sts_reg & VIDINTCON1_INT_I80) {
 		/* decon framedone */
@@ -471,7 +475,7 @@ static u32 wincon(u32 bits_per_pixel, u32 transp_length)
 		}
 		break;
 	default:
-		pr_err("%d bpp doesn't support\n", bits_per_pixel);
+		decon_err("%d bpp doesn't support\n", bits_per_pixel);
 		break;
 	}
 
@@ -752,8 +756,6 @@ pan_display_exit:
 }
 EXPORT_SYMBOL(decon_pan_display);
 
-
-
 int decon_mmap(struct fb_info *info, struct vm_area_struct *vma)
 {
 #ifdef CONFIG_ION_EXYNOS
@@ -809,6 +811,7 @@ static void decon_parse_lcd_info(struct decon_device *decon)
 		decon->windows[i]->win_mode.videomode.yres = lcd_info->yres;
 		decon->windows[i]->win_mode.width = lcd_info->width;
 		decon->windows[i]->win_mode.height = lcd_info->height;
+		decon->windows[i]->win_mode.videomode.refresh = lcd_info->fps;
 	}
 }
 
@@ -855,11 +858,7 @@ irqreturn_t decon_fb_isr_for_eint(int irq, void *dev_id)
 	ktime_t timestamp = ktime_get();
 
 	DISP_SS_EVENT_LOG(DISP_EVT_TE_INTERRUPT, &decon->sd, timestamp);
-
 	spin_lock(&decon->slock);
-
-	decon->vsync_info.timestamp = timestamp;
-	wake_up_interruptible_all(&decon->vsync_info.wait);
 
 	if (decon->pdata->trig_mode == DECON_SW_TRIG) {
 		decon_reg_set_trigger(decon->id, decon->pdata->dsi_mode,
@@ -885,26 +884,19 @@ irqreturn_t decon_fb_isr_for_eint(int irq, void *dev_id)
 	}
 #endif
 
+	decon->vsync_info.timestamp = timestamp;
+	wake_up_interruptible_all(&decon->vsync_info.wait);
+
 #ifdef CONFIG_DECON_LPD_DISPLAY
 	if (decon->state == DECON_STATE_ON) {
-		if (decon_min_lock_cond(decon)) {
+		if (decon_min_lock_cond(decon)) 
 			queue_work(decon->lpd_wq, &decon->lpd_work);
-		}
 	}
 #endif
-
 
 	spin_unlock(&decon->slock);
 
 	return IRQ_HANDLED;
-}
-
-static void underrun_filter_handler(struct work_struct *work)
-{
-	struct decon_device *decon =
-			container_of(work, struct decon_device, fifo_irq_work);
-	msleep(UNDERRUN_FILTER_INTERVAL_MS);
-	decon->fifo_irq_status = UNDERRUN_FILTER_IDLE;
 }
 
 int decon_int_register_irq(struct platform_device *pdev, struct decon_device *decon)
@@ -913,9 +905,23 @@ int decon_int_register_irq(struct platform_device *pdev, struct decon_device *de
 	struct resource *res;
 	int ret = 0;
 
+	if (decon_reg_get_stop_status(decon->id)) {
+		/*
+		* Clear if any interrupt is set durnig bootloader display. It
+		* should have been handled and cleared in bootloader. At this
+		* point, it is too early to handle pernding interrupt in kernel.
+		*/
+		decon_write_mask(decon->id, VIDINTCON1, ~0, ~0);
+	}
+
+
 	/* Get IRQ resource and register IRQ handler. */
 	/* 0: FIFO irq */
 	res = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
+	if (!res) {
+		decon_err("failed to get platform resource\n");
+		return -EINVAL;
+	}
 	ret = devm_request_irq(dev, res->start, decon_int_irq_handler, 0,
 			pdev->name, decon);
 	if (ret) {
@@ -923,27 +929,35 @@ int decon_int_register_irq(struct platform_device *pdev, struct decon_device *de
 		return ret;
 	}
 
+	/* 1: frame irq (Vsync) */
+	res = platform_get_resource(pdev, IORESOURCE_IRQ, 1);
+	if (!res) {
+		decon_err("failed to get platform resource\n");
+		return -EINVAL;
+	}
+	ret = devm_request_irq(dev, res->start, decon_int_irq_handler,
+			0, pdev->name, decon);
+	if (ret) {
+		decon_err("failed to install VSYNC irq\n");
+		return ret;
+	}
+
 	if (decon->pdata->psr_mode == DECON_MIPI_COMMAND_MODE) {
-		/* 1: I80 FrameDone irq */
-		res = platform_get_resource(pdev, IORESOURCE_IRQ, 1);
-		ret = devm_request_irq(dev, res->start, decon_int_irq_handler,
-				0, pdev->name, decon);
-		if (ret) {
-			decon_err("failed to install FrameDOne irq\n");
-			return ret;
-		}
-	} else if (decon->pdata->psr_mode == DECON_VIDEO_MODE) {
-		/* 2: frame irq */
+		/* 1: i80 irq (framedone) */
 		res = platform_get_resource(pdev, IORESOURCE_IRQ, 2);
+		if (!res) {
+			decon_err("failed to get platform resource\n");
+			return -EINVAL;
+		}
 		ret = devm_request_irq(dev, res->start, decon_int_irq_handler,
 				0, pdev->name, decon);
 		if (ret) {
-			decon_err("failed to install FrameDOne irq\n");
+			decon_err("failed to install FRAMEDONE irq\n");
 			return ret;
 		}
 	}
 
-	if (decon->fifo_irq_status++ == UNDERRUN_FILTER_INIT) {
+	if (decon->int_fifo_status++ == UNDERRUN_FILTER_INIT) {
 		decon->fifo_irq_wq = create_singlethread_workqueue("decon_fifo_irq_wq");
 		if (decon->fifo_irq_wq == NULL) {
 			decon_err("%s:failed to create workqueue for fifo_irq_wq\n", __func__);
@@ -952,6 +966,7 @@ int decon_int_register_irq(struct platform_device *pdev, struct decon_device *de
 
 		INIT_WORK(&decon->fifo_irq_work, underrun_filter_handler);
 	}
+
 	return ret;
 }
 
@@ -968,11 +983,10 @@ int decon_fb_config_eint_for_te(struct platform_device *pdev, struct decon_devic
 		return -EINVAL;
 	}
 
-	gpio = gpio_to_irq(gpio);
-	decon->irq = gpio;
-	ret = devm_request_irq(dev, gpio, decon_fb_isr_for_eint,
-			  IRQF_TRIGGER_RISING, pdev->name, decon);
+	decon->irq = gpio_to_irq(gpio);
 	decon->eint_status = 1;
+	ret = devm_request_irq(dev, decon->irq, decon_fb_isr_for_eint,
+			  IRQF_TRIGGER_RISING, pdev->name, decon);
 
 	return ret;
 }

@@ -806,9 +806,6 @@ struct decon_device {
 	u32 				num_blk_region_calc;
 	u32				num_blk_region;
 	u32				num_idma_blk_region;
-#ifdef CONFIG_CPU_IDLE
-        struct notifier_block           lpc_nb;
-#endif
 	struct dentry			*debug_root;
 #ifdef CONFIG_DECON_EVENT_LOG
 	struct dentry			*debug_event;
@@ -830,11 +827,6 @@ struct decon_device {
 	ktime_t				trig_mask_timestamp;
 	int                             frame_idle;
 	int				eint_status;
-	
-	struct work_struct		fifo_irq_work;
-	struct workqueue_struct		*fifo_irq_wq;
-	int				fifo_irq_status;
-	
 	struct vpp_drm_log vpp_log[MAX_VPP_LOG];
 	int log_cnt;
 	struct decon_regs_data win_regs;
@@ -859,6 +851,8 @@ struct decon_device {
 	dma_addr_t vgr0_cb_addr;
 	dma_addr_t vgr1_cb_addr;
 
+	struct work_struct		fifo_irq_work;
+	struct workqueue_struct		*fifo_irq_wq;
 	bool	int_fifo_status;
 
 #ifdef CONFIG_FB_DSU
