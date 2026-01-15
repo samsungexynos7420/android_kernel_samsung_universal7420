@@ -505,7 +505,9 @@ dot-config     := 1
 
 ifeq ($(CONFIG_SOC_EXYNOS7420), y)
 KBUILD_CFLAGS	+= -march=armv8-a+crc -mtune=cortex-a57.cortex-a53
+KBUILD_AFLAGS	+= -march=armv8-a+crc -mtune=cortex-a57.cortex-a53
 KBUILD_CFLAGS	+= -mfloat-abi=hard
+KBUILD_AFLAGS	+= -mfloat-abi=hard
 endif
 
 ifneq ($(filter $(no-dot-config-targets), $(MAKECMDGOALS)),)
@@ -739,6 +741,13 @@ KBUILD_CFLAGS += -Wno-address-of-packed-member \
                  -Wno-format-invalid-specifier \
                  -Wno-gnu
 KBUILD_CPPFLAGS += -Qunused-arguments
+
+ifeq ($(CONFIG_SOC_EXYNOS7420), y)
+KBUILD_AFLAGS += \
+                 -mcpu=cortex-a53 \
+                 -mtune=cortex-a53
+endif
+
 # Quiet clang warning: comparison of unsigned expression < 0 is always false
 KBUILD_CFLAGS += -Wno-tautological-compare
 ifdef CONFIG_MODULES
