@@ -1458,7 +1458,6 @@ int decon_enable(struct decon_device *decon)
 	struct decon_init_param p;
 	int state = decon->state;
 	int ret = 0;
-	unsigned int te_pending = 0;
 #ifdef CONFIG_LCD_ALPM
 	int alpm = 0;
 	struct dsim_device *dsim = NULL;
@@ -4623,7 +4622,6 @@ int decon_doze_enable(struct decon_device *decon)
 	struct decon_psr_info psr;
 	struct decon_init_param p;
 	int ret = 0;
-	unsigned int te_pending = 0;
 
 	decon_info("enable doze decon-%d\n", decon->id);
 	exynos_ss_printk("%s:state %d: active %d:+\n", __func__,
