@@ -294,20 +294,6 @@ void decon_int_set_clocks(struct decon_device *decon)
 
 	case (1920 * 1080):
 		/* NOTE: DPLL, ACLK_DISP_400 & PCLK_DISP must be set by boot loader */
-#ifdef CONFIG_EXYNOS_DECON_7420_DUAL_DSI
-		decon_clk_set_rate(dev, "disp_pll", 267 * MHZ);
-		decon_clk_set_parent(dev, "m_sclk_decon0_eclk", "mout_bus1_pll_top0");
-		decon_clk_set_rate(dev, "dout_sclk_decon_int_eclk", 100 * MHZ);
-
-		decon_clk_set_parent(dev, "m_decon0_eclk", "um_decon0_eclk");
-		decon_clk_set_rate(dev, "d_decon0_eclk", 100 * MHZ);
-		decon_clk_set_parent(dev, "m_decon0_vclk", "disp_pll");
-		if (decon->lcd_info->mic_enabled) {
-			decon_clk_set_rate(dev, "d_decon0_vclk", 143 * MHZ);
-		} else {
-			decon_clk_set_rate(dev, "d_decon0_vclk", 72 * MHZ);
-		}
-#else
 		decon_clk_set_rate(dev, "disp_pll", 142 * MHZ);
 		decon_clk_set_parent(dev, "m_sclk_decon0_eclk", "mout_bus1_pll_top0");
 		decon_clk_set_rate(dev, "dout_sclk_decon_int_eclk", 100 * MHZ);
@@ -315,7 +301,6 @@ void decon_int_set_clocks(struct decon_device *decon)
 		decon_clk_set_rate(dev, "d_decon0_eclk", 100 * MHZ);
 		decon_clk_set_parent(dev, "m_decon0_vclk", "disp_pll");
 		decon_clk_set_rate(dev, "d_decon0_vclk", 142 * MHZ);
-#endif
 		break;
 	default:
 		/* NOTE: DPLL, ACLK_DISP_400 & PCLK_DISP must be set by boot loader */
