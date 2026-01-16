@@ -34,7 +34,6 @@ config EXYNOS_DP
 	help
 	  This enables support for DP device.
 
-source "drivers/video/exynos/decon_display/Kconfig"
 source "drivers/video/exynos/decon_tv_display/Kconfig"
 source "drivers/video/exynos/decon_7420/Kconfig"
 source "drivers/video/exynos/decon_7420_dual_display/Kconfig"
