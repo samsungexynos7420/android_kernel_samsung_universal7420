@@ -395,7 +395,7 @@ static const unsigned char S6E3HA2_SEQ_TSET[] = {
         0x19                    /* Global para(8th) + 25 degrees  : 0x19 */
 };
 
-#if defined(CONFIG_FB_DSU)
+#if defined(CONFIG_LCD_RES) || defined(CONFIG_FB_DSU)
 static const unsigned char S6E3HA2_SEQ_DDI_SCALER_WQHD_00[] = {
 	0xBA,
 	0x01
@@ -807,7 +807,7 @@ static const unsigned char S6E3HA3_SEQ_TE_RISING_TIMING[] = {
 	0x01, 0x09, 0xFF, 0x00, 0x0A
 };
 
-#if defined(CONFIG_FB_DSU)
+#if defined(CONFIG_LCD_RES) || defined(CONFIG_FB_DSU)
 static const unsigned char S6E3HA3_SEQ_DDI_SCALER_FHD_00[] = {
         0xBA,
         0x02
@@ -1089,7 +1089,7 @@ static const unsigned char S6E3HF3_SEQ_PENTILE_SETTING[] = {
 	0x13, 0x20, 0x1E
 };
 
-#if defined(CONFIG_FB_DSU)
+#if defined(CONFIG_LCD_RES) || defined(CONFIG_FB_DSU)
 static const unsigned char S6E3HF3_SEQ_DDI_SCALER_FHD_00[] = {
         0xBA,
         0x02
