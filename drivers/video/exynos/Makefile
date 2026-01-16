@@ -12,5 +12,4 @@ obj-y					+= panels/
 obj-$(CONFIG_EXYNOS_DECON_7420)		+= decon_7420/
 obj-$(CONFIG_EXYNOS_DECON_7420_DUAL_DISPLAY)	+= decon_7420_dual_display/
 obj-$(CONFIG_EXYNOS_DECON_7420_DUAL_DSI)	+= decon_7420_dual_dsi/ 
-obj-$(CONFIG_EXYNOS_DECON_EXYNOS7580)	+= decon_7580/
 obj-$(CONFIG_EXYNOS_DECON_ROYCE) 	+= decon_royce/
