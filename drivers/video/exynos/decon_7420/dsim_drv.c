@@ -83,6 +83,10 @@ EXPORT_SYMBOL(dsim0_for_decon);
 struct dsim_device *dsim1_for_decon;
 EXPORT_SYMBOL(dsim1_for_decon);
 
+#ifdef CONFIG_LCD_RES
+static int g_lcd_res = 0;
+#endif
+
 static void dsim_dump(struct dsim_device *dsim, int dump_panel)
 {
 	dsim_info("=== DSIM SFR DUMP ===\n");
@@ -1880,7 +1884,23 @@ static int dsim_parse_lcd_info(struct dsim_device *dsim)
 	of_property_read_u32(node, "mode", &dsim->lcd_info.mode);
 	dsim_dbg("%s mode\n", dsim->lcd_info.mode ? "command" : "video");
 
+#ifdef CONFIG_LCD_RES
+	dsim_info( "%s : LCD_RES %d", __func__, g_lcd_res );
+	dsim->priv.lcd_res = g_lcd_res;
+	switch( dsim->priv.lcd_res ) {
+	case LCD_RES_FHD:
+		of_property_read_u32_array(node, "resolution_fhd", res, 2);
+		break;
+	case LCD_RES_HD:
+		of_property_read_u32_array(node, "resolution_hd", res, 2);
+		break;
+	default:
+		of_property_read_u32_array(node, "resolution", res, 2);
+		break;
+	}
+#else
 	of_property_read_u32_array(node, "resolution", res, 2);
+#endif
 
 	dsim->lcd_info.xres = res[0];
 	dsim->lcd_info.yres = res[1];
@@ -2279,6 +2299,18 @@ static void __exit dsim_exit(void)
 {
 	platform_driver_unregister(&dsim_driver);
 }
+
+#ifdef CONFIG_LCD_RES
+static int __init get_lcdres(char *arg)
+{
+	get_option(&arg, (unsigned int*) &g_lcd_res);
+
+	dsim_info("%s : %d\n", __func__, g_lcd_res);
+
+	return 0;
+}
+early_param("lcdres", get_lcdres);
+#endif
 
 module_exit(dsim_exit);
 MODULE_AUTHOR("Jiun Yu <jiun.yu@samsung.com>");

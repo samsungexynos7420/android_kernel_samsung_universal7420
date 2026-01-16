@@ -1633,12 +1633,30 @@ static int _s6e3ha2_wqhd_dsu_command(struct dsim_device *dsim, int xres, int yre
 
 	switch( xres ) {
 	case 1080:
+		ret = dsim_write_hl_data(dsim, SEQ_TEST_KEY_ON_F0, ARRAY_SIZE(SEQ_TEST_KEY_ON_F0));
+		if (ret < 0) {
+			dsim_err("%s : fail to write CMD : SEQ_TEST_KEY_ON_F0\n", __func__);
+		}
+		ret = dsim_write_hl_data(dsim, SEQ_TEST_KEY_ON_FC, ARRAY_SIZE(SEQ_TEST_KEY_ON_FC));
+		if (ret < 0) {
+			dsim_err("%s : fail to write CMD : SEQ_TEST_KEY_ON_FC\n", __func__);
+		}
+
 		ret = dsim_write_hl_data(dsim, S6E3HA2_SEQ_DDI_SCALER_FHD_00, ARRAY_SIZE(S6E3HA2_SEQ_DDI_SCALER_FHD_00));
 		if (ret < 0) {
 			dsim_err("%s : fail to write CMD : S6E3HA2_SEQ_DDI_SCALER_FHD_00\n", __func__);
 		}
 	break;
 	case 1440:
+		ret = dsim_write_hl_data(dsim, SEQ_TEST_KEY_ON_F0, ARRAY_SIZE(SEQ_TEST_KEY_ON_F0));
+		if (ret < 0) {
+			dsim_err("%s : fail to write CMD : SEQ_TEST_KEY_ON_F0\n", __func__);
+		}
+		ret = dsim_write_hl_data(dsim, SEQ_TEST_KEY_ON_FC, ARRAY_SIZE(SEQ_TEST_KEY_ON_FC));
+		if (ret < 0) {
+			dsim_err("%s : fail to write CMD : SEQ_TEST_KEY_ON_FC\n", __func__);
+		}
+
 		ret = dsim_write_hl_data(dsim, S6E3HA2_SEQ_DDI_SCALER_WQHD_00, ARRAY_SIZE(S6E3HA2_SEQ_DDI_SCALER_WQHD_00));
 		if (ret < 0) {
 			dsim_err("%s : fail to write CMD : S6E3HA2_SEQ_DDI_SCALER_WQHD_00\n", __func__);
@@ -1652,22 +1670,17 @@ static int _s6e3ha2_wqhd_dsu_command(struct dsim_device *dsim, int xres, int yre
 	dsim_info("%s : xres=%d, yres=%d\n", __func__, xres, yres );
 	return ret;
 }
+#endif
 
+#ifdef CONFIG_FB_DSU
 static int s6e3ha2_wqhd_dsu_command(struct dsim_device *dsim)
 {
 	int ret = 0;
 
-	ret = dsim_write_hl_data(dsim, SEQ_TEST_KEY_ON_F0, ARRAY_SIZE(SEQ_TEST_KEY_ON_F0));
-	if (ret < 0) {
-		dsim_err("%s : fail to write CMD : SEQ_TEST_KEY_ON_F0\n", __func__);
-	}
-
 	ret = _s6e3ha2_wqhd_dsu_command( dsim, dsim->dsu_xres, dsim->dsu_yres );
 
-	ret = dsim_write_hl_data(dsim, SEQ_TEST_KEY_OFF_FC, ARRAY_SIZE(SEQ_TEST_KEY_OFF_FC));
-	if (ret < 0) {
-		dsim_err("%s : fail to write CMD : SEQ_TEST_KEY_ON_FC\n", __func__);
-	}
+	dsim_write_hl_data(dsim, SEQ_TEST_KEY_OFF_F0, ARRAY_SIZE(SEQ_TEST_KEY_OFF_F0));
+	dsim_write_hl_data(dsim, SEQ_TEST_KEY_OFF_FC, ARRAY_SIZE(SEQ_TEST_KEY_OFF_FC));
 
 	dsim_info("%s : xres=%d, yres=%d\n", __func__, dsim->dsu_xres, dsim->dsu_yres);
 	return ret;
@@ -1712,6 +1725,10 @@ static int s6e3ha2_wqhd_init(struct dsim_device *dsim)
                 goto init_exit;
         }
 
+#ifdef CONFIG_LCD_RES
+	ret = _s6e3ha2_wqhd_dsu_command( dsim, dsim->priv.lcd_res, 0 );
+#endif
+        
 #ifdef CONFIG_FB_DSU
 	ret = _s6e3ha2_wqhd_dsu_command( dsim, dsim->dsu_xres, dsim->dsu_yres );
 #endif
