@@ -2700,7 +2700,7 @@ static inline void decon_update_2_full(struct decon_device *decon,
 	regs->update_win.h = lcd_info->yres;
 
 #ifdef CONFIG_FB_DSU
-    if( decon->DSU_mode != DECON_DSU_RES_DEFAULT) {
+    if( decon->DSU_mode) {
         decon->update_win.w = decon->DSU_rect.w;
         decon->update_win.h = decon->DSU_rect.h;
         regs->update_win.w = decon->DSU_rect.w;
@@ -2815,7 +2815,7 @@ static void decon_set_win_update_config(struct decon_device *decon,
 	if ((decon->out_type == DECON_OUT_DSI) &&
 		(decon->decon_doze == DECON_DOZE_STATE_DOZE)) {
 #ifdef CONFIG_FB_DSU
-			if( decon->DSU_mode != DECON_DSU_RES_DEFAULT ) {
+			if(decon->DSU_mode) {
 				decon_update_2_full(decon, regs, lcd_info, true);
 				return;
 			}
@@ -4062,34 +4062,26 @@ static void decon_change_lcdinfo_by_DSU( struct decon_device *decon, int DSU_mod
 {
 	struct dsim_device *dsim = NULL;
 	dsim = container_of(decon->output_sd, struct dsim_device, sd);
-
-	if(DSU_mode != DECON_DSU_RES_DEFAULT) {
+	
+	pr_info( "%s.%d xres,yres (%d,%d)\n", __func__, __LINE__, decon->lcd_info->xres, decon->lcd_info->yres );
+	
+	if(DSU_mode && decon->lcd_info_default.xres == 0 ) { // backup lcd_info
+				decon->lcd_info_default.xres = decon->lcd_info->xres;
+				decon->lcd_info_default.yres = decon->lcd_info->yres;
+			}
+	
+	if(DSU_mode) {
 			decon->lcd_info->xres = decon->DSU_rect.w;
 			decon->lcd_info->yres = decon->DSU_rect.h;
-	} else {
-		switch( DSU_mode ) {
-		case DECON_DSU_RES_WQHD:
-			decon->lcd_info->xres = 1440;
-			decon->lcd_info->yres = 2560;
-			break;
-		case DECON_DSU_RES_FHD:
-			decon->lcd_info->xres = 1080;
-			decon->lcd_info->yres = 1920;
-			break;
-		case DECON_DSU_RES_HD:
-			decon->lcd_info->xres = 720;
-			decon->lcd_info->yres = 1280;
-			break;
-		default:
-			pr_err( "%s: unknown case %d(%d,%d).\n", __func__, DSU_mode, decon->DSU_rect.w, decon->DSU_rect.h );
-		break;
+		} else {
+			decon->lcd_info->xres = decon->lcd_info_default.xres;
+			decon->lcd_info->yres = decon->lcd_info_default.yres;
 		}
-	}
 
 	dsim->dsu_xres = decon->lcd_info->xres;
 	dsim->dsu_yres = decon->lcd_info->yres;
 
-	pr_info( "%s: DSU_mode=%d, (%d,%d)\n", __func__, DSU_mode, decon->lcd_info->xres, decon->lcd_info->yres );
+	pr_info( "%s.%d DSU_mode=%d, (%d,%d)\n", __func__, __LINE__, DSU_mode, decon->lcd_info->xres, decon->lcd_info->yres );
 }
 
 static void decon_dsu_handler(struct decon_device *decon)
@@ -4178,7 +4170,7 @@ static int decon_dsu_change( struct decon_device *decon, struct decon_win_config
 	pr_info( "%s.%d : need_DSU_update = %d, dsc=%d, mic=%d\n", __func__, __LINE__, decon->need_DSU_update, decon->is_DSU_dsc, decon->is_DSU_mic );
 
 	decon->DSU_mode = update_config->enableDSU;
-	if(decon->DSU_mode != DECON_DSU_RES_DEFAULT) {
+	if(decon->DSU_mode) {
 		decon->DSU_x_delta = update_config->dst.x;
 		decon->DSU_y_delta = update_config->top;
 
@@ -6114,7 +6106,7 @@ static int decon_probe(struct platform_device *pdev)
 
 #ifdef CONFIG_FB_DSU
 	if (!decon->id && decon->out_type == DECON_OUT_DSI) {
-		decon->DSU_mode = DECON_DSU_RES_DEFAULT;
+		decon->DSU_mode = 0;
 		decon->need_DSU_update = 0;
 		decon->dsu_lock_cnt = 0;
 		mutex_init(&decon->dsu_lock);
