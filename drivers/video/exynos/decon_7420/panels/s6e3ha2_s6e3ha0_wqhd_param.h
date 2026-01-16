@@ -483,7 +483,7 @@ enum {
 	ACL_OPR_MAX
 };
 
-#if defined(CONFIG_FB_DSU)
+#if defined(CONFIG_LCD_RES) || defined(CONFIG_FB_DSU)
 static const unsigned char S6E3HA2_SEQ_DDI_SCALER_WQHD_00[] = {
 	0xBA,
 	0x01

@@ -34,6 +34,8 @@
 	s6e3ha2_wqhd: s6e3ha2_wqhd_panel {
 		mode = <2>;
 		resolution = <1440 2560>;
+		resolution_fhd = <1080 1920>;
+		resolution_hd = <720 1280>;
 		size = <71 125>;
 		timing,refresh = <60>;
 		timing,h-porch = <1 1 1>;

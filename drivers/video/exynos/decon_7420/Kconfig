@@ -105,6 +105,10 @@ config ALWAYS_RELOAD_MTP_FACTORY_BUILD
 	depends on SEC_FACTORY
 	default n
 
+config LCD_RES
+	bool "change LCD-resolution by BOOT_PARAM"
+	default n
+
 config CHECK_OCTA_CHIP_ID
 	bool "support to check octa chip id"
 	depends on SEC_FACTORY

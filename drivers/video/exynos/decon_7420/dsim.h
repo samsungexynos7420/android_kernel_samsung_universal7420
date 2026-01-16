@@ -103,6 +103,15 @@ struct dsim_resources {
 	struct regulator *regulator_16V;
 };
 
+#ifdef CONFIG_LCD_RES
+typedef enum lcd_res_type {
+	LCD_RES_DEFAULT = 0,
+	LCD_RES_FHD = 1920,
+	LCD_RES_HD = 1280,
+	LCD_RES_MAX
+} lcd_res_t;
+#endif
+
 struct panel_private {
 
 	struct backlight_device *bd;
@@ -176,6 +185,10 @@ struct panel_private {
 	int override_br_value;
 
 	int esd_disable;
+	
+#ifdef	CONFIG_LCD_RES
+	lcd_res_t lcd_res;
+#endif
 
 	unsigned int accessibility;
 	unsigned int adaptive_control;
