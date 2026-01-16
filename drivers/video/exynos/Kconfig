@@ -40,8 +40,5 @@ source "drivers/video/exynos/decon_7420/Kconfig"
 source "drivers/video/exynos/decon_7420_dual_display/Kconfig"
 source "drivers/video/exynos/decon_7420_dual_dsi/Kconfig"
 source "drivers/video/exynos/decon_royce/Kconfig"
-if SOC_EXYNOS7580
-source "drivers/video/exynos/decon_7580/Kconfig"
-endif # SOC_EXYNOS7580
 
 endif # EXYNOS_VIDEO

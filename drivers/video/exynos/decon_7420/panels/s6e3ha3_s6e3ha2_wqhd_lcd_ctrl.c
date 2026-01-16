@@ -1626,7 +1626,7 @@ static int s6e3ha2_wqhd_exit(struct dsim_device *dsim)
         return ret;
 }
 
-#if defined(CONFIG_FB_DSU)
+#if defined(CONFIG_FB_DSU) || defined(CONFIG_LCD_RES)
 static int _s6e3ha2_wqhd_dsu_command(struct dsim_device *dsim, int xres, int yres)
 {
 	int ret = 0;
