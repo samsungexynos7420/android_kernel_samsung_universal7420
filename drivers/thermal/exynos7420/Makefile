@@ -1,4 +1,4 @@
 #
 # Samsung thermal specific Makefile
 #
-obj-$(CONFIG_EXYNOS_THERMAL)			+= exynos7420_thermal.o cal_tmu7420.o
+obj-$(CONFIG_EXYNOS_THERMAL)			+= exynos_thermal_common.o cal_tmu7420.o
