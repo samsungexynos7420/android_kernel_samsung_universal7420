@@ -54,11 +54,11 @@ static unsigned int HOT_CRITICAL_TEMP = 110;
 static unsigned int MIF_TH_TEMP1 = 55;
 static unsigned int MIF_TH_TEMP2 = 95;
 
-static unsigned int GPU_TH_TEMP1 = 90;
-static unsigned int GPU_TH_TEMP2 = 95;
-static unsigned int GPU_TH_TEMP3 = 100;
-static unsigned int GPU_TH_TEMP4 = 105;
-static unsigned int GPU_TH_TEMP5 = 110;
+static unsigned int GPU_TH_TEMP1 = 76;
+static unsigned int GPU_TH_TEMP2 = 81;
+static unsigned int GPU_TH_TEMP3 = 86;
+static unsigned int GPU_TH_TEMP4 = 91;
+static unsigned int GPU_TH_TEMP5 = 100;
 
 static unsigned int ISP_TH_TEMP1 = 85;
 static unsigned int ISP_TH_TEMP2 = 95;
