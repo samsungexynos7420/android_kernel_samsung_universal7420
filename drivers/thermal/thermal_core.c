@@ -1891,6 +1891,9 @@ error:
 
 static void __exit thermal_exit(void)
 {
+#ifdef CONFIG_SCHED_HMP
+	unregister_hotcpu_notifier(&thermal_cpu_notifier);
+#endif
 	of_thermal_destroy_zones();
 	genetlink_exit();
 	class_unregister(&thermal_class);
