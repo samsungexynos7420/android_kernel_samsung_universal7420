@@ -22,7 +22,7 @@ KBASE_PATH = $(src)
 KBASE_PLATFORM_PATH = $(KBASE_PATH)/platform_dummy
 UMP_PATH = $(src)/../../../base
 
-THERMAL_PATH = $(srctree)/drivers/thermal/
+THERMAL_PATH = $(srctree)/drivers/thermal/exynos7420
 
 ifeq ($(CONFIG_MALI_ERROR_INJECTION),y)
 MALI_ERROR_INJECT_ON = 1

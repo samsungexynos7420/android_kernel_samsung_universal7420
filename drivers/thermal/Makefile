@@ -23,7 +23,7 @@ ifeq ($(CONFIG_SOC_EXYNOS7580),y)
 thermal_sys-$(CONFIG_CPU_THERMAL)	+= exynos7580/cpu_cooling.o
 thermal_sys-$(CONFIG_GPU_THERMAL)	+= exynos7580/gpu_cooling.o
 else
-thermal_sys-$(CONFIG_CPU_THERMAL)	+= cpu_cooling.o
+thermal_sys-$(CONFIG_CPU_THERMAL)	+= exynos7420/cpu_cooling.o
 endif
 
 # platform thermal drivers
@@ -34,7 +34,7 @@ ifeq ($(CONFIG_SOC_EXYNOS7580),y)
 obj-y				+= exynos7580/
 else
 ifeq ($(CONFIG_SOC_EXYNOS7420),y)
-obj-$(CONFIG_EXYNOS_THERMAL)	+= exynos7420_thermal.o cal_tmu7420.o
+obj-y				+= exynos7420/
 else
 obj-$(CONFIG_EXYNOS_THERMAL)	+= exynos_thermal.o cal_tmu.o
 endif
