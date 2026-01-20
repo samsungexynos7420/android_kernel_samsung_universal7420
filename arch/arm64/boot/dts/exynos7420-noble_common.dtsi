@@ -2258,20 +2258,20 @@
 			input_booster,label = "TOUCH";
 			input_booster,type = <2>;	/* BOOSTER_DEVICE_TOUCH */
 
-			input_booster,levels = <1 2 3>;
+			input_booster,levels = <1 2>;
 
 			/* Frequency table */
 			/* for level	:	1_Head, 2_Head, 2_Tail */
-			input_booster,cpu_freqs = <1200000 1200000 0>;
-			input_booster,hmp_boost = <1 1 0>;
-			input_booster,kfc_freqs = <800000 800000 1296000>;
-			input_booster,mif_freqs = <0 0 0>;
-			input_booster,int_freqs = <0 0 0>;
+			input_booster,cpu_freqs = <1200000 1200000>;
+			input_booster,hmp_boost = <1 1>;
+			input_booster,kfc_freqs = <800000 800000>;
+			input_booster,mif_freqs = <0 0>;
+			input_booster,int_freqs = <0 0>;
 
 			/* Time table */
-			input_booster,head_times = <130 130 0>;
-			input_booster,tail_times = <0 0 500>;
-			input_booster,phase_times = <0 0 0>;
+			input_booster,head_times = <130 130>;
+			input_booster,tail_times = <500 500>;
+			input_booster,phase_times = <0 0>;
 		};
 		booster_key@4 { // Input Booster +
 			input_booster,label = "MULTITOUCH";
@@ -2281,15 +2281,15 @@
 
 			/* Frequency table */
 			/* for level	:	1_Head 2_Tail*/
-			input_booster,cpu_freqs = <1200000 0>;
+			input_booster,cpu_freqs = <1200000 1200000>;
 			input_booster,hmp_boost = <1 1>;
 			input_booster,kfc_freqs = <800000 800000>;
 			input_booster,mif_freqs = <0 0>;
 			input_booster,int_freqs = <0 0>;
 
 			/* Time table */
-			input_booster,head_times = <1000 0>;
-			input_booster,tail_times = <0 500>;
+			input_booster,head_times = <1000 1000>;
+			input_booster,tail_times = <500 500>;
 			input_booster,phase_times = <0 0>;
 		};
 		booster_key@5 {
