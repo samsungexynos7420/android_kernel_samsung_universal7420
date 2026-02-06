@@ -2,42 +2,22 @@
 # Near Field Communication (NFC) devices
 #
 
+config SAMSUNG_NFC
+    bool "Samsung NFC driver"
+    default n
+    help
+      SAMSUNG NFC Driver.
+      This driver provides support for SAMSUNG NFC products.
+      You should select your NFC product and interface.
+
+      Say Y here to compile support for SAMSUNG NFC driver into the
+      kernel.
+
 menu "Near Field Communication (NFC) devices"
-	depends on NFC
+	depends on SAMSUNG_NFC
 
-config NFC_PN533
-	tristate "NXP PN533 USB driver"
-	depends on USB
-	help
-	  NXP PN533 USB driver.
-	  This driver provides support for NFC NXP PN533 devices.
-
-	  Say Y here to compile support for PN533 devices into the
-	  kernel or say M to compile it as module (pn533).
-
-config NFC_WILINK
-	tristate "Texas Instruments NFC WiLink driver"
-	depends on TI_ST && NFC_NCI
-	help
-	  This enables the NFC driver for Texas Instrument's BT/FM/GPS/NFC
-	  combo devices. This makes use of shared transport line discipline
-	  core driver to communicate with the NFC core of the combo chip.
-
-	  Say Y here to compile support for Texas Instrument's NFC WiLink driver
-	  into the kernel or say M to compile it as module.
-
-config NFC_MEI_PHY
-	tristate "MEI bus NFC device support"
-	depends on INTEL_MEI && NFC_HCI
-	help
-	  This adds support to use an mei bus nfc device. Select this if you
-	  will use an HCI NFC driver for an NFC chip connected behind an
-	  Intel's Management Engine chip.
-
-	  If unsure, say N.
-
-config SEC_NFC_I2C
-	bool "SEC NFC driver"
+config SEC_NFC
+	bool "Samsung NFC driver"
 	default n
 	help
 	  SAMSUNG NFC Driver.
@@ -47,8 +27,8 @@ config SEC_NFC_I2C
 	  Say Y here to compile support for SAMSUNG NFC driver into the
 	  kernel.
 
-config SEC_NFC
-	bool "Samsung NFC driver"
+config SEC_NFC_I2C
+	bool "SEC NFC driver"
 	default n
 	help
 	  SAMSUNG NFC Driver.
@@ -62,8 +42,6 @@ choice
 	prompt "SEC NFC Products"
 	depends on SEC_NFC
 	default SEC_NFC_PRODUCT_N5
-config SEC_NFC_PRODUCT_N3
-	bool "N3"
 config SEC_NFC_PRODUCT_N5
 	bool "N5"
 endchoice
@@ -90,17 +68,6 @@ config SEC_NFC_CLK_REQ
 	  You should select this feature if your NFC product uses AP CLK.
 
 	  Say Y here to compile support for SAMSUNG NFC CLK REQ feature into the
-	  kernel.
-
-config SEC_NFC_MARGINTIME
-	bool "SEC NFC MARGINTIME"
-	default n
-	help
-	  SAMSUNG SEC NFC MARGINTIME feature.
-	  This feature provides support for SAMSUNG NFC products.
-	  You should select this feature if your NFC product uses AVDD Cap 10uF .
-
-	  Say Y here to compile support for SAMSUNG SEC NFC MARGINTIME feature into the
 	  kernel.
 
 config ESE_P3_LSI
@@ -206,7 +173,5 @@ config SEC_NFC_LDO_CONTROL
 	  kernel.
 
 source "drivers/nfc/secnfc/Kconfig"
-source "drivers/nfc/pn544/Kconfig"
-source "drivers/nfc/microread/Kconfig"
 
 endmenu
