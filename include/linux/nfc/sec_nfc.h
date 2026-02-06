@@ -117,10 +117,6 @@ enum readable_state {
         #define CONFIG_SEC_NFC_IF_I2C
     #endif
 
-    #if !defined(CONFIG_SEC_NFC_PRODUCT_N3) && !defined(CONFIG_SEC_NFC_PRODUCT_N5)
-        #define CONFIG_SEC_NFC_PRODUCT_N3
-    #endif
-
 #endif /* CONFIG_SEC_NFC_I2C */
 
 #define SEC_NFC_DRIVER_NAME		"sec-nfc"
@@ -139,11 +135,7 @@ enum readable_state {
 #define SEC_NFC_MSG_MAX_SIZE	(256 + 4)
 
 /* wait for device stable */
-#ifdef CONFIG_SEC_NFC_MARGINTIME
-#define SEC_NFC_VEN_WAIT_TIME	(150)
-#else
 #define SEC_NFC_VEN_WAIT_TIME	(100)
-#endif
 
 #ifdef CONFIG_SEC_NFC_LDO_CONTROL
 #define NFC_I2C_LDO_ON	1
@@ -190,12 +182,7 @@ enum sec_nfc_mode {
 	SEC_NFC_MODE_COUNT,
 };
 
-#ifdef CONFIG_SEC_NFC_PRODUCT_N3
-enum sec_nfc_power {
-	SEC_NFC_PW_OFF = 0,
-	SEC_NFC_PW_ON,
-};
-#elif defined(CONFIG_SEC_NFC_PRODUCT_N5)
+#ifdef CONFIG_SEC_NFC_PRODUCT_N5
 enum sec_nfc_power {
 	SEC_NFC_PW_ON = 0,
 	SEC_NFC_PW_OFF,

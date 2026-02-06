@@ -605,12 +605,7 @@ static long sec_nfc_ioctl(struct file *file, unsigned int cmd,
 
 		break;
 
-#if defined(CONFIG_SEC_NFC_PRODUCT_N3)
-	case SEC_NFC_SLEEP:
-	case SEC_NFC_WAKEUP:
-		break;
-
-#elif defined(CONFIG_SEC_NFC_PRODUCT_N5)
+#if defined(CONFIG_SEC_NFC_PRODUCT_N5)
 	case SEC_NFC_SLEEP:
 		if (info->mode != SEC_NFC_MODE_BOOTLOADER) {
 			if(wake_lock_active(&info->nfc_wake_lock))
