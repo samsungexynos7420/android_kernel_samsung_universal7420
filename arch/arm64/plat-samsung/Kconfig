@@ -4,33 +4,4 @@
 #
 # Licensed under GPLv2
 
-config PLAT_SAMSUNG
-	bool
-	depends on PLAT_S3C24XX || ARCH_S3C64XX || PLAT_S5P
-	default y
-	select GENERIC_IRQ_CHIP
-	select NO_IOPORT
-	help
-	  Base platform code for all Samsung SoC based systems
-
-config PLAT_S5P
-	bool
-	depends on (ARCH_S5P64X0 || ARCH_S5PC100 || ARCH_S5PV210 || ARCH_EXYNOS)
-	default y
-	select ARCH_REQUIRE_GPIOLIB
-	select ARM_GIC if ARCH_EXYNOS
-	select ARM_VIC if !ARCH_EXYNOS
-	select GIC_NON_BANKED if ARCH_EXYNOS4
-	select NO_IOPORT
-	select PLAT_SAMSUNG
-	select S3C_GPIO_TRACK
-	select S5P_GPIO_DRVSTR
-	select SAMSUNG_CLKSRC if !COMMON_CLK
-	select SAMSUNG_GPIOLIB_4BIT
-	select SAMSUNG_IRQ_VIC_TIMER
-	help
-	  Base platform code for Samsung's S5P series SoC.
-
-if PLAT_SAMSUNG
-
-endif
+# Dummy file
