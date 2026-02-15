@@ -15,5 +15,5 @@ else
 	obj-$(CONFIG_SOC_EXYNOS5422)		+= clk-exynos5422.o init-exynos5422.o
 	obj-$(CONFIG_SOC_EXYNOS5440)		+= clk-exynos5440.o
 endif
-	obj-$(CONFIG_ARCH_EXYNOS)		+= clk-exynos-audss.o
-	obj-$(CONFIG_PWM_SAMSUNG)		+= clk-exynos-pwm.o
+obj-$(CONFIG_ARCH_EXYNOS)		+= clk-exynos-audss.o
+obj-$(CONFIG_PWM_SAMSUNG)		+= clk-exynos-pwm.o
