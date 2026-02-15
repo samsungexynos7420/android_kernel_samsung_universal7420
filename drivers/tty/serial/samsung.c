@@ -2192,7 +2192,7 @@ static int s3c24xx_serial_probe(struct platform_device *pdev)
 			return -ENOMEM;
 		}
 
-		ent = proc_create("log", 440, bt_log_dir, &proc_fops_btlog);
+		ent = proc_create("log", 0440, bt_log_dir, &proc_fops_btlog);
 		if (ent == NULL) {
 			pr_err("Unable to create /proc/%s/log entry\n", PROC_DIR);
 			return -ENOMEM;
