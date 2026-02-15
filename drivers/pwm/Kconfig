@@ -117,7 +117,7 @@ config PWM_PXA
 
 config PWM_SAMSUNG
 	tristate "Samsung PWM support"
-	depends on PLAT_SAMSUNG
+	depends on ARCH_EXYNOS
 	help
 	  Generic PWM framework driver for Samsung.
 
