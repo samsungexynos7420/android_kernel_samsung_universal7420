@@ -48,12 +48,6 @@ obj-$(CONFIG_SOC_EXYNOS7420)	+= exynos-smc.o
 
 # device support
 
-obj-$(CONFIG_EXYNOS5_SETUP_MIPIPHY)	+= setup-exynos5-mipiphy.o
-
-ifneq ($(CONFIG_SOC_EXYNOS7580),y)
-obj-$(CONFIG_EXYNOS_CONTENT_PATH_PROTECTION) += secmem.o
-endif
-
 obj-$(CONFIG_MSM_HSIC_SYSMON) += hsic_sysmon.o
 obj-$(CONFIG_MSM_HSIC_SYSMON_TEST) += hsic_sysmon_test.o
 obj-$(CONFIG_MSM_SUBSYSTEM_RESTART) += subsystem_restart.o subsystem_notif.o

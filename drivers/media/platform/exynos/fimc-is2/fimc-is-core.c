@@ -33,8 +33,8 @@
 #include <linux/pm_qos.h>
 #include <linux/bug.h>
 #include <linux/v4l2-mediabus.h>
-#include <mach/devfreq.h>
-#include <mach/bts.h>
+#include <soc/samsung/devfreq.h>
+#include <soc/samsung/bts.h>
 #include <linux/gpio.h>
 
 #ifdef CONFIG_OF

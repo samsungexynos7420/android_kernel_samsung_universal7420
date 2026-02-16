@@ -20,7 +20,7 @@
 #include <linux/smc.h>
 
 #include <plat/cpu.h>
-#include <mach/devfreq.h>
+#include <soc/samsung/devfreq.h>
 
 #include "vpp_core.h"
 #include "../decon_helper.h"

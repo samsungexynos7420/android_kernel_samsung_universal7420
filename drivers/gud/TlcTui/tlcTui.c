@@ -27,7 +27,7 @@
 #include "tui-hal.h"
 
 #if defined(CONFIG_SECURE_OS_BOOSTER_API)
-#include <mach/secos_booster.h>
+#include <soc/samsung/secos_booster.h>
 #endif
 
 /* ------------------------------------------------------------- */

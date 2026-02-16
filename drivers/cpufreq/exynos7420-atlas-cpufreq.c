@@ -21,7 +21,7 @@
 #include <mach/regs-clock.h>
 #include <mach/regs-clock-exynos7420.h>
 #include <mach/regs-pmu.h>
-#include <mach/cpufreq.h>
+#include <soc/samsung/cpufreq.h>
 #include <mach/asv-exynos.h>
 #include <linux/of.h>
 

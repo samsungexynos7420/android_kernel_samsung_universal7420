@@ -23,7 +23,7 @@
 #include <asm/uaccess.h>
 #include <linux/buffer_head.h>
 
-#include <mach/cpufreq.h>
+#include <soc/samsung/cpufreq.h>
 #include <linux/suspend.h>
 #include <linux/exynos-ss.h>
 

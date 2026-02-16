@@ -20,7 +20,7 @@
 #include <mach/map.h>
 #include <mach/regs-clock.h>
 #include <mach/irqs.h>
-#include <mach/exynos5-mipiphy.h>
+#include <soc/samsung/exynos5-mipiphy.h>
 
 #include "fimc-is-config.h"
 #include "fimc-is-regs.h"

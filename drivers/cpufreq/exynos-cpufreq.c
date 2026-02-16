@@ -20,7 +20,7 @@
 
 #include <plat/cpu.h>
 
-#include <mach/cpufreq.h>
+#include <soc/samsung/cpufreq.h>
 
 static struct exynos_dvfs_info *exynos_info;
 

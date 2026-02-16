@@ -18,7 +18,7 @@
 #include <linux/suspend.h>
 #include <linux/debugfs.h>
 
-#include <mach/bts.h>
+#include <soc/samsung/bts.h>
 #include "regs-bts.h"
 
 void __iomem *drex0_va_base;

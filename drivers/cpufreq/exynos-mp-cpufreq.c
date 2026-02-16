@@ -40,7 +40,7 @@
 #include <asm/smp_plat.h>
 #include <asm/cputype.h>
 
-#include <mach/cpufreq.h>
+#include <soc/samsung/cpufreq.h>
 #include <mach/asv-exynos.h>
 #include <mach/apm-exynos.h>
 #include <mach/regs-pmu.h>
@@ -52,7 +52,7 @@
 #include "pmu_func.h"
 #endif
 
-#include <mach/devfreq.h>
+#include <soc/samsung/devfreq.h>
 
 #ifdef CONFIG_SOC_EXYNOS5422_REV_0
 #define POWER_COEFF_15P		57 /* percore param */

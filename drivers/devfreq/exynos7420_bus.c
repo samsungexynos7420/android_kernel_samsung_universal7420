@@ -13,7 +13,7 @@
 
 #include <plat/cpu.h>
 
-#include <mach/devfreq.h>
+#include <soc/samsung/devfreq.h>
 #include <mach/tmu.h>
 #include <mach/asv-exynos.h>
 #include <mach/apm-exynos.h>
