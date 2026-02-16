@@ -29,10 +29,10 @@ fimc-is-objs	:= fimc-is-core.o \
 obj-$(CONFIG_COMPANION_USE) += fimc-is-device-companion.o \
 				fimc-is-video-companion.o
 
-obj-$(CONFIG_VIDEO_EXYNOS_FIMC_IS) += fimc-is.o
-obj-$(CONFIG_VIDEO_EXYNOS_FIMC_IS) += sensor/
-obj-$(CONFIG_VIDEO_EXYNOS_FIMC_IS) += ischain/
-obj-$(CONFIG_VIDEO_EXYNOS_FIMC_IS) += vendor/
+obj-$(CONFIG_VIDEO_EXYNOS_FIMC_IS2) += fimc-is.o
+obj-$(CONFIG_VIDEO_EXYNOS_FIMC_IS2) += sensor/
+obj-$(CONFIG_VIDEO_EXYNOS_FIMC_IS2) += ischain/
+obj-$(CONFIG_VIDEO_EXYNOS_FIMC_IS2) += vendor/
 
 EXTRA_CFLAGS += -Idrivers/media/platform/exynos/fimc-is2
 EXTRA_CFLAGS += -Idrivers/media/platform/exynos/fimc-is2/include
