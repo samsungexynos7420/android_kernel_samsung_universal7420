@@ -41,7 +41,8 @@
 #include <asm/uaccess.h>
 #include <linux/nfc/sec_nfc.h>
 #ifdef CONFIG_SEC_NFC_CLK_REQ
-#include <mach/exynos-fimc-is.h>
+#include <exynos-fimc-is.h>
+
 #include <linux/clk-provider.h>
 
 #include <linux/interrupt.h>
