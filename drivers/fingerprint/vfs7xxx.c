@@ -71,13 +71,9 @@
 #include <linux/amba/bus.h>
 #include <linux/amba/pl330.h>
 #if defined(CONFIG_SECURE_OS_BOOSTER_API)
-#if defined(CONFIG_SOC_EXYNOS8890)
 #include <soc/samsung/secos_booster.h>
-#else
-#include <mach/secos_booster.h>
 #endif
-#endif
-#include <mach/bts.h>
+#include <soc/samsung/bts.h>
 #include <linux/smc.h>
 
 struct sec_spi_info {

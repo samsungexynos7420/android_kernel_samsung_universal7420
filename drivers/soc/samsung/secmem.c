@@ -28,7 +28,7 @@
 #include <asm/memory.h>
 #include <asm/cacheflush.h>
 
-#include <mach/secmem.h>
+#include <soc/samsung/secmem.h>
 
 #define SECMEM_DEV_NAME	"s5p-smem"
 struct miscdevice secmem;

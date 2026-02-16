@@ -21,7 +21,7 @@
 #include <linux/suspend.h>
 
 #ifdef CONFIG_ARM_EXYNOS_MP_CPUFREQ
-#include <mach/cpufreq.h>
+#include <soc/samsung/cpufreq.h>
 #endif
 
 #include "smpboot.h"

@@ -39,9 +39,9 @@
 #include <linux/of_dma.h>
 #include <linux/amba/bus.h>
 #include <linux/amba/pl330.h>
-#include <mach/bts.h>
+#include <soc/samsung/bts.h>
 #if defined(CONFIG_SECURE_OS_BOOSTER_API)
-#include <mach/secos_booster.h>
+#include <soc/samsung/secos_booster.h>
 #endif
 
 struct sec_spi_info {

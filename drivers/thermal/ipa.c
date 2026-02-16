@@ -29,7 +29,7 @@
 #include <linux/math64.h>
 #include <linux/of.h>
 
-#include <mach/cpufreq.h>
+#include <soc/samsung/cpufreq.h>
 
 #include "platform_tables.h"
 #include "../cpufreq/cpu_load_metric.h"

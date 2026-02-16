@@ -15,7 +15,7 @@
 
 #include <mach/exynos-powermode.h>
 #include <mach/pm_domains.h>
-#include <mach/devfreq.h>
+#include <soc/samsung/devfreq.h>
 #include "pm_domains-exynos7420-cal.h"
 
 void __iomem *gpu_dvs_ctrl;

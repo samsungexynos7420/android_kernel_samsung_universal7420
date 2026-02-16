@@ -45,7 +45,7 @@
 #include <plat/cpu.h>
 
 #include <mach/map.h>
-#include <mach/exynos5-mipiphy.h>
+#include <soc/samsung/exynos5-mipiphy.h>
 
 #include "regs-dsim.h"
 #include "dsim.h"

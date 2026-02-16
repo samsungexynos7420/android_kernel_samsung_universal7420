@@ -36,7 +36,7 @@
 #include <asm/cputime.h>
 
 #ifdef CONFIG_ARM_EXYNOS_MP_CPUFREQ
-#include <mach/cpufreq.h>
+#include <soc/samsung/cpufreq.h>
 #endif
 #include "cpu_load_metric.h"
 #ifdef CONFIG_PMU_COREMEM_RATIO

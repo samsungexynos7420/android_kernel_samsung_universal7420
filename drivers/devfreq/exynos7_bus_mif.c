@@ -20,7 +20,7 @@
 #include <linux/workqueue.h>
 #include <linux/exynos-ss.h>
 #include <mach/tmu.h>
-#include <mach/devfreq.h>
+#include <soc/samsung/devfreq.h>
 #include <mach/asv-exynos.h>
 #include <mach/apm-exynos.h>
 #include <mach/regs-clock-exynos7420.h>
@@ -30,7 +30,7 @@
 #include "exynos_ppmu_fw.h"
 #include "devfreq_exynos.h"
 #include "governor.h"
-#include <mach/bts.h>
+#include <soc/samsung/bts.h>
 
 #define DEVFREQ_MIF_REBOOT_FREQ	(1672000/2)
 #define DEVFREQ_INITIAL_FREQ	(3104000/2)

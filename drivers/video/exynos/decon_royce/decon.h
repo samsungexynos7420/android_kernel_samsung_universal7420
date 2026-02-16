@@ -31,8 +31,8 @@
 #include <media/v4l2-device.h>
 #include <media/videobuf2-core.h>
 #include <media/exynos_mc.h>
-#include <mach/devfreq.h>
-#include <mach/bts.h>
+#include <soc/samsung/devfreq.h>
+#include <soc/samsung/bts.h>
 
 #include "regs-decon.h"
 #include "decon_common.h"

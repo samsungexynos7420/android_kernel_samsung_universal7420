@@ -43,7 +43,7 @@
 #include <linux/exynos-ss.h>
 #include <plat/cpu.h>
 #include <mach/tmu.h>
-#include <mach/cpufreq.h>
+#include <soc/samsung/cpufreq.h>
 #include <mach/asv-exynos.h>
 #include <mach/exynos-pm.h>
 #include "cal_tmu7420.h"

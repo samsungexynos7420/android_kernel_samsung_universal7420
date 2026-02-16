@@ -43,7 +43,7 @@
 #include <crypto/scatterwalk.h>
 
 #ifdef CONFIG_EXYNOS_CONTENT_PATH_PROTECTION
-#include <mach/secmem.h>
+#include <soc/samsung/secmem.h>
 #endif
 
 #include "ace.h"
