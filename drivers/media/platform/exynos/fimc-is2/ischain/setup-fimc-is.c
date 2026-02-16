@@ -25,7 +25,7 @@
 #include <mach/regs-clock.h>
 #include <plat/map-s5p.h>
 #include <plat/cpu.h>
-#include <mach/exynos-fimc-is.h>
+#include <exynos-fimc-is.h>
 #ifdef CONFIG_OF
 #include <linux/of_gpio.h>
 #endif

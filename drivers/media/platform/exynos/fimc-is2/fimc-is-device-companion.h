@@ -12,8 +12,8 @@
 #ifndef FIMC_IS_DEVICE_COMPANION_H
 #define FIMC_IS_DEVICE_COMPANION_H
 
-#include <mach/exynos-fimc-is-sensor.h>
-#include <mach/exynos-fimc-is-companion.h>
+#include <exynos-fimc-is-sensor.h>
+#include <exynos-fimc-is-companion.h>
 #include <linux/interrupt.h>
 #include "fimc-is-video.h"
 #include "fimc-is-config.h"

@@ -10,3 +10,4 @@ obj-$(CONFIG_ESE_P3_LSI)		+= ese_p3.o
 obj-$(CONFIG_ESE_GEM_LSI)		+= ese_gem.o
 
 ccflags-$(CONFIG_NFC_DEBUG) := -DDEBUG
+EXTRA_CFLAGS += -Idrivers/media/platform/exynos/fimc-is2/include

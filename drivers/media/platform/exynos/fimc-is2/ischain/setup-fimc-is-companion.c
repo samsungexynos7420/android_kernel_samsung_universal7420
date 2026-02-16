@@ -31,8 +31,8 @@
 #include <linux/of_gpio.h>
 #endif
 
-#include <mach/exynos-fimc-is.h>
-#include <mach/exynos-fimc-is-sensor.h>
+#include <exynos-fimc-is.h>
+#include <exynos-fimc-is-sensor.h>
 
 #if defined(CONFIG_SOC_EXYNOS7420)
 int exynos7420_fimc_is_companion_iclk_cfg(struct platform_device *pdev,
