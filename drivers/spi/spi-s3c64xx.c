@@ -47,9 +47,7 @@
 #undef CONFIG_ESE_SECURE_ENABLE
 #endif
 
-#ifdef CONFIG_EXYNOS_SPI_RESET_DURING_DSTOP
 static LIST_HEAD(drvdata_list);
-#endif
 
 #define MAX_SPI_PORTS		8
 #define SPI_AUTOSUSPEND_TIMEOUT		(100)
@@ -408,7 +406,9 @@ static int s3c64xx_spi_prepare_transfer(struct spi_master *spi)
 {
 	struct s3c64xx_spi_driver_data *sdd = spi_master_get_devdata(spi);
 	struct s3c64xx_spi_info *sci = sdd->cntrlr_info;
+#ifdef CONFIG_PM_RUNTIME
 	int ret;
+#endif
 
 #ifndef CONFIG_PM_RUNTIME
 	if (sci->dma_mode == DMA_MODE) {
@@ -418,9 +418,11 @@ static int s3c64xx_spi_prepare_transfer(struct spi_master *spi)
 	}
 #endif
 
+#ifdef CONFIG_PM_RUNTIME
 	ret = pm_runtime_get_sync(&sdd->pdev->dev);
 	if(ret < 0)
 		return ret;
+#endif
 
 	if (sci->need_hw_init)
 		s3c64xx_spi_hwinit(sdd, sdd->port_id);
@@ -431,7 +433,9 @@ static int s3c64xx_spi_prepare_transfer(struct spi_master *spi)
 static int s3c64xx_spi_unprepare_transfer(struct spi_master *spi)
 {
 	struct s3c64xx_spi_driver_data *sdd = spi_master_get_devdata(spi);
+#ifdef CONFIG_PM_RUNTIME
 	int ret;
+#endif
 
 #ifndef CONFIG_PM_RUNTIME
 	struct s3c64xx_spi_info *sci = sdd->cntrlr_info;
@@ -449,13 +453,17 @@ static int s3c64xx_spi_unprepare_transfer(struct spi_master *spi)
 		sdd->ops->release((enum dma_ch)sdd->tx_dma.ch,
 						&s3c64xx_spi_dma_client);
 	#endif
+		sdd->rx_dma.ch = NULL;
+		sdd->tx_dma.ch = NULL;
 	}
 #endif
 
+#ifdef CONFIG_PM_RUNTIME
 	pm_runtime_mark_last_busy(&sdd->pdev->dev);
 	ret = pm_runtime_put_autosuspend(&sdd->pdev->dev);
 	if(ret < 0)
 		return ret;
+#endif
 
 	return 0;
 }
@@ -1187,7 +1195,9 @@ static int s3c64xx_spi_setup(struct spi_device *spi)
 		goto setup_exit;
 	}
 
+#ifdef CONFIG_PM_RUNTIME
 	pm_runtime_get_sync(&sdd->pdev->dev);
+#endif
 
 	/* Check if we can provide the requested rate */
 	if (!sdd->port_conf->clk_from_cmu) {
@@ -1232,8 +1242,10 @@ static int s3c64xx_spi_setup(struct spi_device *spi)
 
 	disable_cs(sdd, spi);
 
+#ifdef CONFIG_PM_RUNTIME
 	pm_runtime_mark_last_busy(&sdd->pdev->dev);
 	pm_runtime_put_autosuspend(&sdd->pdev->dev);
+#endif
 
 	return 0;
 
@@ -1473,7 +1485,7 @@ static inline struct s3c64xx_spi_port_config *s3c64xx_spi_get_port_config(
 			 platform_get_device_id(pdev)->driver_data;
 }
 
-#ifdef CONFIG_EXYNOS_SPI_RESET_DURING_DSTOP
+#ifdef CONFIG_CPU_IDLE
 static int s3c64xx_spi_notifier(struct notifier_block *self,
 				unsigned long cmd, void *v)
 {
@@ -1492,7 +1504,7 @@ static int s3c64xx_spi_notifier(struct notifier_block *self,
 static struct notifier_block s3c64xx_spi_notifier_block = {
 	.notifier_call = s3c64xx_spi_notifier,
 };
-#endif /* CONFIG_EXYNOS_SPI_RESET_DURING_DSTOP */
+#endif /* CONFIG_CPU_IDLE */
 
 static int s3c64xx_spi_probe(struct platform_device *pdev)
 {
@@ -1515,7 +1527,7 @@ static int s3c64xx_spi_probe(struct platform_device *pdev)
 		return -ENODEV;
 	}
 
-#ifndef CONFIG_VIDEO_EXYNOS_FIMC_IS
+#if !defined(CONFIG_VIDEO_EXYNOS_FIMC_IS) && !defined(CONFIG_VIDEO_EXYNOS_FIMC_IS2)
 	if (sci->domain != DOMAIN_TOP)
 		return -ENODEV;
 #endif
@@ -1612,9 +1624,10 @@ static int s3c64xx_spi_probe(struct platform_device *pdev)
 		ret = PTR_ERR(sdd->regs);
 		goto err0;
 	}
-
+	//maybe move this down a bit?
+#ifdef CONFIG_PM_RUNTIME
 	pm_runtime_use_autosuspend(&pdev->dev);
-
+#endif
 
 	if (sci->cfg_gpio && sci->cfg_gpio()) {
 		dev_err(&pdev->dev, "Unable to config gpio\n");
@@ -1738,8 +1751,10 @@ static int s3c64xx_spi_probe(struct platform_device *pdev)
 			sdd->regs + S3C64XX_SPI_INT_EN);
 	}
 
+#ifdef CONFIG_PM_RUNTIME
 	pm_runtime_mark_last_busy(&pdev->dev);
 	pm_runtime_put_sync(&pdev->dev);
+#endif
 
 	if (spi_register_master(master)) {
 		dev_err(&pdev->dev, "cannot register SPI master\n");
@@ -1747,17 +1762,17 @@ static int s3c64xx_spi_probe(struct platform_device *pdev)
 		goto err3;
 	}
 
-#ifdef CONFIG_EXYNOS_SPI_RESET_DURING_DSTOP
 	list_add_tail(&sci->node, &drvdata_list);
-#endif
 
 	sdd->is_probed = 1;
+#ifdef CONFIG_PM_RUNTIME
 	if (sci->domain == DOMAIN_TOP)
 		pm_runtime_set_autosuspend_delay(&pdev->dev,
 					sdd->spi_clkoff_time);
 	else
 		pm_runtime_set_autosuspend_delay(&pdev->dev,
 					SPI_AUTOSUSPEND_TIMEOUT);
+#endif
 
 	dev_dbg(&pdev->dev, "Samsung SoC SPI Driver loaded for Bus SPI-%d with %d Slaves attached\n",
 					sdd->port_id, master->num_chipselect);
@@ -1768,7 +1783,9 @@ static int s3c64xx_spi_probe(struct platform_device *pdev)
 	return 0;
 
 err3:
+#ifdef CONFIG_PM_RUNTIME
 	pm_runtime_disable(&pdev->dev);
+#endif
 	clk_disable_unprepare(sdd->src_clk);
 err2:
 	clk_disable_unprepare(sdd->clk);
@@ -1787,7 +1804,9 @@ static int s3c64xx_spi_remove(struct platform_device *pdev)
 	if (sdd->port_id == SENSOR_HUB_PORT)
 		iounmap(clk_test);
 
+#ifdef CONFIG_PM_RUNTIME
 	pm_runtime_disable(&pdev->dev);
+#endif
 
 	spi_unregister_master(master);
 
@@ -1877,7 +1896,7 @@ static int s3c64xx_spi_suspend(struct device *dev)
 	if (sci->dma_mode != DMA_MODE)
 		return 0;
 
-	pr_info("spi suspend is handled in device suspend, dma mode = %d, bus_num = %d\n",
+	dev_dbg("spi suspend is handled in device suspend, dma mode = %d, bus_num = %d\n",
 			sci->dma_mode, master->bus_num);
 	return s3c64xx_spi_suspend_operation(dev);
 }
@@ -1891,7 +1910,7 @@ static int s3c64xx_spi_suspend_noirq(struct device *dev)
 	if (sci->dma_mode == DMA_MODE)
 		return 0;
 
-	pr_info("spi suspend is handled in suspend_noirq, dma mode = %d, bus_num = %d\n",
+	dev_dbg("spi suspend is handled in suspend_noirq, dma mode = %d, bus_num = %d\n",
 			sci->dma_mode, master->bus_num);
 	return s3c64xx_spi_suspend_operation(dev);
 }
@@ -1905,7 +1924,7 @@ static int s3c64xx_spi_resume(struct device *dev)
 	if (sci->dma_mode != DMA_MODE)
 		return 0;
 
-	pr_info("spi resume is handled in device resume, dma mode = %d, bus_num = %d\n",
+	dev_dbg("spi resume is handled in device resume, dma mode = %d, bus_num = %d\n",
 			sci->dma_mode, master->bus_num);
 	return s3c64xx_spi_resume_operation(dev);
 }
@@ -1919,7 +1938,7 @@ static int s3c64xx_spi_resume_noirq(struct device *dev)
 	if (sci->dma_mode == DMA_MODE)
 		return 0;
 
-	pr_info("spi resume is handled in resume_noirq, dma mode = %d, bus_num = %d\n",
+	dev_dbg("spi resume is handled in resume_noirq, dma mode = %d, bus_num = %d\n",
 			sci->dma_mode, master->bus_num);
 	return s3c64xx_spi_resume_operation(dev);
 }
@@ -2007,7 +2026,7 @@ static int s3c64xx_spi_runtime_resume(struct device *dev)
 		clk_prepare_enable(sdd->clk);
 	}
 
-#ifdef CONFIG_VIDEO_EXYNOS_FIMC_IS
+#if defined(CONFIG_VIDEO_EXYNOS_FIMC_IS) || defined(CONFIG_VIDEO_EXYNOS_FIMC_IS2)
 	else if (sci->domain == DOMAIN_CAM1 || sci->domain == DOMAIN_ISP) {
 		clk_prepare_enable(sdd->src_clk);
 		clk_prepare_enable(sdd->clk);
@@ -2174,7 +2193,7 @@ MODULE_ALIAS("platform:s3c64xx-spi");
 
 static int __init s3c64xx_spi_init(void)
 {
-#ifdef CONFIG_EXYNOS_SPI_RESET_DURING_DSTOP
+#ifdef CONFIG_CPU_IDLE
 	exynos_pm_register_notifier(&s3c64xx_spi_notifier_block);
 #endif
 	return platform_driver_probe(&s3c64xx_spi_driver, s3c64xx_spi_probe);
