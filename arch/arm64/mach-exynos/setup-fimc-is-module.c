@@ -29,9 +29,7 @@
 #ifdef CONFIG_OF
 #include <linux/of_gpio.h>
 #endif
-#if defined(CONFIG_SOC_EXYNOS5433)
-#include <mach/regs-clock-exynos5433.h>
-#elif defined(CONFIG_SOC_EXYNOS7420)
+#if defined(CONFIG_SOC_EXYNOS7420)
 #include <mach/regs-clock-exynos7420.h>
 #endif
 
