@@ -26,7 +26,7 @@
 #include <linux/of_address.h>
 #include <linux/smc.h>
 #include <video/videonode.h>
-#include <mach/bts.h>
+#include <soc/samsung/bts.h>
 #include <media/videobuf2-core.h>
 #include <media/v4l2-ctrls.h>
 #include <media/v4l2-device.h>

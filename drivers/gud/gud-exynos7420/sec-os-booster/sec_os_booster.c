@@ -33,8 +33,8 @@
 #include <linux/irq.h>
 #include <linux/suspend.h>
 
-#include <mach/secos_booster.h>
-#include <mach/cpufreq.h>
+#include <soc/samsung/secos_booster.h>
+#include <soc/samsung/cpufreq.h>
 
 #include "platform.h"
 

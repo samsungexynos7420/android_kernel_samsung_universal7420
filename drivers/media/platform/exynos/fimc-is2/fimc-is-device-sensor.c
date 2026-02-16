@@ -33,7 +33,7 @@
 #include <linux/i2c.h>
 
 #include <mach/map.h>
-#include <mach/devfreq.h>
+#include <soc/samsung/devfreq.h>
 #include <mach/regs-clock.h>
 
 #include "fimc-is-core.h"

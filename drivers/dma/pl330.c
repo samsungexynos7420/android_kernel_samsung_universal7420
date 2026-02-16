@@ -37,7 +37,7 @@
 #include <linux/exynos_ion.h>
 #include <linux/smc.h>
 
-#include <mach/cpufreq.h>
+#include <soc/samsung/cpufreq.h>
 
 #define MC_FC_SECURE_DMA	((uint32_t)(0x81000010))
 

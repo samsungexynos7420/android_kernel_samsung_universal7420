@@ -16,7 +16,7 @@
 #include <linux/clk.h>
 #include <mach/exynos-pm.h>
 #include <linux/smc.h>
-#include <mach/bts.h>
+#include <soc/samsung/bts.h>
 
 #include "ufshcd.h"
 #include "unipro.h"

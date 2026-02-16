@@ -50,7 +50,7 @@
 /******************************************/
 // Samsung Custom Header
 #ifdef CONFIG_ARM_EXYNOS_MP_CPUFREQ
-#include <mach/cpufreq.h>
+#include <soc/samsung/cpufreq.h>
 #endif
 
 #ifdef CONFIG_BATTERY_SAMSUNG

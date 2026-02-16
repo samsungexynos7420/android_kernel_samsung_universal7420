@@ -23,7 +23,7 @@
 
 #include <linux/exynos_iovmm.h>
 
-#include <mach/bts.h>
+#include <soc/samsung/bts.h>
 
 #include "exynos-iommu-log.h"
 

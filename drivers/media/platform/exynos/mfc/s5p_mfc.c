@@ -30,8 +30,8 @@
 #include <linux/exynos_ion.h>
 #include <linux/delay.h>
 #include <linux/smc.h>
-#include <mach/bts.h>
-#include <mach/devfreq.h>
+#include <soc/samsung/bts.h>
+#include <soc/samsung/devfreq.h>
 #include <asm/cacheflush.h>
 
 #if defined(CONFIG_SOC_EXYNOS5422)

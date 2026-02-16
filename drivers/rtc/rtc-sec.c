@@ -29,7 +29,7 @@
 #include <linux/mfd/samsung/s2mps13.h>
 #include <linux/mfd/samsung/s2mps15.h>
 #include <linux/mfd/samsung/s2mpu03.h>
-#include <mach/cpufreq.h>
+#include <soc/samsung/cpufreq.h>
 #if defined(CONFIG_RTC_ALARM_BOOT)
 #include <linux/reboot.h>
 #include <linux/wakelock.h>

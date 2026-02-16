@@ -44,10 +44,10 @@
 #include <linux/exynos-ss.h>
 #include <plat/cpu.h>
 #include <mach/tmu.h>
-#include <mach/cpufreq.h>
+#include <soc/samsung/cpufreq.h>
 #include <mach/asv-exynos.h>
 #include <mach/exynos-pm.h>
-#include <mach/devfreq.h>
+#include <soc/samsung/devfreq.h>
 #include "cal_tmu.h"
 
 #ifdef CONFIG_ARM_EXYNOS_MP_CPUFREQ

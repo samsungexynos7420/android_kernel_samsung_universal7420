@@ -32,7 +32,7 @@
 #include <sound/pcm_params.h>
 #include <sound/initval.h>
 
-#include <mach/exynos-audio.h>
+#include <soc/samsung/exynos-audio.h>
 
 #include "i2s.h"
 #include "i2s-regs.h"
