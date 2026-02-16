@@ -11,8 +11,8 @@
  */
 
 #include <linux/sched.h>
-#include <mach/exynos-fimc-is-companion.h>
-#include <mach/exynos-fimc-is.h>
+#include <exynos-fimc-is-companion.h>
+#include <exynos-fimc-is.h>
 #include <media/exynos_mc.h>
 #ifdef CONFIG_OF
 #include <linux/of.h>

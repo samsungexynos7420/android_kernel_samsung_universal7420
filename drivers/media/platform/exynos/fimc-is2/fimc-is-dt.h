@@ -13,8 +13,8 @@
 #define FIMC_IS_DT_H
 
 #include "fimc-is-spi.h"
-#include <mach/exynos-fimc-is-module.h>
-#include <mach/exynos-fimc-is-sensor.h>
+#include <exynos-fimc-is-module.h>
+#include <exynos-fimc-is-sensor.h>
 
 #define DT_READ_U32(node, key, value) do {\
 		pprop = key; \

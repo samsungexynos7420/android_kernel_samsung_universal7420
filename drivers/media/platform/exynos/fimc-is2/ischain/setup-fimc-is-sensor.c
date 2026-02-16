@@ -32,9 +32,9 @@
 #include <mach/regs-clock-exynos7420.h>
 #endif
 
-#include <mach/exynos-fimc-is.h>
-#include <mach/exynos-fimc-is-sensor.h>
-#include <mach/exynos-fimc-is-module.h>
+#include <exynos-fimc-is.h>
+#include <exynos-fimc-is-sensor.h>
+#include <exynos-fimc-is-module.h>
 
 char *clk_g_list[CLK_NUM] = {
 	"cam_pll",
