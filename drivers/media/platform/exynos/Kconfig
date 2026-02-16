@@ -14,12 +14,7 @@ if VIDEO_EXYNOS
 	source "drivers/media/platform/exynos/gsc/Kconfig"
 	source "drivers/media/platform/exynos/mfc/Kconfig"
 	source "drivers/media/platform/exynos/hevc/Kconfig"
-if SOC_EXYNOS7420
 	source "drivers/media/platform/exynos/fimc-is2/Kconfig"
-endif
-if !SOC_EXYNOS7420
-	source "drivers/media/platform/exynos/fimc-is/Kconfig"
-endif
 	source "drivers/media/platform/exynos/scaler/Kconfig"
 	source "drivers/media/platform/exynos/fimg2d/Kconfig"
 	source "drivers/media/platform/exynos/jpeg4/Kconfig"
