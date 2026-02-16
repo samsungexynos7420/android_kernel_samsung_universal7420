@@ -21,98 +21,6 @@
 #define MIPI_PHY_SRESETN				(1 << 1)
 #define MIPI_PHY_MRESETN				(1 << 2)
 
-#if defined(CONFIG_SOC_EXYNOS5433)
-static __inline__ u32 exynos5_phy0_is_running(u32 reset)
-{
-	u32 ret = 0;
-
-	/* When you try to disable DSI, CHECK CAM0 PD STATUS */
-	if (reset == MIPI_PHY_MRESETN) {
-		if (readl(EXYNOS_PMU_CAM0_STATUS) & 0x1)
-			ret = __raw_readl(S5P_VA_SYSREG_CAM0 + 0x1014) & MIPI_PHY_BIT0;
-	/* When you try to disable CSI, CHECK DISP PD STATUS */
-	} else if (reset == MIPI_PHY_SRESETN) {
-		if (readl(EXYNOS_PMU_DISP_STATUS) & 0x1)
-			ret = __raw_readl(S5P_VA_SYSREG_DISP + 0x000C) & MIPI_PHY_BIT0;
-	}
-
-	return ret;
-}
-
-static int __exynos5_mipi_phy_control(int id, bool on, u32 reset)
-{
-	static DEFINE_SPINLOCK(lock);
-	void __iomem *addr_phy;
-	void __iomem *addr_reset;
-	unsigned long flags;
-	u32 cfg;
-
-	addr_phy = EXYNOS_PMU_MIPI_PHY_CONTROL(id);
-
-	spin_lock_irqsave(&lock, flags);
-
-	/* PHY reset */
-	switch(id) {
-	case 0:
-		if (reset == MIPI_PHY_SRESETN) {
-			if (readl(EXYNOS_PMU_CAM0_STATUS) & 0x1) {
-				addr_reset = S5P_VA_SYSREG_CAM0 + 0x1014;
-				cfg = __raw_readl(addr_reset);
-				cfg = on ? (cfg | MIPI_PHY_BIT0) : (cfg & ~MIPI_PHY_BIT0);
-				__raw_writel(cfg, addr_reset);
-			}
-		} else {
-			if (readl(EXYNOS_PMU_DISP_STATUS) & 0x1) {
-				addr_reset = S5P_VA_SYSREG_DISP + 0x000c;
-				cfg = __raw_readl(addr_reset);
-				cfg = on ? (cfg | MIPI_PHY_BIT0) : (cfg & ~MIPI_PHY_BIT0);
-				__raw_writel(cfg, addr_reset);
-			}
-		}
-		break;
-	case 1:
-		if (readl(EXYNOS_PMU_CAM0_STATUS) & 0x1) {
-			addr_reset = S5P_VA_SYSREG_CAM0 + 0x1014;
-			cfg = __raw_readl(addr_reset);
-			cfg = on ? (cfg | MIPI_PHY_BIT1) : (cfg & ~MIPI_PHY_BIT1);
-			__raw_writel(cfg, addr_reset);
-		}
-		break;
-	case 2:
-		if (readl(EXYNOS_PMU_CAM1_STATUS) & 0x1) {
-			addr_reset = S5P_VA_SYSREG_CAM1 + 0x1020;
-			cfg = __raw_readl(addr_reset);
-			cfg = on ? (cfg | MIPI_PHY_BIT0) : (cfg & ~MIPI_PHY_BIT0);
-			__raw_writel(cfg, addr_reset);
-		}
-		break;
-	default:
-		pr_err("id(%d) is invalid", id);
-		spin_unlock_irqrestore(&lock, flags);
-		return -EINVAL;
-	}
-
-	/* PHY PMU enable */
-	cfg = __raw_readl(addr_phy);
-
-	if (on)
-		cfg |= MIPI_PHY_ENABLE;
-	else {
-		if (id == 0) {
-			if (!exynos5_phy0_is_running(reset))
-				cfg &= ~MIPI_PHY_ENABLE;
-		} else {
-			cfg &= ~MIPI_PHY_ENABLE;
-		}
-	}
-
-	__raw_writel(cfg, addr_phy);
-	spin_unlock_irqrestore(&lock, flags);
-
-	return 0;
-}
-#else
-
 static int dphy_m4s4_status = 0;
 
 static int __exynos5_mipi_phy_control(int id, bool on, u32 reset)
@@ -302,7 +210,6 @@ p_err:
 	spin_unlock_irqrestore(&lock, flags);
 	return ret;
 }
-#endif
 
 int exynos5_csis_phy_enable(int id, bool on)
 {
