@@ -38,13 +38,13 @@
 
 #include <mach/map.h>
 #include <mach/regs-clock.h>
-#include <mach/devfreq.h>
+#include <soc/samsung/devfreq.h>
 #include <linux/regulator/consumer.h>
 #include <linux/pinctrl/consumer.h>
 #include <linux/pinctrl/pinctrl-samsung.h>
 #include <linux/gpio.h>
 #if defined(CONFIG_SOC_EXYNOS3470)
-#include <mach/bts.h>
+#include <soc/samsung/bts.h>
 #endif
 
 #include "fimc-is-binary.h"

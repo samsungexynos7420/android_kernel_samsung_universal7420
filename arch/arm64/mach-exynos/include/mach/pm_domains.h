@@ -31,7 +31,7 @@
 
 #include <mach/regs-clock.h>
 #include <mach/regs-pmu.h>
-#include <mach/bts.h>
+#include <soc/samsung/bts.h>
 
 #define PM_DOMAIN_PREFIX	"PM DOMAIN: "
 

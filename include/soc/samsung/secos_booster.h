@@ -1,4 +1,4 @@
-/* linux/arch/arm/mach-exynos/include/mach/secos_booster.h
+/* include/soc/samsung/secos_booster.h
 *
 * Copyright (c) 2014 Samsung Electronics Co., Ltd.
 *              http://www.samsung.com/

@@ -23,7 +23,7 @@
 #include <mach/exynos-pm.h>
 #endif
 
-#include <mach/bts.h>
+#include <soc/samsung/bts.h>
 #include "cal_bts.h"
 #include "regs-bts.h"
 

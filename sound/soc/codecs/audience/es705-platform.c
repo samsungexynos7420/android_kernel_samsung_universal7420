@@ -31,7 +31,7 @@
 #endif
 #ifdef CONFIG_ARCH_EXYNOS /* EXYNOS CLK ENABLE */
 #include <linux/io.h>
-#include <mach/exynos-audio.h>
+#include <soc/samsung/exynos-audio.h>
 #endif
 
 static int stimulate_only_once;

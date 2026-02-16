@@ -8,4 +8,28 @@ if SOC_SAMSUNG
 config EXYNOS_CHIPID
 	bool "Exynos Chip ID Driver Support"
 	depends on ARCH_EXYNOS
+
+config EXYNOS5_SETUP_MIPIPHY
+	bool
+	depends on (VIDEO_EXYNOS_FIMC_IS || DECON_MIPI_DSI || EXYNOS_MIPI_DSI)
+	default y
+	help
+		Compile in common setup code for MIPI-CSIS devices
+	
+config EXYNOS5_DYNAMIC_CPU_HOTPLUG
+	bool "Dynamic CPU Hotplug support"
+	depends on !SOC_EXYNOS7580
+	depends on CPU_FREQ
+	help
+		Enable Dynamic CPU Hotplug
+
+config EXYNOS5_DYNAMIC_CPU_HOTPLUG_SLEEP_PREPARE
+        int "Activate number of cores when sleep"
+        depends on EXYNOS5_DYNAMIC_CPU_HOTPLUG
+        default 1
+        help
+		When gose to sleep, activate some cores for performace
+		during sleep/wakeup sequence.
+		This config set the number of activate cores.
+		defaut value is "4" to activate all cores in cluster0.
 endif #SOC_SAMSUNG

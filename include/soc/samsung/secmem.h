@@ -1,4 +1,4 @@
-/* linux/arch/arm/mach-exynos/include/mach/secmem.h
+/* include/soc/samsung/secmem.h
  *
  * Copyright (c) 2013 Samsung Electronics Co., Ltd.
  *		http://www.samsung.com

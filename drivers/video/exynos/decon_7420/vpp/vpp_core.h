@@ -25,7 +25,7 @@
 #include <linux/of_address.h>
 #include <linux/exynos_iovmm.h>
 #include <video/videonode.h>
-#include <mach/bts.h>
+#include <soc/samsung/bts.h>
 #include <media/exynos_mc.h>
 #include <mach/regs-clock-exynos7420.h>
 

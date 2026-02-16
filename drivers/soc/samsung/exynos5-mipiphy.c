@@ -14,7 +14,7 @@
 #include <linux/io.h>
 #include <linux/spinlock.h>
 #include <mach/regs-clock.h>
-#include <mach/exynos5-mipiphy.h>
+#include <soc/samsung/exynos5-mipiphy.h>
 
 #define MIPI_PHY_BIT0					(1 << 0)
 #define MIPI_PHY_BIT1					(1 << 1)

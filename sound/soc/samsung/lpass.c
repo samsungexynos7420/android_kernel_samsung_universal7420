@@ -35,7 +35,7 @@
 
 #include <mach/map.h>
 #include <mach/regs-pmu.h>
-#include <mach/cpufreq.h>
+#include <soc/samsung/cpufreq.h>
 
 #include "lpass.h"
 

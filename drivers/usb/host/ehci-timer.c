@@ -15,7 +15,7 @@
 /* This file is part of ehci-hcd.c */
 
 #ifdef CONFIG_MDM_HSIC_PM
-#include <mach/bts.h>
+#include <soc/samsung/bts.h>
 #endif
 
 /*-------------------------------------------------------------------------*/
