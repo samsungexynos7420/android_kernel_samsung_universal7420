@@ -1,18 +1,18 @@
 config CAMERA_EEPROM_SUPPORT_REAR
         bool "Enable eeprom for rear cam"
-        depends on VIDEO_EXYNOS_FIMC_IS
+        depends on VIDEO_EXYNOS_FIMC_IS2
         default n
         help
           Enable eeprom for rear cam.
 config CAMERA_EEPROM_SUPPORT_FRONT
         bool "Enable eeprom for front cam"
-        depends on VIDEO_EXYNOS_FIMC_IS
+        depends on VIDEO_EXYNOS_FIMC_IS2
         default n
         help
           Enable eeprom for front cam.
 config COMPANION_USE
         bool "Use companion"
-        depends on VIDEO_EXYNOS_FIMC_IS
+        depends on VIDEO_EXYNOS_FIMC_IS2
         default n
         help
           Use companion.
@@ -42,7 +42,7 @@ config COMPANION_STANDBY_USE
           Use companion standby.
 config OIS_USE
         bool "Use ois"
-        depends on VIDEO_EXYNOS_FIMC_IS
+        depends on VIDEO_EXYNOS_FIMC_IS2
         default n
         help
           Use ois.
@@ -54,49 +54,49 @@ config OIS_FW_UPDATE_THREAD_USE
           Enable ois fw update thread.
 config AF_HOST_CONTROL
         bool "Enable host af control"
-        depends on VIDEO_EXYNOS_FIMC_IS
+        depends on VIDEO_EXYNOS_FIMC_IS2
         default n
         help
           Enable host af control.
 config CAMERA_ZERO
         bool "This camera is zero project"
-        depends on VIDEO_EXYNOS_FIMC_IS
+        depends on VIDEO_EXYNOS_FIMC_IS2
         default n
         help
           This camera is zero project.
 config CAMERA_MARINE
         bool "This camera is marine project"
-        depends on VIDEO_EXYNOS_FIMC_IS
+        depends on VIDEO_EXYNOS_FIMC_IS2
         default n
         help
           This camera is marine project.
 config CAMERA_VLTE
         bool "This camera is vlte project"
-        depends on VIDEO_EXYNOS_FIMC_IS
+        depends on VIDEO_EXYNOS_FIMC_IS2
         default n
         help
           This camera is vlte project.
 config CAMERA_NOBLE
         bool "This camera is noble project"
-        depends on VIDEO_EXYNOS_FIMC_IS
+        depends on VIDEO_EXYNOS_FIMC_IS2
         default n
         help
           This camera is noble project.
 config CAMERA_ZENLTE
         bool "This camera is zenlte project"
-        depends on VIDEO_EXYNOS_FIMC_IS
+        depends on VIDEO_EXYNOS_FIMC_IS2
         default n
         help
           This camera is zenlte project.
 config CAMERA_ROYCE
         bool "This camera is royce project"
-        depends on VIDEO_EXYNOS_FIMC_IS
+        depends on VIDEO_EXYNOS_FIMC_IS2
         default n
         help
           This camera is royce project.
 config CAMERA_A8XE
         bool "This camera is a8xe project"
-        depends on VIDEO_EXYNOS_FIMC_IS
+        depends on VIDEO_EXYNOS_FIMC_IS2
         default n
         help
           This camera is a8xe project.

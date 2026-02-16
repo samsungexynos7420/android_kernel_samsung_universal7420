@@ -44,9 +44,9 @@ obj-$(CONFIG_MACH_UNIVERSAL7420)	+= mach-universal7420.o asv-exynos7420_cal.o
 obj-$(CONFIG_MACH_SMDK7580)		+= mach-smdk7580.o asv-exynos7580_cal.o
 obj-$(CONFIG_MACH_UNIVERSAL7580)	+= mach-universal7580.o asv-exynos7580_cal.o
 
-obj-$(CONFIG_VIDEO_EXYNOS_FIMC_IS)	+= setup-fimc-is.o
-obj-$(CONFIG_VIDEO_EXYNOS_FIMC_IS)	+= setup-fimc-is-sensor.o
-obj-$(CONFIG_VIDEO_EXYNOS_FIMC_IS)	+= setup-fimc-is-module.o
+obj-$(CONFIG_VIDEO_EXYNOS_FIMC_IS2)	+= setup-fimc-is.o
+obj-$(CONFIG_VIDEO_EXYNOS_FIMC_IS2)	+= setup-fimc-is-sensor.o
+obj-$(CONFIG_VIDEO_EXYNOS_FIMC_IS2)	+= setup-fimc-is-module.o
 obj-$(CONFIG_COMPANION_USE)		+= setup-fimc-is-companion.o
 
 obj-$(CONFIG_SOC_EXYNOS7420)	+= exynos-smc.o

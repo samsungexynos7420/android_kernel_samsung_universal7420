@@ -3,11 +3,7 @@ obj-$(CONFIG_VIDEO_EXYNOS_GSCALER_1_3)	+= gsc_1.3/
 obj-$(CONFIG_VIDEO_EXYNOS_GSCALER)	+= gsc/
 obj-$(CONFIG_VIDEO_EXYNOS_MFC)		+= mfc/
 obj-$(CONFIG_VIDEO_EXYNOS_HEVC)		+= hevc/
-ifeq ($(CONFIG_SOC_EXYNOS7420),y)
-	obj-$(CONFIG_VIDEO_EXYNOS_FIMC_IS)	+= fimc-is2/
-else
-	obj-$(CONFIG_VIDEO_EXYNOS_FIMC_IS)	+= fimc-is/
-endif
+obj-$(CONFIG_VIDEO_EXYNOS_FIMC_IS2)	+= fimc-is2/
 obj-$(CONFIG_VIDEO_EXYNOS_SCALER)	+= scaler/
 obj-$(CONFIG_VIDEO_EXYNOS_FIMG2D)	+= fimg2d/
 obj-$(CONFIG_VIDEO_EXYNOS_JPEG)		+= jpeg4/
