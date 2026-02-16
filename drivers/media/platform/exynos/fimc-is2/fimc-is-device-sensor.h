@@ -12,7 +12,7 @@
 #ifndef fimc_is_device_sensor_H
 #define fimc_is_device_sensor_H
 
-#include <mach/exynos-fimc-is-sensor.h>
+#include <exynos-fimc-is-sensor.h>
 #include "fimc-is-mem.h"
 #include "fimc-is-video.h"
 #include "fimc-is-resourcemgr.h"

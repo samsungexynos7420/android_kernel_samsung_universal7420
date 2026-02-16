@@ -34,7 +34,8 @@
 #include <linux/of_gpio.h>
 
 #include <linux/platform_data/spi-s3c64xx.h>
-#include <mach/exynos-fimc-is.h>
+#include <exynos-fimc-is.h>
+
 #include <linux/pinctrl/pinctrl-samsung.h>
 
 #include <linux/dma/dma-pl330.h>

@@ -35,7 +35,7 @@
 
 #include <mach/map.h>
 #include <mach/regs-clock.h>
-#include <mach/exynos-fimc-is-companion.h>
+#include <exynos-fimc-is-companion.h>
 
 #include "fimc-is-video.h"
 #include "fimc-is-dt.h"

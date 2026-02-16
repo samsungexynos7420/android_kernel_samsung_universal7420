@@ -23,7 +23,7 @@
 #include <linux/clkdev.h>
 #include <mach/map.h>
 #include <mach/regs-clock.h>
-#include <mach/exynos-fimc-is-module.h>
+#include <exynos-fimc-is-module.h>
 #include <plat/map-s5p.h>
 #include <plat/cpu.h>
 #ifdef CONFIG_OF
