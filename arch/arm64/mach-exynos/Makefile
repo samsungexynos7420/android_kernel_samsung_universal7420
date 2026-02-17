@@ -20,7 +20,7 @@ obj-$(CONFIG_SOC_EXYNOS5433)	+= pm_domains-exynos5433.o
 obj-$(CONFIG_CPU_IDLE)		+= exynos-pm.o
 obj-$(CONFIG_PM_RUNTIME)	+= pm_domains.o
 obj-$(CONFIG_PM_RUNTIME_TEST_SYSFS)	+= pm_domains_sysfs.o
-obj-$(CONFIG_ARCH_EXYNOS)	+= pmu.o pmu_cal_sys.o
+
 ifneq ($(CONFIG_SOC_EXYNOS7580),y)
 obj-$(CONFIG_ARCH_EXYNOS)	+= exynos-powermode.o
 else
