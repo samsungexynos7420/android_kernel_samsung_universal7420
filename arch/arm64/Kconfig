@@ -648,16 +648,14 @@ menu "Power management options"
 
 source "kernel/power/Kconfig"
 
-source "drivers/cpufreq/Kconfig"
-
-source "drivers/mailbox/samsung/Kconfig"
-
 config ARCH_SUSPEND_POSSIBLE
 	def_bool y
 
 config ARM64_CPU_SUSPEND
 	def_bool PM_SLEEP
 endmenu
+
+source "drivers/cpufreq/Kconfig"
 
 menu "CPU Power Management"
 
