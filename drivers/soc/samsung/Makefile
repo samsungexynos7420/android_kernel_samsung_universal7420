@@ -4,6 +4,8 @@
 
 obj-$(CONFIG_EXYNOS_CHIPID)	+= exynos-chipid.o
 
+obj-$(CONFIG_ARCH_EXYNOS)	+= exynos-pmu.o exynos-pmu_cal_sys.o
+
 ifneq ($(CONFIG_SOC_EXYNOS7580),y)
 obj-$(CONFIG_EXYNOS_CONTENT_PATH_PROTECTION) += secmem.o
 endif
