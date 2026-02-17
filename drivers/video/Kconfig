@@ -2322,11 +2322,6 @@ config FB_MB862XX
 	---help---
 	  Frame buffer driver for Fujitsu Carmine/Coral-P(A)/Lime controllers.
 
-config S5P_LCD_INIT
-	bool "LCD init in kernel"
-	depends on EXYNOS_VIDEO || DECON
-	default y
-
 choice
 	prompt "GDC variant"
 	depends on FB_MB862XX
