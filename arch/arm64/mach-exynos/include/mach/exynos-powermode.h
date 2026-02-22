@@ -111,7 +111,7 @@ extern void wakeup_from_c2(unsigned int cpu);
 #define LPC_STATE		(2 << SUB_STATE_OFFSET)
 
 /* cpuidle profile helper function */
-#ifdef CONFIG_CPU_IDLE_EXYNOS
+#ifdef CONFIG_ARM64_EXYNOS_CPUIDLE
 extern void lpa_blocking_counter(int);
 #else
 static inline void lpa_blocking_counter(int blocker)
