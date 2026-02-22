@@ -1897,7 +1897,7 @@ static int s3c64xx_spi_suspend(struct device *dev)
 	if (sci->dma_mode != DMA_MODE)
 		return 0;
 
-	dev_dbg("spi suspend is handled in device suspend, dma mode = %d, bus_num = %d\n",
+	dev_dbg(dev, "spi suspend is handled in device suspend, dma mode = %d, bus_num = %d\n",
 			sci->dma_mode, master->bus_num);
 	return s3c64xx_spi_suspend_operation(dev);
 }
@@ -1911,7 +1911,7 @@ static int s3c64xx_spi_suspend_noirq(struct device *dev)
 	if (sci->dma_mode == DMA_MODE)
 		return 0;
 
-	dev_dbg("spi suspend is handled in suspend_noirq, dma mode = %d, bus_num = %d\n",
+	dev_dbg(dev, "spi suspend is handled in suspend_noirq, dma mode = %d, bus_num = %d\n",
 			sci->dma_mode, master->bus_num);
 	return s3c64xx_spi_suspend_operation(dev);
 }
@@ -1925,7 +1925,7 @@ static int s3c64xx_spi_resume(struct device *dev)
 	if (sci->dma_mode != DMA_MODE)
 		return 0;
 
-	dev_dbg("spi resume is handled in device resume, dma mode = %d, bus_num = %d\n",
+	dev_dbg(dev, "spi resume is handled in device resume, dma mode = %d, bus_num = %d\n",
 			sci->dma_mode, master->bus_num);
 	return s3c64xx_spi_resume_operation(dev);
 }
@@ -1939,7 +1939,7 @@ static int s3c64xx_spi_resume_noirq(struct device *dev)
 	if (sci->dma_mode == DMA_MODE)
 		return 0;
 
-	dev_dbg("spi resume is handled in resume_noirq, dma mode = %d, bus_num = %d\n",
+	dev_dbg(dev, "spi resume is handled in resume_noirq, dma mode = %d, bus_num = %d\n",
 			sci->dma_mode, master->bus_num);
 	return s3c64xx_spi_resume_operation(dev);
 }
