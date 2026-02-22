@@ -48,6 +48,10 @@ config CPU_IDLE_CALXEDA
 	help
 	  Select this to enable cpuidle on Calxeda processors.
 
+config CPU_IDLE_STOP_IDLE_DURING_HOTPLUG
+	bool "Stop idle during hotplug in/out"
+	depends on CPU_IDLE && HOTPLUG_CPU
+
 menu "ARM64 CPU Idle Drivers"
 depends on ARM64
 source "drivers/cpuidle/Kconfig.arm64"
