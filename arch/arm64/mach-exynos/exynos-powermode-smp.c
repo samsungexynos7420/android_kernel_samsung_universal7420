@@ -295,7 +295,7 @@ int __init exynos_powermode_init(void)
 {
 	store_boot_cpu_info();
 
-	if (IS_ENABLED(CONFIG_CPU_IDLE_EXYNOS))
+	if (IS_ENABLED(CONFIG_ARM64_EXYNOS_CPUIDLE))
 		exynos_idle_clock_down(true);
 
 	init_cpd_state_mask();

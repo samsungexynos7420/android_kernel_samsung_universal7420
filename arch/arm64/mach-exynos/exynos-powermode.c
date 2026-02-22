@@ -49,7 +49,7 @@
 /***************************************************************************
  *                         Functions for low power                         *
  ***************************************************************************/
-#ifdef CONFIG_CPU_IDLE_EXYNOS
+#ifdef CONFIG_ARM64_EXYNOS_CPUIDLE
 static void exynos_idle_clock_down(bool on, enum cluster_type cluster)
 {
 	void __iomem *reg_pwr_ctrl;
