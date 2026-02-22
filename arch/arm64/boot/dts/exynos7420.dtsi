@@ -112,7 +112,7 @@
 		#size-cells = <0>;
 
 		idle-states {
-                        entry-method = "arm,psci";
+			entry-method = "arm,psci";
 			multiple_drv_count = <2>;
 
 			CPU_SLEEP_0: C1 {

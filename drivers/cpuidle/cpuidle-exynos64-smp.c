@@ -31,6 +31,24 @@ enum idle_state {
 	IDLE_LPM,
 };
 
+/***************************************************************************
+ *                             Helper function                             *
+ ***************************************************************************/
+static void prepare_idle(unsigned int cpuid)
+{
+	cpu_pm_enter();
+}
+
+static void post_idle(unsigned int cpuid)
+{
+	cpu_pm_exit();
+}
+
+static bool nonboot_cpus_working(void)
+{
+	return (num_online_cpus() > 1);
+}
+
 static bool idle_c2_disabled(struct cpuidle_driver *drv)
 {
 	return drv->states[IDLE_C2].disabled;
@@ -55,31 +73,42 @@ static int find_next_state(struct cpuidle_device *dev,
 	return IDLE_C1;
 }
 
+/***************************************************************************
+ *                           Cpuidle state handler                         *
+ ***************************************************************************/
 static int exynos_enter_idle(struct cpuidle_device *dev,
-			     struct cpuidle_driver *drv, int index)
+				struct cpuidle_driver *drv, int index)
 {
+	cpuidle_profile_start_no_substate(dev->cpu, index);
+
 	cpu_do_idle();
+
+	cpuidle_profile_finish_no_earlywakeup(dev->cpu);
 
 	return index;
 }
 
 static int exynos_enter_c2(struct cpuidle_device *dev,
-			   struct cpuidle_driver *drv, int index)
+				struct cpuidle_driver *drv, int index)
 {
 	int cpu = dev->cpu, ret, target_index;
 	unsigned int target_residency = drv->states[index].target_residency;
 
-	cpu_pm_enter();
+	prepare_idle(dev->cpu);
 
 	target_index = determine_cpd(index, IDLE_C2, cpu, target_residency);
+
+	cpuidle_profile_start(dev->cpu, index, entry_index);
 
 	ret = cpu_suspend(target_index);
 	if (ret)
 		flush_tlb_all();
 
+	cpuidle_profile_finish(dev->cpu, ret);
+
 	wakeup_from_c2(cpu);
 
-	cpu_pm_exit();
+	post_idle(dev->cpu);
 
 	return target_index;
 }
@@ -91,21 +120,25 @@ static int exynos_enter_lpm(struct cpuidle_device *dev,
 
 	mode = determine_lpm();
 
-	cpu_pm_enter();
+	prepare_idle(dev->cpu);
 
 	exynos_prepare_sys_powerdown(mode);
 
+	cpuidle_profile_start(dev->cpu, index, mode);
+
 	ret = cpu_suspend(index);
+
+	cpuidle_profile_finish(dev->cpu, ret);
 
 	exynos_wakeup_sys_powerdown(mode, ret);
 
-	cpu_pm_exit();
+	post_idle(dev->cpu);
 
 	return index;
 }
 
 static int exynos_enter_idle_state(struct cpuidle_device *dev,
-				   struct cpuidle_driver *drv, int index)
+				struct cpuidle_driver *drv, int index)
 {
 	int (*func)(struct cpuidle_device *, struct cpuidle_driver *, int);
 
@@ -119,7 +152,7 @@ static int exynos_enter_idle_state(struct cpuidle_device *dev,
 					     : exynos_enter_c2;
 		break;
 	case IDLE_LPM:
-		if (num_online_cpus() > 1) {
+		if (nonboot_cpus_working()) {
 			index = find_next_state(dev, drv);
 			return exynos_enter_idle_state(dev, drv, index);
 		} else {
@@ -127,7 +160,7 @@ static int exynos_enter_idle_state(struct cpuidle_device *dev,
 			break;
 		}
 	default:
-		pr_err("%s : invalid index: %d\n", __func__, index);
+		pr_err("%s : Invalid index: %d\n", __func__, index);
 		return -EINVAL;
 	}
 
@@ -154,8 +187,11 @@ static struct notifier_block exynos_cpuidle_pm_nb = {
 	.notifier_call = exynos_cpuidle_pm_notifier,
 };
 
-static int exynos_cpuidle_reboot_notifier(struct notifier_block *nb,
-					  unsigned long event, void *unused)
+/***************************************************************************
+ *                            Define notifier call                         *
+ ***************************************************************************/
+static int exynos_cpuidle_reboot_notifier(struct notifier_block *this,
+				unsigned long event, void *_cmd)
 {
 	switch (event) {
 	case SYS_RESTART:
