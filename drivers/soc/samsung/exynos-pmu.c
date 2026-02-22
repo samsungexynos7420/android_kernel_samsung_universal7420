@@ -96,10 +96,6 @@ void exynos_set_wakeupmask(enum sys_powerdown mode)
 
 	/* Set external interrupt mask */
 	__raw_writel((u32)eintmask, EXYNOS_PMU_EINT_WAKEUP_MASK);
-#if defined(CONFIG_SOC_EXYNOS5433)
-	__raw_writel((u32)(eintmask >> 32), EXYNOS_PMU_EINT_WAKEUP_MASK1);
-#endif
-
 	switch (mode) {
 	case SYS_AFTR:
 	case SYS_LPA:
@@ -209,15 +205,6 @@ static void exynos_enable_hw_trip(void)
 	__raw_writel(tmp, EXYNOS_PMU_PS_HOLD_CONTROL);
 }
 
-#if defined(CONFIG_SOC_EXYNOS5433)
-static void exynos5433_pmu_init(void)
-{
-	/* Set clock freeze cycle before and after ARM clamp to 0 */
-	__raw_writel(0x0, EXYNOS5430_EGL_STOPCTRL);
-	__raw_writel(0x0, EXYNOS5430_KFC_STOPCTRL);
-}
-#endif
-
 #if defined(CONFIG_SOC_EXYNOS7420)
 static void exynos7420_pmu_init(void)
 {
@@ -255,9 +242,7 @@ int __init exynos_pmu_init(void)
 
 	exynos_enable_hw_trip();
 
-#if defined(CONFIG_SOC_EXYNOS5433)
-	exynos5433_pmu_init();
-#elif defined(CONFIG_SOC_EXYNOS7420)
+#if defined(CONFIG_SOC_EXYNOS7420)
 	exynos7420_pmu_init();
 #elif defined(CONFIG_SOC_EXYNOS7580)
 	exynos7580_pmu_init();
