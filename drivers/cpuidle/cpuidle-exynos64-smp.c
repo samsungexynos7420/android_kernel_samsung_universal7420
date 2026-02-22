@@ -54,20 +54,17 @@ static bool idle_c2_disabled(struct cpuidle_driver *drv)
 	return drv->states[IDLE_C2].disabled;
 }
 
-static int find_next_state(struct cpuidle_device *dev,
-			   struct cpuidle_driver *drv)
+static int find_available_low_state(struct cpuidle_device *dev,
+				struct cpuidle_driver *drv, unsigned int index)
 {
-	int index;
-
-	/* Search starts from the deepest idle state */
-	for (index = IDLE_CPD; index >= IDLE_C2; index--) {
+	while (--index > 0) {
 		struct cpuidle_state *s = &drv->states[index];
-		struct cpuidle_state_usage *u = &dev->states_usage[index];
+		struct cpuidle_state_usage *su = &dev->states_usage[index];
 
-		if (s->disabled || u->disable)
+		if (s->disabled || su->disable)
 			continue;
-
-		return index;
+		else
+			return index;
 	}
 
 	return IDLE_C1;
@@ -114,7 +111,7 @@ static int exynos_enter_c2(struct cpuidle_device *dev,
 }
 
 static int exynos_enter_lpm(struct cpuidle_device *dev,
-			    struct cpuidle_driver *drv, int index)
+				struct cpuidle_driver *drv, int index)
 {
 	int ret, mode;
 
@@ -130,7 +127,7 @@ static int exynos_enter_lpm(struct cpuidle_device *dev,
 
 	cpuidle_profile_finish(dev->cpu, ret);
 
-	exynos_wakeup_sys_powerdown(mode, ret);
+	exynos_wakeup_sys_powerdown(mode, (bool)ret);
 
 	post_idle(dev->cpu);
 
@@ -141,6 +138,11 @@ static int exynos_enter_idle_state(struct cpuidle_device *dev,
 				struct cpuidle_driver *drv, int index)
 {
 	int (*func)(struct cpuidle_device *, struct cpuidle_driver *, int);
+	ktime_t time_start, time_end;
+	int ret;
+
+	exynos_ss_cpuidle(index, 0, 0, ESS_FLAG_IN);
+	time_start = ktime_get();
 
 	switch (index) {
 	case IDLE_C1:
@@ -152,19 +154,29 @@ static int exynos_enter_idle_state(struct cpuidle_device *dev,
 					     : exynos_enter_c2;
 		break;
 	case IDLE_LPM:
+		/*
+		 * In exynos, system can enter LPM when only boot core is running.
+		 * In other words, non-boot cores should be shutdown to enter LPM.
+		 */
 		if (nonboot_cpus_working()) {
-			index = find_next_state(dev, drv);
+			index = find_available_low_state(dev, drv, index);
 			return exynos_enter_idle_state(dev, drv, index);
 		} else {
 			func = exynos_enter_lpm;
-			break;
 		}
+		break;
 	default:
 		pr_err("%s : Invalid index: %d\n", __func__, index);
 		return -EINVAL;
 	}
 
-	return (*func)(dev, drv, index);
+	ret = (*func)(dev, drv, index);
+
+	time_end = ktime_get();
+	exynos_ss_cpuidle(index, entered_state,
+		(int)ktime_to_us(ktime_sub(time_end, time_start)), ESS_FLAG_OUT);
+
+	return ret;
 }
 
 static int exynos_cpuidle_pm_notifier(struct notifier_block *nb,
