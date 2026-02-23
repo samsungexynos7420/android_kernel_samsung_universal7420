@@ -240,7 +240,7 @@
 		};
 	};
 
-	coresight {
+	coresight@16000000 {
 		compatible = "exynos,coresight";
 		reg = <0x16000000 0xc00000>;
 		#address-cells = <1>;
@@ -1075,7 +1075,7 @@
 		compatible = "samsung,acm_data_mdm_bridge";
 	};
 
-	usb@15400000 {
+	udc: usb@15400000 {
 		compatible = "samsung,exynos5-dwusb3";
 		clocks = <&clock 5010>, <&clock 5011>, <&clock 5012>, <&clock 5013>, <&clock 5014>, <&clock 5015>, <&clock 5016>, <&clock 5017>;
 		clock-names = "aclk", "aclk_axius", "sclk_ref", "sclk", "oscclk_phy", "phyclock", "pipe_pclk", "aclk_ahb_usblinkh";
@@ -1149,7 +1149,7 @@
 		};
 	};
 
-    mali {
+    mali: mali@14AC0000 {
         compatible = "arm,mali";
         reg = <0x14AC0000 0x5000>;
         interrupts = <0 241 0>, <0 242 0>, <0 240 0>;
