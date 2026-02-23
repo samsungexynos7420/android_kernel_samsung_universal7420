@@ -1017,21 +1017,6 @@
 		};
 	};
 
-	i2c@1c {
-		compatible = "i2c-gpio";
-		gpios = <&gpf5 3 0 &gpf5 2 0>;
-		i2c-gpio,delay-us = <2>;
-		#address-cells = <1>;
-		#size-cells = <0>;
-		pinctrl-names = "default";
-		pinctrl-0 = <&fimc_is_vision>;
-		status = "disabled";
-		fimc-is-vision@20 {
-			compatible = "samsung,exynos5-fimc-is-sensor-6d1";
-			reg = <0x35>;
-		};
-	};
-
 	i2c@3d{
 		compatible = "i2c-gpio";
 		gpios = <&gpc2 0 0 /* sda */
