@@ -703,7 +703,8 @@ static void s2m_adc_read_data(struct s2m_rtc_info *info)
 static unsigned int get_coeff(struct device *dev, u8 adc_reg_num)
 {
 	struct s2m_rtc_info *info = dev_get_drvdata(dev);
-	unsigned int coeff, temp;
+	unsigned int coeff = 0;
+	unsigned int temp;
 	u8 is_evt2;
 
 	if (SEC_PMIC_REV(info->iodev) == 0x0)
