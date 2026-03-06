@@ -123,8 +123,7 @@ static int s2m_tm_to_data(struct rtc_time *tm, u8 *data)
 static int s2m_rtc_update(struct s2m_rtc_info *info,
 				 enum S2M_RTC_OP op)
 {
-	u8 data;
-	unsigned int rtc_update_reg;
+	u8 data, rtc_update_reg;
 	int ret;
 
 	if (!info || !info->iodev) {
