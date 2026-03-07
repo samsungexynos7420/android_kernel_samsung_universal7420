@@ -22,6 +22,7 @@
 #include <linux/bitops.h>
 #include <linux/bug.h>
 #include <linux/init.h>
+#include <linux/hardirq.h>
 #include <linux/kernel.h>
 #include <linux/preempt.h>
 #include <linux/printk.h>
