@@ -11,6 +11,7 @@
 
 #include <asm/hwcap.h>
 #include <asm/sysreg.h>
+#include <asm/cputype.h>
 
 /*
  * In the arm64 world (as in the ARM world), elf_hwcap is used both internally
