@@ -812,7 +812,6 @@ static int cpufreq_interactive_speedchange_task(void *data)
 			u64 hvt = ~0ULL, fvt = 0;
 
 			pcpu = &per_cpu(cpuinfo, cpu);
-
 			if (!down_read_trylock(&pcpu->enable_sem))
 				continue;
 			if (!pcpu->governor_enabled) {
@@ -1001,7 +1000,6 @@ static ssize_t show_target_loads(
 #ifdef CONFIG_MODE_AUTO_CHANGE
 	unsigned long flags_idx;
 #endif
-
 	spin_lock_irqsave(&tunables->target_loads_lock, flags);
 #ifdef CONFIG_MODE_AUTO_CHANGE
 	spin_lock_irqsave(&tunables->param_index_lock, flags_idx);
@@ -1030,7 +1028,6 @@ static ssize_t store_target_loads(
 #ifdef CONFIG_MODE_AUTO_CHANGE
 	unsigned long flags_idx;
 #endif
-
 	new_target_loads = get_tokenized_data(buf, &ntokens);
 	if (IS_ERR(new_target_loads))
 		return PTR_RET(new_target_loads);
@@ -1067,7 +1064,6 @@ static ssize_t show_above_hispeed_delay(
 #ifdef CONFIG_MODE_AUTO_CHANGE
 	unsigned long flags_idx;
 #endif
-
 	spin_lock_irqsave(&tunables->above_hispeed_delay_lock, flags);
 #ifdef CONFIG_MODE_AUTO_CHANGE
 	spin_lock_irqsave(&tunables->param_index_lock, flags_idx);
@@ -1303,8 +1299,6 @@ static ssize_t store_boost(struct cpufreq_interactive_tunables *tunables,
 {
 	int ret;
 	unsigned long val;
-	struct cpufreq_policy *policy = container_of(tunables->policy,
-						struct cpufreq_policy, policy);
 
 	ret = kstrtoul(buf, 0, &val);
 	if (ret < 0)
@@ -1329,8 +1323,6 @@ static ssize_t store_boostpulse(struct cpufreq_interactive_tunables *tunables,
 {
 	int ret;
 	unsigned long val;
-	struct cpufreq_policy *policy = container_of(tunables->policy,
-						struct cpufreq_policy, policy);
 
 	ret = kstrtoul(buf, 0, &val);
 	if (ret < 0)
