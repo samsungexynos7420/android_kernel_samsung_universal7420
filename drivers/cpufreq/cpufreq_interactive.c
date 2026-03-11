@@ -894,14 +894,15 @@ static int cpufreq_interactive_speedchange_task(void *data)
 	return 0;
 }
 
-static void cpufreq_interactive_boost(struct cpufreq_interactive_tunables *tunables, 
-										const struct cpufreq_policy *policy)
+static void cpufreq_interactive_boost(struct cpufreq_interactive_tunables *tunables)
 {
 	int i;
 	int anyboost = 0;
 	unsigned long flags[2];
 	struct cpufreq_interactive_cpuinfo *pcpu;
 	struct cpumask boost_mask;
+	struct cpufreq_policy *policy = container_of(tunables->policy,
+		struct cpufreq_policy, policy);
 
 	tunables->boosted = true;
 
@@ -1348,7 +1349,7 @@ static ssize_t store_boost(struct cpufreq_interactive_tunables *tunables,
 	if (tunables->boost_val) {
 		trace_cpufreq_interactive_boost("on");
 		if (!tunables->boosted)
-			cpufreq_interactive_boost(tunables, policy);
+			cpufreq_interactive_boost(tunables);
 	} else {
 		tunables->boostpulse_endtime = ktime_to_us(ktime_get());
 		trace_cpufreq_interactive_unboost("off");
@@ -1373,7 +1374,7 @@ static ssize_t store_boostpulse(struct cpufreq_interactive_tunables *tunables,
 		tunables->boostpulse_duration_val;
 	trace_cpufreq_interactive_boost("pulse");
 	if (!tunables->boosted)
-		cpufreq_interactive_boost(tunables, policy);
+		cpufreq_interactive_boost(tunables);
 	return count;
 }
 
