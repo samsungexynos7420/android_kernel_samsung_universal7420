@@ -38,7 +38,10 @@
 #ifdef CONFIG_ARM_EXYNOS_MP_CPUFREQ
 #include <soc/samsung/cpufreq.h>
 #endif
+
+#ifdef CONFIG_CPU_THERMAL_IPA
 #include "cpu_load_metric.h"
+#endif
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/cpufreq_interactive.h>
@@ -432,7 +435,9 @@ static u64 update_load(int cpu)
 
 	pcpu->cputime_speedadj += active_time * pcpu->policy->cur;
 
+#ifdef CONFIG_CPU_THERMAL_IPA
 	update_cpu_metric(cpu, now, delta_idle, delta_time, pcpu->policy);
+#endif
 
 	pcpu->time_in_idle = now_idle;
 	pcpu->time_in_idle_timestamp = now;
@@ -836,15 +841,14 @@ static int cpufreq_interactive_speedchange_task(void *data)
 							max_freq,
 							CPUFREQ_RELATION_H);
 				for_each_cpu(j, pcpu->policy->cpus) {
-							pjcpu = &per_cpu(cpuinfo, j);
-							pjcpu->pol_hispeed_val_time = hvt;
+					pjcpu = &per_cpu(cpuinfo, j);
+					pjcpu->pol_hispeed_val_time = hvt;
 				}
 			}
 
 #if defined(CONFIG_CPU_THERMAL_IPA)
 			ipa_cpufreq_requested(pcpu->policy, max_freq);
 #endif
-
 			trace_cpufreq_interactive_setspeed(cpu,
 						     pcpu->target_freq,
 						     pcpu->policy->cur);
@@ -864,7 +868,7 @@ static void cpufreq_interactive_boost(struct cpufreq_interactive_tunables *tunab
 	struct cpufreq_interactive_cpuinfo *pcpu;
 	struct cpumask boost_mask;
 	struct cpufreq_policy *policy = container_of(tunables->policy,
-		struct cpufreq_policy, policy);
+						struct cpufreq_policy, policy);
 
 	tunables->boosted = true;
 
