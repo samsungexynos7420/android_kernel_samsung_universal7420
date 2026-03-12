@@ -112,11 +112,11 @@
 		#size-cells = <0>;
 		
 		hmp {
-			up_threshold = <479>;
+			up_threshold = <524>;
 			down_threshold = <214>;
-			semiboost_up_threshold = <400>;
-			semiboost_down_threshold = <150>;
-			bootboost-duration-us = <30000000>;
+			semiboost_up_threshold = <254>;
+			semiboost_down_threshold = <163>;
+			bootboost-duration-us = <40000000>;
 			
 		};
 
