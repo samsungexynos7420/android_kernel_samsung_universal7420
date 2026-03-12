@@ -1148,7 +1148,7 @@ static ssize_t store_hispeed_freq(struct cpufreq_interactive_tunables *tunables,
 #ifdef CONFIG_MODE_AUTO_CHANGE
 	unsigned long flags_idx;
 #endif
-	ret = strict_strtoul(buf, 0, &val);
+	ret = kstrtoul(buf, 0, &val);
 	if (ret < 0)
 		return ret;
 #ifdef CONFIG_MODE_AUTO_CHANGE
@@ -1181,7 +1181,7 @@ static ssize_t store_go_hispeed_load(struct cpufreq_interactive_tunables
 #ifdef CONFIG_MODE_AUTO_CHANGE
 	unsigned long flags_idx;
 #endif
-	ret = strict_strtoul(buf, 0, &val);
+	ret = kstrtoul(buf, 0, &val);
 	if (ret < 0)
 		return ret;
 #ifdef CONFIG_MODE_AUTO_CHANGE
@@ -1214,7 +1214,7 @@ static ssize_t store_min_sample_time(struct cpufreq_interactive_tunables
 #ifdef CONFIG_MODE_AUTO_CHANGE
 	unsigned long flags_idx;
 #endif
-	ret = strict_strtoul(buf, 0, &val);
+	ret = kstrtoul(buf, 0, &val);
 	if (ret < 0)
 		return ret;
 #ifdef CONFIG_MODE_AUTO_CHANGE
@@ -1247,7 +1247,7 @@ static ssize_t store_timer_rate(struct cpufreq_interactive_tunables *tunables,
 #ifdef CONFIG_MODE_AUTO_CHANGE
 	unsigned long flags_idx;
 #endif
-	ret = strict_strtoul(buf, 0, &val);
+	ret = kstrtoul(buf, 0, &val);
 	if (ret < 0)
 		return ret;
 
@@ -1388,7 +1388,7 @@ static ssize_t store_mode(struct cpufreq_interactive_tunables
 	int ret;
 	long unsigned int val;
 
-	ret = strict_strtoul(buf, 0, &val);
+	ret = kstrtoul(buf, 0, &val);
 	if (ret < 0)
 		return ret;
 
@@ -1409,7 +1409,7 @@ static ssize_t store_enforced_mode(struct cpufreq_interactive_tunables
 	int ret;
 	long unsigned int val;
 
-	ret = strict_strtoul(buf, 0, &val);
+	ret = kstrtoul(buf, 0, &val);
 	if (ret < 0)
 		return ret;
 
@@ -1431,7 +1431,7 @@ static ssize_t store_param_index(struct cpufreq_interactive_tunables
 	long unsigned int val;
 	unsigned long flags;
 
-	ret = strict_strtoul(buf, 0, &val);
+	ret = kstrtoul(buf, 0, &val);
 	if (ret < 0)
 		return ret;
 
@@ -1455,7 +1455,7 @@ static ssize_t store_multi_enter_load(struct cpufreq_interactive_tunables
 	int ret;
 	long unsigned int val;
 
-	ret = strict_strtoul(buf, 0, &val);
+	ret = kstrtoul(buf, 0, &val);
 	if (ret < 0)
 			return ret;
 
@@ -1475,7 +1475,7 @@ static ssize_t store_multi_exit_load(struct cpufreq_interactive_tunables
 	int ret;
 	long unsigned int val;
 
-	ret = strict_strtoul(buf, 0, &val);
+	ret = kstrtoul(buf, 0, &val);
 	if (ret < 0)
 			return ret;
 
@@ -1495,7 +1495,7 @@ static ssize_t store_single_enter_load(struct cpufreq_interactive_tunables
 	int ret;
 	long unsigned int val;
 
-	ret = strict_strtoul(buf, 0, &val);
+	ret = kstrtoul(buf, 0, &val);
 	if (ret < 0)
 			return ret;
 
@@ -1515,7 +1515,7 @@ static ssize_t store_single_exit_load(struct cpufreq_interactive_tunables
 	int ret;
 	long unsigned int val;
 
-	ret = strict_strtoul(buf, 0, &val);
+	ret = kstrtoul(buf, 0, &val);
 	if (ret < 0)
 			return ret;
 
@@ -1535,7 +1535,7 @@ static ssize_t store_multi_enter_time(struct cpufreq_interactive_tunables
 	int ret;
 	long unsigned int val;
 
-	ret = strict_strtoul(buf, 0, &val);
+	ret = kstrtoul(buf, 0, &val);
 	if (ret < 0)
 			return ret;
 
@@ -1555,7 +1555,7 @@ static ssize_t store_multi_exit_time(struct cpufreq_interactive_tunables
 	int ret;
 	long unsigned int val;
 
-	ret = strict_strtoul(buf, 0, &val);
+	ret = kstrtoul(buf, 0, &val);
 	if (ret < 0)
 			return ret;
 
@@ -1575,7 +1575,7 @@ static ssize_t store_single_enter_time(struct cpufreq_interactive_tunables
 	int ret;
 	long unsigned int val;
 
-	ret = strict_strtoul(buf, 0, &val);
+	ret = kstrtoul(buf, 0, &val);
 	if (ret < 0)
 			return ret;
 
@@ -1595,7 +1595,7 @@ static ssize_t store_single_exit_time(struct cpufreq_interactive_tunables
 	int ret;
 	long unsigned int val;
 
-	ret = strict_strtoul(buf, 0, &val);
+	ret = kstrtoul(buf, 0, &val);
 	if (ret < 0)
 			return ret;
 
@@ -1642,7 +1642,7 @@ static ssize_t store_single_cluster0_min_freq(struct cpufreq_interactive_tunable
 	int ret;
 	long unsigned int val;
 
-	ret = strict_strtoul(buf, 0, &val);
+	ret = kstrtoul(buf, 0, &val);
 	if (ret < 0)
 			return ret;
 
@@ -1662,7 +1662,7 @@ static ssize_t store_multi_cluster0_min_freq(struct cpufreq_interactive_tunables
 	int ret;
 	long unsigned int val;
 
-	ret = strict_strtoul(buf, 0, &val);
+	ret = kstrtoul(buf, 0, &val);
 	if (ret < 0)
 			return ret;
 
