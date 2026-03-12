@@ -110,6 +110,15 @@
 	cpus {
 		#address-cells = <2>;
 		#size-cells = <0>;
+		
+		hmp {
+			up_threshold = <479>;
+			down_threshold = <214>;
+			semiboost_up_threshold = <400>;
+			semiboost_down_threshold = <150>;
+			bootboost-duration-us = <10000000>;
+			
+		};
 
 		idle-states {
 			entry-method = "arm,psci";
