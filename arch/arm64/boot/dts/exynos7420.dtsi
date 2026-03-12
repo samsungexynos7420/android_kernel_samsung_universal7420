@@ -116,7 +116,7 @@
 			down_threshold = <214>;
 			semiboost_up_threshold = <400>;
 			semiboost_down_threshold = <150>;
-			bootboost-duration-us = <10000000>;
+			bootboost-duration-us = <30000000>;
 			
 		};
 
