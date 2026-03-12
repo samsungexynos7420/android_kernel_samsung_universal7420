@@ -118,6 +118,10 @@
 			semiboost_down_threshold = <150>;
 			bootboost-duration-us = <30000000>;
 			
+			down_compensation_timeout = <30>;		/* ms */
+			down_compensation_high_freq = <1104000>;	/* min qos lock for little cpu */
+			down_compensation_mid_freq = <900000>;		/* min qos lock for little cpu */
+			down_compensation_low_freq = <800000>;		/* min qos lock for little cpu */
 		};
 
 		idle-states {
