@@ -2209,11 +2209,7 @@ static int kbase_jd_umm_map(struct kbase_context *kctx,
                 }
 
                 /* MALI_SEC_INTEGRATION */
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 17, 0)
-                pages = PFN_UP(sg_dma_len(s));
-#else
                 pages = PFN_UP(s->length);
-#endif
 
 		WARN_ONCE(sg_dma_len(s) & (PAGE_SIZE-1),
 		"sg_dma_len(s)=%u is not a multiple of PAGE_SIZE\n",
