@@ -14,7 +14,6 @@ config ARM64
 	select ARM_GIC
 	select ARM_GIC_V3
 	select BUILDTIME_EXTABLE_SORT
-	select ARM_HAS_SG_CHAIN
 	select AUDIT_ARCH_COMPAT_GENERIC
 	select CLONE_BACKWARDS
 	select COMMON_CLK
@@ -157,10 +156,7 @@ config NEED_DMA_MAP_STATE
 	def_bool y
 
 config NEED_SG_DMA_LENGTH
-	def_bool n
-
-config ARM_HAS_SG_CHAIN
-	def_bool n
+	def_bool y
 
 config SWIOTLB
 	def_bool y
