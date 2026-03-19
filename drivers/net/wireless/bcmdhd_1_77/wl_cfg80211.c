@@ -21089,9 +21089,9 @@ struct wiphy *wiphy)
 	}
 
 	if (CHSPEC_IS5G(chanspec))
-		freq = ieee80211_channel_to_frequency(channel, NL80211_BAND_5GHZ);
+		freq = ieee80211_channel_to_frequency(channel, IEEE80211_BAND_5GHZ);
 	else
-		freq = ieee80211_channel_to_frequency(channel, NL80211_BAND_2GHZ);
+		freq = ieee80211_channel_to_frequency(channel, IEEE80211_BAND_2GHZ);
 
 	chan = ieee80211_get_channel(wiphy, freq);
 	WL_DBG(("channel:%d freq:%d chan_type: %d chan_ptr:%p \n",
