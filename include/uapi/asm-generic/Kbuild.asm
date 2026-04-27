@@ -13,7 +13,7 @@ header-y += bitsperlong.h
 header-y += byteorder.h
 header-y += errno.h
 # remove fcntl.h for zero_MDM9x35
-#header-y += fcntl.h
+header-y += fcntl.h
 header-y += ioctl.h
 header-y += ioctls.h
 header-y += ipcbuf.h
