@@ -11,11 +11,6 @@ choice
 depends on VIDEO_EXYNOS_MFC
 prompt "MFC version"
 default EXYNOS_MFC_V6
-config EXYNOS_MFC_V5
-prompt "MFC version 5"
-	bool
-	depends on ARCH_EXYNOS4
-
 config EXYNOS_MFC_V6
 prompt "MFC version 6"
 	bool
