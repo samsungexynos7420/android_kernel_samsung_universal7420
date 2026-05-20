@@ -1702,16 +1702,6 @@ static int s5p_mfc_set_enc_params_h264(struct s5p_mfc_ctx *ctx)
 			mfc_info_ctx("Set High profile for UHD\n");
 			p_264->profile = 0x2;
 		}
-#if defined(CONFIG_SOC_EXYNOS5422)
-		sysmmu_set_qos(dev->device, 0xF);
-#endif
-#if defined(CONFIG_SOC_EXYNOS5422) || defined(CONFIG_SOC_EXYNOS5433)
-		bts_scen_update(TYPE_MFC_UD_ENCODING, 1);
-#ifdef CONFIG_MFC_USE_BUS_DEVFREQ
-		exynos5_update_media_layers(TYPE_UD_ENCODING, 1);
-#endif
-		mfc_info_ctx("UHD encoding start\n");
-#endif
 	}
 
 	/* profile & level */
@@ -3395,16 +3385,6 @@ static inline int s5p_mfc_run_init_dec_buffers(struct s5p_mfc_ctx *ctx)
 			"before starting processing.\n");
 		return -EAGAIN;
 	}
-
-#if defined(CONFIG_SOC_EXYNOS5422) || defined(CONFIG_SOC_EXYNOS5433)
-	if(is_UHD(ctx)) {
-		bts_scen_update(TYPE_MFC_UD_DECODING, 1);
-#ifdef CONFIG_MFC_USE_BUS_DEVFREQ
-		exynos5_update_media_layers(TYPE_UD_DECODING, 1);
-#endif
-		mfc_info_ctx("UHD decoding start\n");
-	}
-#endif
 
 	dev->curr_ctx = ctx->num;
 	s5p_mfc_clean_ctx_int_flags(ctx);
