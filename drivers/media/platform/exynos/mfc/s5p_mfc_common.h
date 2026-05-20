@@ -1228,13 +1228,7 @@ static inline int s5p_mfc_ctx_ready(struct s5p_mfc_ctx *ctx)
 }
 
 
-#if defined(CONFIG_EXYNOS_MFC_V6)
-#include "regs-mfc-v6.h"
-#include "s5p_mfc_opr_v6.h"
-#elif defined(CONFIG_EXYNOS_MFC_V8)
-#include "regs-mfc-v8.h"
-#include "s5p_mfc_opr_v8.h"
-#elif defined(CONFIG_EXYNOS_MFC_V9)
+#if defined(CONFIG_EXYNOS_MFC_V9)
 #include "regs-mfc-v9.h"
 #include "s5p_mfc_opr_v9.h"
 #endif
