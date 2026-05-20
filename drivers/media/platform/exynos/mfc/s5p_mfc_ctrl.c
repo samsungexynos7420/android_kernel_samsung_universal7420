@@ -31,7 +31,7 @@
 int s5p_mfc_alloc_firmware(struct s5p_mfc_dev *dev)
 {
 	unsigned int base_align;
-	size_t firmware_size;
+	size_t firmware_size, fw_region_size;
 	void *alloc_ctx;
 	struct s5p_mfc_buf_size_v6 *buf_size;
 
@@ -46,6 +46,7 @@ int s5p_mfc_alloc_firmware(struct s5p_mfc_dev *dev)
 	base_align = dev->variant->buf_align->mfc_base_align;
 	firmware_size = dev->variant->buf_size->firmware_code;
 	alloc_ctx = dev->alloc_ctx[MFC_FW_ALLOC_CTX];
+	fw_region_size = firmware_size + buf_size->dev_ctx;
 
 	if (dev->fw_info.alloc)
 		return 0;
@@ -54,7 +55,7 @@ int s5p_mfc_alloc_firmware(struct s5p_mfc_dev *dev)
 
 	alloc_ctx = dev->alloc_ctx_fw;
 	dev->fw_info.alloc = s5p_mfc_mem_alloc_priv(alloc_ctx,
-					firmware_size + buf_size->dev_ctx);
+					fw_region_size);
 	if (IS_ERR(dev->fw_info.alloc)) {
 		dev->fw_info.alloc = 0;
 		printk(KERN_ERR "Allocating bitprocessor buffer failed\n");
@@ -94,7 +95,7 @@ int s5p_mfc_alloc_firmware(struct s5p_mfc_dev *dev)
 	alloc_ctx = dev->alloc_ctx_drm_fw;
 
 	dev->drm_fw_info.alloc = s5p_mfc_mem_alloc_priv(alloc_ctx,
-					firmware_size + buf_size->dev_ctx);
+					fw_region_size);
 	if (IS_ERR(dev->drm_fw_info.alloc)) {
 		/* Release normal F/W buffer */
 		s5p_mfc_mem_free_priv(dev->fw_info.alloc);
