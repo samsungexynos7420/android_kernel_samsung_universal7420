@@ -48,26 +48,44 @@ static int __find_platform_heap_id(unsigned int heap_id)
 	return i;
 }
 
-static void __ion_secure_protect(struct exynos_ion_platform_heap *pdata)
+static int __ion_secure_protect(struct exynos_ion_platform_heap *pdata)
 {
+	int try = 2;
+	int ret;
+
 	pr_info("%s: enter\n", __func__);
 
-	pdata->protected = true;
-
 	spin_lock(&smc_lock);
+	do {
+		ret = exynos_smc(SMC_DRM_SECMEM_REGION_INFO, pdata->id - 1,
+				pdata->rmem->base, pdata->rmem->size);
+	} while (ret != 0 && --try > 0);
 
-	/* passing region info */
-	BUG_ON(exynos_smc(SMC_DRM_SECMEM_REGION_INFO, pdata->id - 1,
-			pdata->rmem->base, pdata->rmem->size) != 0);
+	if (ret != 0) {
+		pr_crit("%s: failed smc call for region info, ret=%d\n",
+				__func__, ret);
+		return -EFAULT;
+	}
 
-	/* protection */
-	BUG_ON(exynos_smc(SMC_DRM_SECMEM_REGION_PROT, pdata->id - 1,
-				SMC_PROTECTION_ENABLE, 0) != 0);
+	try = 2;
 
+	do {
+		ret = exynos_smc(SMC_DRM_SECMEM_REGION_PROT, pdata->id - 1,
+				SMC_PROTECTION_ENABLE, 0);
+	} while (ret != 0 && --try > 0);
+
+	if (ret != 0) {
+		pr_crit("%s: failed smc call for protection, ret=%d\n",
+				__func__, ret);
+		return -EFAULT;
+	}
+
+	pdata->protected = true;
 	spin_unlock(&smc_lock);
 
 	pr_info("%s: protection enabled for heap %s\n", __func__,
 						pdata->heap->name);
+	return 0;
 }
 
 int ion_secure_protect(struct ion_buffer *buffer)
@@ -90,8 +108,12 @@ int ion_secure_protect(struct ion_buffer *buffer)
 	}
 
 	if (unlikely(atomic_read(&pdata->secure_ref.refcount) == 0)) {
+		if (__ion_secure_protect(pdata)) {
+			pr_crit("%s: protection failed for heap %s\n",
+					__func__, heap->name);
+			return -EFAULT;
+		}
 		kref_init(&pdata->secure_ref);
-		__ion_secure_protect(pdata);
 	} else {
 		kref_get(&pdata->secure_ref);
 	}
