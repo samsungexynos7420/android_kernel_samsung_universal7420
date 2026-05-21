@@ -547,8 +547,8 @@ static void ion_buffer_remove_from_handle(struct ion_buffer *buffer)
 		task = current->group_leader;
 		get_task_comm(buffer->task_comm, task);
 		buffer->pid = task_pid_nr(task);
+		atomic_long_sub(buffer->size, &buffer->heap->total_handles);
 	}
-	atomic_long_sub(buffer->size, &buffer->heap->total_handles);
 	mutex_unlock(&buffer->lock);
 }
 
