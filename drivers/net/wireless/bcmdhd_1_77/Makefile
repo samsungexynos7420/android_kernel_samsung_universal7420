@@ -252,8 +252,10 @@ DHDCFLAGS += -DPKTPRIO_OVERRIDE
 # Prevent rx thread monopolize
 DHDCFLAGS += -DWAIT_DEQUEUE
 
-# Control PM related value for MFG process(Read from file) 
+# Control PM related value for MFG process(Read from file) if not S6/S6e
+ifneq ($(filter y,$(CONFIG_BOARD_ZEROLTE_UNI) $(CONFIG_BOARD_ZEROFLTE_UNI)),y)
 DHDCFLAGS += -DDHD_PM_CONTROL_FROM_FILE
+endif
 
 # Use Android wake lock mechanism
 DHDCFLAGS += -DCONFIG_HAS_WAKELOCK
