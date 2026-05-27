@@ -1574,6 +1574,20 @@ try_to_wake_up(struct task_struct *p, unsigned int state, int wake_flags)
 
 #ifdef CONFIG_SMP
 	/*
+	 * In some case,
+	 * target P is on current cpu (on_cpu == 1), but it's not on rq (on_rq != 1).
+	 *
+	 * P.on_cpu is set to 0 only after finishing schedule(), so this function can
+	 * be in dead lock. In this case, P should be aborted and skip to wake up.
+	 */
+	if (cpu == task_cpu(current)) {
+		if (unlikely(WARN_ON(current == p))) {
+			exynos_ss_printkl((size_t)current, (size_t)current);
+			goto stat;
+		}
+	}
+
+	/*
 	 * Ensure we load p->on_cpu _after_ p->on_rq, otherwise it would be
 	 * possible to, falsely, observe p->on_cpu == 0.
 	 *
