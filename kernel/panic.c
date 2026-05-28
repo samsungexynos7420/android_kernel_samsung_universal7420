@@ -123,6 +123,14 @@ void panic(const char *fmt, ...)
 	va_end(args);
 	pr_emerg("Kernel panic - not syncing: %s\n", buf);
 
+#ifdef CONFIG_RELOCATABLE_KERNEL 
+	{	
+		extern u64 *__boot_kernel_offset; 
+		u64 *kernel_addr = (u64 *) &__boot_kernel_offset;
+		pr_emerg("Kernel loaded at: 0x%llx, offset from compile-time address %llx\n", kernel_addr[1]+kernel_addr[0], kernel_addr[1]- kernel_addr[2] );
+	}
+#endif 
+
 	exynos_ss_prepare_panic();
 	exynos_ss_dump_panic();
 #ifdef CONFIG_DEBUG_BUGVERBOSE
