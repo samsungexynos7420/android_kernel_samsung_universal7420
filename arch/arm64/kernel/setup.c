@@ -296,6 +296,10 @@ void __init setup_arch(char **cmdline_p)
 {
 	struct machine_desc *mdesc;
 
+	unsigned long v_addr = 0x40300000;
+	void *vir_addr = phys_to_virt(v_addr);
+	u32 *data = (u32 *)vir_addr;
+
 	pr_info("Boot CPU: AArch64 Processor [%08x]\n", read_cpuid_id());
 
 	setup_machine_fdt(__fdt_pointer);
@@ -362,12 +366,14 @@ void __init setup_arch(char **cmdline_p)
 	if (mdesc->init_early)
 		mdesc->init_early();
 
-	if (boot_args[1] || boot_args[2] || boot_args[3]) {
-		pr_err("WARNING: x1-x3 nonzero in violation of boot protocol:\n"
-			"\tx1: %016llx\n\tx2: %016llx\n\tx3: %016llx\n"
-			"This indicates a broken bootloader or old kernel\n",
-			boot_args[1], boot_args[2], boot_args[3]);
-	}
+#if !(defined CONFIG_RELOCATABLE_KERNEL) && !(defined CONFIG_RANDOMIZE_BASE)
+		if (boot_args[1] || boot_args[2] || boot_args[3]) {
+			pr_err("WARNING: x1-x3 nonzero in violation of boot protocol:\n"
+				"\tx1: %016llx\n\tx2: %016llx\n\tx3: %016llx\n"
+				"This indicates a broken bootloader or old kernel\n",
+				boot_args[1], boot_args[2], boot_args[3]);
+		}
+#endif
 }
 
 static int __init arm64_device_init(void)

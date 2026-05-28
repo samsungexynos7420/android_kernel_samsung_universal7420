@@ -917,6 +917,12 @@ config ARM64_CPU_SUSPEND
 	def_bool PM_SLEEP
 endmenu
 
+config RELOCATABLE_KERNEL 
+	bool "set kernel to relocatable in both virtual and physical address"
+	default n
+	help 	
+	  This configuare will allow you to config the kernel into position independent kernel, with '--PIE' insert into LD script.
+
 source "drivers/cpufreq/Kconfig"
 
 menu "CPU Power Management"
