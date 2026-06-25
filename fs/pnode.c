@@ -464,9 +464,9 @@ void propagate_remount(struct mount *mnt)
 {
 	struct mount *m = mnt;
 #ifdef CONFIG_RKP_NS_PROT
-    struct super_block *sb = mnt->mnt->mnt_sb;
+	struct super_block *sb = mnt->mnt->mnt_sb;
 #else
-    struct super_block *sb = mnt->mnt.mnt_sb;
+	struct super_block *sb = mnt->mnt.mnt_sb;
 #endif
 
 	if (sb->s_op->copy_mnt_data) {
