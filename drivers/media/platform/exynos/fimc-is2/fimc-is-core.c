@@ -518,6 +518,15 @@ static int fimc_is_probe(struct platform_device *pdev)
 	probe_info("%s:start(%ld, %ld)\n", __func__,
 		sizeof(struct fimc_is_core), sizeof(struct fimc_is_video_ctx));
 
+	core = kzalloc(sizeof(struct fimc_is_core), GFP_KERNEL);
+	if (!core) {
+		probe_err("core is NULL");
+		return -ENOMEM;
+	}
+
+	fimc_is_dev = &pdev->dev;
+	dev_set_drvdata(fimc_is_dev, core);
+	
 	pdata = dev_get_platdata(&pdev->dev);
 	if (!pdata) {
 #ifdef CONFIG_OF
@@ -531,20 +540,6 @@ static int fimc_is_probe(struct platform_device *pdev)
 #else
 		BUG();
 #endif
-	}
-
-	core = kzalloc(sizeof(struct fimc_is_core), GFP_KERNEL);
-	if (!core) {
-		probe_err("core is NULL");
-		return -ENOMEM;
-	}
-
-	fimc_is_dev = &pdev->dev;
-	ret = dev_set_drvdata(fimc_is_dev, core);
-	if (ret) {
-		probe_err("dev_set_drvdata is fail(%d)", ret);
-		kfree(core);
-		return ret;
 	}
 
 #ifdef USE_ION_ALLOC

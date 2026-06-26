@@ -1349,11 +1349,7 @@ int max86900_probe(struct i2c_client *client, const struct i2c_device_id *id )
 		goto max86900_init_device_failed;
 	}
 
-	err = dev_set_drvdata(data->dev, data);
-	if (err) {
-		pr_err("%s dev_set_drvdata fail err = %d", __func__, err);
-		goto dev_set_drvdata_failed;
-	}
+	dev_set_drvdata(data->dev, data);
 
 	if (data->sub_ldo4 != NULL) {
 		err = max86900_regulator_onoff(data, HRM_LDO_OFF);
