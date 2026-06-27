@@ -31,9 +31,6 @@
 #include <linux/sched.h>
 #include <linux/seq_file.h>
 #include <asm/cputime.h>
-#ifdef CONFIG_BL_SWITCHER
-#include <asm/bL_switcher.h>
-#endif
 #include <linux/uaccess.h>
 
 #define UID_HASH_BITS 10
@@ -1860,52 +1857,17 @@ static void cpufreq_stats_cleanup(void)
 	}
 	cpufreq_allstats_free();
 }
-
-#ifdef CONFIG_BL_SWITCHER
-static int cpufreq_stats_switcher_notifier(struct notifier_block *nfb,
-					unsigned long action, void *_arg)
-{
-	switch (action) {
-	case BL_NOTIFY_PRE_ENABLE:
-	case BL_NOTIFY_PRE_DISABLE:
-		cpufreq_stats_cleanup();
-		break;
-
-	case BL_NOTIFY_POST_ENABLE:
-	case BL_NOTIFY_POST_DISABLE:
-		cpufreq_stats_setup();
-		break;
-
-	default:
-		return NOTIFY_DONE;
-	}
-
-	return NOTIFY_OK;
-}
-
-static struct notifier_block switcher_notifier = {
-	.notifier_call = cpufreq_stats_switcher_notifier,
-};
-#endif
-
 static int __init cpufreq_stats_init(void)
 {
 	int ret;
 	spin_lock_init(&cpufreq_stats_lock);
 
 	ret = cpufreq_stats_setup();
-#ifdef CONFIG_BL_SWITCHER
-	if (!ret)
-		bL_switcher_register_notifier(&switcher_notifier);
-#endif
 	return ret;
 }
 
 static void __exit cpufreq_stats_exit(void)
 {
-#ifdef CONFIG_BL_SWITCHER
-	bL_switcher_unregister_notifier(&switcher_notifier);
-#endif
 	cpufreq_stats_cleanup();
 	cpufreq_powerstats_free();
 }
