@@ -9,4 +9,3 @@ obj-$(CONFIG_SENSORS_SSP)		+= sensors_core.o ssp_dev.o ssp_spi.o ssp_data.o ssp_
 obj-$(CONFIG_SENSORS_SX9310)		+= sx9310.o
 obj-$(CONFIG_SENSORS_MAX86900)		+= max86900.o
 obj-$(CONFIG_SENSORS_MAX86902)		+= max86902.o
-obj-$(CONFIG_SENSORS_MAX_NOTCHFILTER) += max_notchfilter/

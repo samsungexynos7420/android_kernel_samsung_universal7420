@@ -24,40 +24,6 @@ config SENSORS_SSP_STM
 	  To compile this driver as a module, choose M here: the
 	  module will be called ssp.
 
-config SENSORS_MAX86900
-	tristate "MAXIM MAX86900 HRM Sensor"
-	default n
-	depends on I2C && SYSFS
-	help
-	  If you say yes here you get support for the MAX86900
-	  HRM sensor.
-	  This driver can also be built as a module.  If so, the module
-	  will be called max86900.
-
-config SENSORS_MAX86902
-	tristate "MAXIM MAX86902 UV HRM Sensor"
-	default n
-	depends on I2C
-	help
-	  If you say yes here you get support for the MAX86902
-	  HRM sensor & uv sensor.
-	  This driver can also be built as a module.  If so, the module
-	  will be called MAX86902.
-
-config SENSORS_ADPD142
-	depends on I2C
-	tristate "ADI hrm sensor driver"
-	default n
-	help
-	  This option enables hrm sensors using adpd142 driver.
-
-config SENSORS_ADPD143
-	depends on I2C
-	tristate "ADI hrm sensor driver"
-	default n
-	help
-	  This option enables hrm sensors using adpd143 driver.
-
 config SENSORS_MULTIPLE_GLASS_TYPE
 	tristate "Sensors ssp multiple glass type"
 	default n
@@ -131,4 +97,3 @@ config SENSORS_SSP_ROYCELTE
 	  If you want to use royce project, it should be set.
 
 source "drivers/sensorhub/stm/factory/Kconfig"
-source "drivers/sensorhub/stm/max_notchfilter/Kconfig"

@@ -171,6 +171,13 @@ obj-$(CONFIG_MOBICORE_DRIVER)   += gud/
 obj-$(CONFIG_SENSORS_SSP)	+= sensorhub/
 obj-$(CONFIG_SENSORS_CORE)	+= sensors/
 
+# HRM sensor driver
+obj-$(CONFIG_SENSORS_MAX86900)	+= optics/
+obj-$(CONFIG_SENSORS_MAX86902)	+= optics/
+obj-$(CONFIG_SENSORS_ADPD142)	+= optics/
+obj-$(CONFIG_SENSORS_ADPD143)	+= optics/
+obj-$(CONFIG_SENSORS_HRMSENSOR)	+= optics/
+
 obj-$(CONFIG_GATOR)		+= gator/
 
 # BTS driver

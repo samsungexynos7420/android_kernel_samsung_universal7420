@@ -216,36 +216,6 @@ config SENSORS_SSP_MOBEAM
 	  To compile this driver as a module, choose M here: the
 	  module will be called ssp.
 
-config SENSORS_MAX86900
-	tristate "MAXIM MAX86900 HRM Sensor"
-	default n
-	depends on I2C
-	help
-	  If you say yes here you get support for the MAX86900
-	  HRM sensor.
-	  This driver can also be built as a module.  If so, the module
-	  will be called max86900.
-
-config SENSORS_MAX86902
-	tristate "MAXIM MAX86902 HRM & UV Sensor"
-	default n
-	depends on I2C
-	help
-	  If you say yes here you get support for the MAX86902
-	  HRM & UV sensor.
-	  This driver can also be built as a module.	If so, the module
-	  will be called max86902.
-
-config SENSORS_MAX86902_LED_5V
-	tristate "MAXIM MAX86902 LED 5V"
-	default n
-	depends on SENSORS_MAX86902
-	help
-	  If you say yes here you get support for the MAX86902
-	  LED power as 5V.
-	  This driver can also be built as a module.	  If so, the module
-	  will be called max86902.
-
 config SENSOR_SSP_PROXIMTY_FOR_WINDOW_TYPE
 	tristate "PROXIMITY THRESHOLD FOR WINDOW_TYPE"
 	default n
@@ -253,13 +223,6 @@ config SENSOR_SSP_PROXIMTY_FOR_WINDOW_TYPE
 	help
 	  If you say yes here you get support for the proximity threshold
 	  This threshold is changed by window type.
-
-config SENSORS_ADPD142
-	depends on I2C
-	tristate "ADI hrm sensor driver"
-	default n
-	help
-	  This option enables hrm sensors using adpd142 driver.
 
 config SENSORS_SSP_TMD4903
 	tristate "Sensors ssp tmd4903"
@@ -404,7 +367,7 @@ config SENSORS_SSP_ZENLTE
  	  To compile this driver as a module, choose M here: the
  	  module will be called ssp.
 
- config SENSORS_SSP_MARINELTE
+config SENSORS_SSP_MARINELTE
 	tristate "MARINELTE Proejct"
 	default n
 	depends on SPI
@@ -415,4 +378,3 @@ config SENSORS_SSP_ZENLTE
  	  To compile this driver as a module, choose M here: the
  	  module will be called ssp.
 
-source "drivers/sensorhub/brcm/max_notchfilter/Kconfig"

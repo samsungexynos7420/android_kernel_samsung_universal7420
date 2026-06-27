@@ -26,7 +26,7 @@
 #include <linux/timer.h>
 
 #include <linux/pinctrl/consumer.h>
-#include "../../pinctrl/core.h"
+#include "../pinctrl/core.h"
 
 #define MAX86902_DEBUG
 

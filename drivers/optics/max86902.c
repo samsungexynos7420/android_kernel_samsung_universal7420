@@ -796,7 +796,7 @@ static int max86902_uv_init_fov_correction(struct max86900_device_data *data)
 		pr_err("%s - error initializing MAX86902_LED_FLEX_CONTROL_1!\n",
 			__func__);
 		return -EIO;
-}
+	}
 
 	/* Interrupt 20th(32-20) */
 	err = max86900_write_reg(data, MAX86902_FIFO_CONFIG,
@@ -1933,7 +1933,7 @@ static int max86902_uv_read_data_hr(struct max86900_device_data *device, int *da
 	int sum_data = 0;
 	int i;
 
-    status = MAX86902_INTERRUPT_STATUS;
+	status = MAX86902_INTERRUPT_STATUS;
 	err = max86900_read_reg(device, &status, 1);
 	if (err < 0) {
 		pr_err("%s: read status err: %d\n", __func__, err);
@@ -3153,7 +3153,7 @@ static int max86902_get_device_id(struct max86900_device_data *data, unsigned lo
 	int red_led_code = 0;
 	int TS_trim_code = 0;
 
-	if ( !atomic_read(&data->uv_is_enable)
+	if (!atomic_read(&data->uv_is_enable)
 			&& !atomic_read(&data->hrm_is_enable)) {
 		pr_info("%s - regulator on\n", __func__);
 		err = max86900_regulator_onoff(data, HRM_LDO_ON);
@@ -3254,7 +3254,7 @@ static int max86902_get_device_id(struct max86900_device_data *data, unsigned lo
 		return -EIO;
 	}
 
-	if ( !atomic_read(&data->uv_is_enable)
+	if (!atomic_read(&data->uv_is_enable)
 			&& !atomic_read(&data->hrm_is_enable)) {
 		pr_info("%s - regulator off\n", __func__);
 		err = max86900_regulator_onoff(data, HRM_LDO_OFF);
@@ -4593,8 +4593,10 @@ static void max86902_uv_irq_handler(struct max86900_device_data *data)
 irqreturn_t max86900_irq_handler(int irq, void *device)
 {
 	struct max86900_device_data *data = device;
+#if !defined(CONFIG_SWI2C_MAX86902)
 	u8 recvData;
 	int err;
+#endif
 
 	if (data->reenable_set || data->reenable_cnt == MAX86902_REENABLE_MAX_CNT) {
 		cancel_delayed_work(&data->reenable_work_queue);
@@ -4616,6 +4618,7 @@ irqreturn_t max86900_irq_handler(int irq, void *device)
 			max86902_uv_irq_handler(data);
 	}
 
+#if !defined(CONFIG_SWI2C_MAX86902)
 	/* Interrupt Clear */
 	recvData = MAX86902_INTERRUPT_STATUS;
 	if ((err = max86900_read_reg(data, &recvData, 1)) != 0) {
@@ -4631,6 +4634,7 @@ irqreturn_t max86900_irq_handler(int irq, void *device)
 			__func__, err, recvData);
 		return -EIO;
 	}
+#endif
 
 	if (data->is_alc_off) {
 		if ((data->sample_cnt % 1000) == 1)
@@ -5275,6 +5279,10 @@ static const struct i2c_device_id max86900_device_id[] = {
 	{ "max86900_match_table", 0 },
 	{ }
 };
+
+#if defined(CONFIG_SEC_TRLTE_JPN) || defined(CONFIG_SEC_TBLTE_JPN)
+MODULE_DEVICE_TABLE(i2c, hrm_id);
+#endif
 
 /* descriptor of the max86900 I2C driver */
 static struct i2c_driver max86900_i2c_driver = {

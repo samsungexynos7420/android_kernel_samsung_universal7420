@@ -31,4 +31,3 @@ config SSP_REGISTER_RW
 	  If you want to use Register RW sysfs, it should be set.
 
 source "drivers/sensorhub/stm32/factory/Kconfig"
-source "drivers/sensorhub/stm32/max_notchfilter/Kconfig"
