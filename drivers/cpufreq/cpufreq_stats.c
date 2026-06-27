@@ -1767,7 +1767,7 @@ static struct notifier_block process_notifier_block = {
 	.notifier_call	= process_notifier,
 };
 
-static int cpufreq_stats_setup(void)
+static int __init cpufreq_stats_init(void)
 {
 	int ret;
 	unsigned int cpu;
@@ -1782,7 +1782,7 @@ static int cpufreq_stats_setup(void)
 
 	register_hotcpu_notifier(&cpufreq_stat_cpu_notifier);
 	for_each_online_cpu(cpu)
-		cpufreq_update_policy(cpu);
+		cpufreq_stats_create_table_cpu(cpu);
 
 	/* XXX TODO task support for time_in_state doesn't update freq
 	 * info for tasks already initialized, so tasks initialized early
@@ -1842,7 +1842,7 @@ static int cpufreq_stats_setup(void)
 	return 0;
 }
 
-static void cpufreq_stats_cleanup(void)
+static void __exit cpufreq_stats_exit(void)
 {
 	unsigned int cpu;
 
@@ -1856,19 +1856,6 @@ static void cpufreq_stats_cleanup(void)
 		cpufreq_stats_free_sysfs(cpu);
 	}
 	cpufreq_allstats_free();
-}
-static int __init cpufreq_stats_init(void)
-{
-	int ret;
-	spin_lock_init(&cpufreq_stats_lock);
-
-	ret = cpufreq_stats_setup();
-	return ret;
-}
-
-static void __exit cpufreq_stats_exit(void)
-{
-	cpufreq_stats_cleanup();
 	cpufreq_powerstats_free();
 }
 
