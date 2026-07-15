@@ -476,10 +476,6 @@ static const unsigned char SEQ_ALPM2NIT_MODE_ON[] = {
 	0x53, 0x23
 };
 
-static const unsigned char SEQ_NORMAL_MODE_ON[] = {
-	0x53, 0x00
-};
-
 static const unsigned char SEQ_GLOBAL_PARAM_21[] = {
 	0xB0,
 	0x15
