@@ -43,7 +43,7 @@
 		video_ext {
 			compatible = "exynos5433-ion,video_ext";
 			secure;
-			reg = <0xF0E00000 0x600000>;
+			reg = <0xF0E00000 0xC00000>;
 			id = <1>;
 		};
 
