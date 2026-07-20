@@ -177,7 +177,7 @@ static void ion_carveout_heap_free(struct ion_buffer *buffer)
 		}
 #endif
 	} else {
-		ion_secure_unprotect(heap);
+		ion_secure_unprotect(buffer);
 	}
 	ion_carveout_free(heap, paddr, buffer->size);
 	sg_free_table(table);

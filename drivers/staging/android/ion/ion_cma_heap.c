@@ -191,7 +191,7 @@ static void ion_cma_free(struct ion_buffer *buffer)
 	dev_dbg(dev, "Release buffer %p\n", buffer);
 
 	if (is_protected)
-		ion_secure_unprotect(buffer->heap);
+		ion_secure_unprotect(buffer);
 
 	mutex_lock(&cma_heap->isolate_mutex);
 	if (should_isolate && (--cma_heap->isolate_count == 0))

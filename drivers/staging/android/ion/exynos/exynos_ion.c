@@ -141,8 +141,9 @@ static void __ion_secure_unprotect(struct kref *kref)
 						pdata->heap->name);
 }
 
-int ion_secure_unprotect(struct ion_heap *heap)
+int ion_secure_unprotect(struct ion_buffer *buffer)
 {
+	struct ion_heap *heap = buffer->heap;
 	struct exynos_ion_platform_heap *pdata;
 	int id;
 
