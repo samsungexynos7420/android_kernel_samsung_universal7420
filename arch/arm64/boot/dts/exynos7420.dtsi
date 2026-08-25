@@ -253,10 +253,6 @@
 		};
 	};
 
-	cpufreq {
-		compatible = "samsung,exynos-mp-cpufreq";
-	};
-
 	coresight@16000000 {
 		compatible = "exynos,coresight";
 		reg = <0x16000000 0xc00000>;
@@ -351,6 +347,15 @@
                 cpu_off = <0x84000002>;
                 cpu_on = <0xC4000003>;
         };
+
+	cpu_hotplug {
+		compatible = "exynos,cpu_hotplug";
+		boot_lock_time = <40>;
+	};
+
+	cpufreq {
+		compatible = "samsung,exynos-mp-cpufreq";
+	};
 
 	mailbox@11240000 {
 		compatible = "samsung,exynos-mailbox";
