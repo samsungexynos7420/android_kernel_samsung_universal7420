@@ -320,7 +320,7 @@ static inline void pm_qos_set_value(struct pm_qos_constraints *c, s32 value)
  *  otherwise.
  */
 int pm_qos_update_target(struct pm_qos_constraints *c, struct plist_node *node,
-			 enum pm_qos_req_action action, int value)
+			 enum pm_qos_req_action action, int value, void *notify_param)
 {
 	unsigned long flags;
 	int prev_value, curr_value, new_value;
@@ -374,14 +374,14 @@ int pm_qos_update_target(struct pm_qos_constraints *c, struct plist_node *node,
 	if (c->type == PM_QOS_FORCE_MAX) {
 		blocking_notifier_call_chain(c->notifiers,
 					     (unsigned long)curr_value,
-					     NULL);
+					     notify_param);
 		return 1;
 	}
 
 	if (prev_value != curr_value) {
 		blocking_notifier_call_chain(c->notifiers,
 					     (unsigned long)curr_value,
-					     NULL);
+					     notify_param);
 		return 1;
 	} else {
 		return 0;
@@ -409,7 +409,7 @@ int pm_qos_update_constraints(int pm_qos_class,
 	}
 
 	for (i = 1; i < PM_QOS_NUM_CLASSES; i++) {
-		if (i != pm_qos_class)
+ 		if (i != pm_qos_class)
 			continue;
 
 		r_constraints = pm_qos_array[i]->constraints;
@@ -514,12 +514,12 @@ int pm_qos_request_active(struct pm_qos_request *req)
 EXPORT_SYMBOL_GPL(pm_qos_request_active);
 
 static void __pm_qos_update_request(struct pm_qos_request *req,
-			   s32 new_value)
+			   s32 new_value, void *notify_param)
 {
 	if (new_value != req->node.prio)
 		pm_qos_update_target(
 			pm_qos_array[req->pm_qos_class]->constraints,
-			&req->node, PM_QOS_UPDATE_REQ, new_value);
+			&req->node, PM_QOS_UPDATE_REQ, new_value, notify_param);
 }
 
 /**
@@ -534,7 +534,7 @@ static void pm_qos_work_fn(struct work_struct *work)
 						  struct pm_qos_request,
 						  work);
 
-	__pm_qos_update_request(req, PM_QOS_DEFAULT_VALUE);
+	__pm_qos_update_request(req, PM_QOS_DEFAULT_VALUE, NULL);
 }
 
 /**
@@ -566,7 +566,7 @@ void pm_qos_add_request_trace(char *func, unsigned int line,
 	req->line = line;
 	INIT_DELAYED_WORK(&req->work, pm_qos_work_fn);
 	pm_qos_update_target(pm_qos_array[pm_qos_class]->constraints,
-			     &req->node, PM_QOS_ADD_REQ, value);
+			     &req->node, PM_QOS_ADD_REQ, value, NULL);
 }
 EXPORT_SYMBOL_GPL(pm_qos_add_request_trace);
 
@@ -594,9 +594,38 @@ void pm_qos_update_request(struct pm_qos_request *req,
 	if (delayed_work_pending(&req->work))
 		cancel_delayed_work_sync(&req->work);
 
-	__pm_qos_update_request(req, new_value);
+	__pm_qos_update_request(req, new_value, NULL);
 }
 EXPORT_SYMBOL_GPL(pm_qos_update_request);
+
+/**
+ * pm_qos_update_request_param - modifies an existing qos request
+ * @req : handle to list element holding a pm_qos request to use
+ * @value: defines the qos request
+ * @notify_param: notifier parameter
+ *
+ * Updates an existing qos request for the pm_qos_class of parameters along
+ * with updating the target pm_qos_class value.
+ *
+ * Attempts are made to make this code callable on hot code paths.
+ */
+void pm_qos_update_request_param(struct pm_qos_request *req,
+			   s32 new_value, void *notify_param)
+{
+	if (!req) /*guard against callers passing in null */
+		return;
+
+	if (!pm_qos_request_active(req)) {
+		WARN(1, KERN_ERR "pm_qos_update_request() called for unknown object\n");
+		return;
+	}
+
+	if (delayed_work_pending(&req->work))
+		cancel_delayed_work_sync(&req->work);
+
+	__pm_qos_update_request(req, new_value, notify_param);
+}
+EXPORT_SYMBOL_GPL(pm_qos_update_request_param);
 
 /**
  * pm_qos_update_request_timeout - modifies an existing qos request temporarily.
@@ -621,7 +650,7 @@ void pm_qos_update_request_timeout(struct pm_qos_request *req, s32 new_value,
 	if (new_value != req->node.prio)
 		pm_qos_update_target(
 			pm_qos_array[req->pm_qos_class]->constraints,
-			&req->node, PM_QOS_UPDATE_REQ, new_value);
+			&req->node, PM_QOS_UPDATE_REQ, new_value, NULL);
 
 	schedule_delayed_work(&req->work, usecs_to_jiffies(timeout_us));
 }
@@ -650,7 +679,7 @@ void pm_qos_remove_request(struct pm_qos_request *req)
 
 	pm_qos_update_target(pm_qos_array[req->pm_qos_class]->constraints,
 			     &req->node, PM_QOS_REMOVE_REQ,
-			     PM_QOS_DEFAULT_VALUE);
+			     PM_QOS_DEFAULT_VALUE, NULL);
 	memset(req, 0, sizeof(*req));
 }
 EXPORT_SYMBOL_GPL(pm_qos_remove_request);

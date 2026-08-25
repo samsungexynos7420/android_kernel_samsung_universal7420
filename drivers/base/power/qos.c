@@ -142,7 +142,7 @@ static int apply_constraint(struct dev_pm_qos_request *req,
 	switch(req->type) {
 	case DEV_PM_QOS_LATENCY:
 		ret = pm_qos_update_target(&qos->latency, &req->data.pnode,
-					   action, value);
+					   action, value, NULL);
 		if (ret) {
 			value = pm_qos_read_value(&qos->latency);
 			blocking_notifier_call_chain(&dev_pm_notifiers,
