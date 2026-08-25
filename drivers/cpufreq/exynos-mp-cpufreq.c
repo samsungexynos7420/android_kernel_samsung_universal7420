@@ -837,11 +837,38 @@ static int exynos_cpufreq_resume(struct cpufreq_policy *policy)
 }
 #endif
 
-static int __cpuinit exynos_cpufreq_cpu_notifier(struct notifier_block *notifier,
+static int __cpuinit exynos_cpufreq_cpu_up_notifier(struct notifier_block *notifier,
 					unsigned long action, void *hcpu)
 {
 	unsigned int cpu = (unsigned long)hcpu;
 	struct device *dev;
+	struct cpumask mask;
+	int cluster;
+
+	dev = get_cpu_device(cpu);
+	if (dev) {
+		switch (action) {
+		case CPU_ONLINE:
+			cluster = get_cur_cluster(cpu);
+			if (cluster == CL_ONE) {
+				cpumask_and(&mask, cpu_coregroup_mask(cpu), cpu_online_mask);
+				if (cpumask_weight(&mask) == 1)
+					pm_qos_update_request(&boot_max_qos[cluster], freq_max[cluster]);
+			}
+			break;
+		}
+	}
+
+	return NOTIFY_OK;
+}
+
+static int __cpuinit exynos_cpufreq_cpu_down_notifier(struct notifier_block *notifier,
+					unsigned long action, void *hcpu)
+{
+	unsigned int cpu = (unsigned long)hcpu;
+	struct device *dev;
+	struct cpumask mask;
+	int cluster;
 
 	if (suspend_prepared)
 		return NOTIFY_OK;
@@ -850,6 +877,13 @@ static int __cpuinit exynos_cpufreq_cpu_notifier(struct notifier_block *notifier
 	if (dev) {
 		switch (action) {
 		case CPU_DOWN_PREPARE:
+			cluster = get_cur_cluster(cpu);
+			if (cluster == CL_ONE) {
+				cpumask_and(&mask, cpu_coregroup_mask(cpu), cpu_online_mask);
+				if (cpumask_weight(&mask) == 1)
+					pm_qos_update_request(&boot_max_qos[cluster], freq_min[cluster]);
+			}
+			break;
 		case CPU_DOWN_PREPARE_FROZEN:
 			mutex_lock(&cpufreq_lock);
 			exynos_info[CL_ZERO]->blocked = true;
@@ -869,8 +903,18 @@ static int __cpuinit exynos_cpufreq_cpu_notifier(struct notifier_block *notifier
 	return NOTIFY_OK;
 }
 
-static struct notifier_block __refdata exynos_cpufreq_cpu_nb = {
-	.notifier_call = exynos_cpufreq_cpu_notifier,
+static struct notifier_block __refdata exynos_cpufreq_cpu_up_nb = {
+	.notifier_call = exynos_cpufreq_cpu_up_notifier,
+	.priority = INT_MIN,
+};
+
+/*
+ * This notifier should be perform before
+ * cpufreq_cpu_notifier performs.
+ */
+static struct notifier_block __refdata exynos_cpufreq_cpu_down_nb = {
+	.notifier_call = exynos_cpufreq_cpu_down_notifier,
+	.priority = INT_MIN + 2,
 };
 
 /*
@@ -2045,7 +2089,8 @@ static int exynos_cpufreq_init(void)
 
 	}
 
-	register_hotcpu_notifier(&exynos_cpufreq_cpu_nb);
+	register_hotcpu_notifier(&exynos_cpufreq_cpu_up_nb);
+	register_hotcpu_notifier(&exynos_cpufreq_cpu_down_nb);
 	register_pm_notifier(&exynos_cpufreq_nb);
 	register_reboot_notifier(&exynos_cpufreq_reboot_notifier);
 #ifdef CONFIG_EXYNOS_THERMAL
@@ -2225,7 +2270,8 @@ err_mp_attr:
 err_cpufreq:
 	unregister_reboot_notifier(&exynos_cpufreq_reboot_notifier);
 	unregister_pm_notifier(&exynos_cpufreq_nb);
-	unregister_hotcpu_notifier(&exynos_cpufreq_cpu_nb);
+	unregister_hotcpu_notifier(&exynos_cpufreq_cpu_up_nb);
+	unregister_hotcpu_notifier(&exynos_cpufreq_cpu_down_nb);
 err_alloc:
 err_init:
 	for (cluster = 0; cluster < CL_END; cluster++) {
