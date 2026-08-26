@@ -1740,8 +1740,10 @@ static int exynos_cluster1_min_qos_handler(struct notifier_block *b, unsigned lo
 	struct cpufreq_policy *policy;
 	int cpu = boot_cluster ? 0 : NR_CLUST0_CPUS;
 
+#if defined(CONFIG_SCHED_HMP) && defined(CONFIG_EXYNOS5_DYNAMIC_CPU_HOTPLUG)
 	if (val)
 		event_hotplug_in();
+#endif
 
 	freq = exynos_getspeed(cpu);
 	if (freq >= val)
@@ -1862,8 +1864,10 @@ static int exynos_cluster0_min_qos_handler(struct notifier_block *b, unsigned lo
 	threshold_freq = 1000000;	/* 1.0GHz */
 #endif
 
+#if defined(CONFIG_SCHED_HMP) && defined(CONFIG_EXYNOS5_DYNAMIC_CPU_HOTPLUG)
 	if (val > threshold_freq)
 		event_hotplug_in();
+#endif
 
 	freq = exynos_getspeed(cpu);
 	if (freq >= val)
