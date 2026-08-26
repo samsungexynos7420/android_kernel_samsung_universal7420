@@ -313,6 +313,8 @@ int kbase_backend_timer_init(struct kbase_device *kbdev)
 	hrtimer_init(&backend->scheduling_timer, CLOCK_MONOTONIC,
 							HRTIMER_MODE_REL);
 	backend->scheduling_timer.function = timer_callback;
+	/* MALI_SEC_INTEGRATION */
+	backend->scheduling_timer.bounded_to_boot_cluster = true;
 
 	backend->timer_running = false;
 
