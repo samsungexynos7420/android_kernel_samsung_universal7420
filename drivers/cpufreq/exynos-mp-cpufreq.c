@@ -205,12 +205,17 @@ static cluster_type get_cur_cluster(unsigned int cpu)
 	return per_cpu(cpu_cur_cluster, cpu);
 }
 
+static unsigned int clk_get_freq(cluster_type cl)
+{
+	return clk_get_rate(exynos_info[cl]->cpu_clk) / 1000;
+}
+
 static void set_boot_freq(cluster_type cluster)
 {
 
 	if (exynos_info[cluster]) {
 		exynos_info[cluster]->boot_freq
-				= clk_get_rate(exynos_info[cluster]->cpu_clk) / 1000;
+				= clk_get_freq(cluster);
 		pr_info("Cluster[%d] BootFreq: %dKHz\n", cluster,
 						exynos_info[cluster]->boot_freq);
 	}
@@ -223,7 +228,7 @@ static void set_resume_freq(cluster_type cluster)
 
 	if (exynos_info[cluster])
 		exynos_info[cluster]->resume_freq
-				= clk_get_rate(exynos_info[cluster]->cpu_clk) / 1000;
+				= clk_get_freq(cluster);
 }
 
 static void cluster_onoff_monitor(struct work_struct *work)
@@ -328,7 +333,7 @@ int exynos_verify_speed(struct cpufreq_policy *policy)
 
 unsigned int exynos_getspeed_cluster(cluster_type cluster)
 {
-	return clk_get_rate(exynos_info[cluster]->cpu_clk) / 1000;
+	return clk_get_freq(cluster);
 }
 
 unsigned int exynos_getspeed(unsigned int cpu)
