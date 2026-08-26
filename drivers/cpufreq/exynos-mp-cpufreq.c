@@ -136,6 +136,10 @@ static int qos_max_class[CL_END] = {PM_QOS_CLUSTER0_FREQ_MAX, PM_QOS_CLUSTER1_FR
 static int qos_min_class[CL_END] = {PM_QOS_CLUSTER0_FREQ_MIN, PM_QOS_CLUSTER1_FREQ_MIN};
 //static int qos_max_default_value[CL_END] = {PM_QOS_CLUSTER0_FREQ_MAX_DEFAULT_VALUE, PM_QOS_CLUSTER1_FREQ_MAX_DEFAULT_VALUE};
 static int qos_min_default_value[CL_END] = {PM_QOS_CLUSTER0_FREQ_MIN_DEFAULT_VALUE, PM_QOS_CLUSTER1_FREQ_MIN_DEFAULT_VALUE};
+
+/* For limit number of online cpus through cpuhotplug */
+struct pm_qos_request cpufreq_cpu_hotplug_max_request;
+
 /*
  * CPUFREQ init notifier
  */
@@ -1295,6 +1299,16 @@ static ssize_t show_cpufreq_max_limit(struct kobject *kobj,
 	return nsize;
 }
 
+static void enable_nonboot_cluster_cpus(void)
+{
+	pm_qos_update_request(&cpufreq_cpu_hotplug_max_request, NR_CPUS);
+}
+
+static void disable_nonboot_cluster_cpus(void)
+{
+	pm_qos_update_request(&cpufreq_cpu_hotplug_max_request, NR_CLUST1_CPUS);
+}
+
 static ssize_t store_cpufreq_max_limit(struct kobject *kobj, struct attribute *attr,
 					const char *buf, size_t count)
 {
@@ -2321,6 +2335,9 @@ static int exynos_mp_cpufreq_probe(struct platform_device *pdev)
 {
 	int ret;
 	cluster_type cluster;
+
+	pm_qos_add_request(&cpufreq_cpu_hotplug_max_request, PM_QOS_CPU_ONLINE_MAX,
+		PM_QOS_CPU_ONLINE_MAX_DEFAULT_VALUE);
 
 	for (cluster = 0; cluster < CL_END; cluster++) {
 		exynos_info[cluster] = kzalloc(sizeof(struct exynos_dvfs_info), GFP_KERNEL);
