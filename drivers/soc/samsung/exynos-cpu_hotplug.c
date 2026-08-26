@@ -465,8 +465,17 @@ int ess_boot_logging = 5000;
      /* Guarantee all CPUs running during booting time */
      pm_qos_add_request(&boot_min_cpu_hotplug_request,
          PM_QOS_CPU_ONLINE_MIN, NR_CPUS);
+#ifdef CONFIG_EXYNOS_HOTPLUG_GOVERNOR
      pm_qos_update_request_timeout(&boot_min_cpu_hotplug_request,
          NR_CPUS, cpu_hotplug.boot_lock_time * USEC_PER_SEC);
+#else
+	/*
+	 * If hotplug governor is not activated, nobody may be requested
+	 * PM_QOS_CPU_ONLINE_MIN, all secondary CPUs can go out. To prevent
+	 * this, it updates QoS to NR_CPUS.
+	 */
+	pm_qos_update_request(&boot_min_cpu_hotplug_request, NR_CPUS);
+#endif
  
      /* Add PM QoS for sysfs node */
      pm_qos_add_request(&user_min_cpu_hotplug_request,
