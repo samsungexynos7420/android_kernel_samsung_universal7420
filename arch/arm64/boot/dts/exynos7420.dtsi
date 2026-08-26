@@ -253,6 +253,10 @@
 		};
 	};
 
+	cpufreq {
+		compatible = "samsung,exynos-mp-cpufreq";
+	};
+
 	coresight@16000000 {
 		compatible = "exynos,coresight";
 		reg = <0x16000000 0xc00000>;
