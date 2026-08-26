@@ -1925,6 +1925,7 @@ static int __cpuinit cpufreq_cpu_callback(struct notifier_block *nfb,
 			cpufreq_add_dev(dev, NULL);
 			break;
 		case CPU_DOWN_PREPARE:
+		case CPU_DOWN_LATE_PREPARE:
 		case CPU_DOWN_PREPARE_FROZEN:
 			__cpufreq_remove_dev(dev, NULL);
 			break;
