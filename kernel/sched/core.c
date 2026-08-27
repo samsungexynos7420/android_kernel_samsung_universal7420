@@ -1748,6 +1748,9 @@ static void __sched_fork(struct task_struct *p)
 #ifdef CONFIG_SCHED_HMP
 	p->se.avg.hmp_last_up_migration = 0;
 	p->se.avg.hmp_last_down_migration = 0;
+#ifdef CONFIG_HP_EVENT_HMP_SYSTEM_LOAD
+	p->se.avg.is_big_thread = false;
+#endif
 #else
 	p->se.avg.runnable_avg_period = 0;
 	p->se.avg.runnable_avg_sum = 0;

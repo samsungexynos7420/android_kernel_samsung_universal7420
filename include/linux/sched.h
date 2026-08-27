@@ -1040,6 +1040,9 @@ struct sched_avg {
 #ifdef CONFIG_SCHED_HMP
 	u64 hmp_last_up_migration;
 	u64 hmp_last_down_migration;
+#ifdef CONFIG_HP_EVENT_HMP_SYSTEM_LOAD
+	bool is_big_thread;
+#endif
 #endif
 	u32 usage_avg_sum;
 };
@@ -2966,5 +2969,29 @@ static inline unsigned long rlimit_max(unsigned int limit)
 {
 	return task_rlimit_max(current, limit);
 }
+
+#if defined(CONFIG_HP_EVENT_THREAD_GROUP) || defined(CONFIG_HP_EVENT_HMP_SYSTEM_LOAD)
+void hp_event_enqueue_entity(struct sched_entity *se, int flags);
+void hp_event_dequeue_entity(struct sched_entity *se, int flags);
+void hp_event_update_entity_load(struct sched_entity *se);
+void hp_event_switched_from(struct sched_entity *se);
+void hp_event_do_exit(struct task_struct *p);
+void hp_event_update_rq_load(int cpu);
+extern unsigned int *pcpu_efficiency;
+#else
+static inline void hp_event_update_entity_load(struct sched_entity *se) { };
+static inline void hp_event_enqueue_entity(struct sched_entity *se, int flags) { };
+static inline void hp_event_dequeue_entity(struct sched_entity *se, int flags) { };
+static inline void hp_event_switched_from(struct sched_entity *se) { };
+static inline void hp_event_do_exit(struct task_struct *p) { };
+static inline void hp_event_update_rq_load(int cpu) { };
+#endif
+
+#if defined(CONFIG_HP_EVENT_HMP_SYSTEM_LOAD)
+extern int hp_sysload_to_quad_ratio;
+extern int hp_sysload_to_dual_ratio;
+extern int hp_sysload_param_calc(void);
+extern int hp_little_multiplier_ratio;
+#endif
 
 #endif

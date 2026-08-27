@@ -32,4 +32,22 @@ config EXYNOS5_DYNAMIC_CPU_HOTPLUG_SLEEP_PREPARE
 		during sleep/wakeup sequence.
 		This config set the number of activate cores.
 		defaut value is "4" to activate all cores in cluster0.
+
+config EXYNOS_HOTPLUG_GOVERNOR
+	bool "Enable Exynos dynamic hotplug governor"
+
+config SCHED_HP_EVENT
+	bool "Gathers scheduler events to decide hotplug in/out"
+	depends on EXYNOS_HOTPLUG_GOVERNOR
+	default y
+
+config HP_EVENT_THREAD_GROUP
+	bool "Gathres thread group information"
+	depends on SCHED_HP_EVENT && SCHED_HMP
+	default n
+
+config HP_EVENT_HMP_SYSTEM_LOAD
+	bool "Gathres system load information"
+	depends on SCHED_HP_EVENT && SCHED_HMP
+	default y
 endif #SOC_SAMSUNG

@@ -17,3 +17,4 @@ endif
 obj-$(CONFIG_EXYNOS5_SETUP_MIPIPHY)	+= exynos5-mipiphy.o
 
 obj-$(CONFIG_EXYNOS5_DYNAMIC_CPU_HOTPLUG)	+= exynos5_hotplug.o
+obj-$(CONFIG_EXYNOS_HOTPLUG_GOVERNOR)	+= exynos-hotplug_governor.o

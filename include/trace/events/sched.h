@@ -532,6 +532,30 @@ TRACE_EVENT(sched_rq_runnable_ratio,
 );
 
 /*
+ * Tracepoint for showing tracked rq runnable ratio [0..1023].
+ */
+ TRACE_EVENT(sched_rq_sysload_ratio,
+
+	TP_PROTO(int cpu, unsigned long ratio),
+
+	TP_ARGS(cpu, ratio),
+
+	TP_STRUCT__entry(
+		__field(int, cpu)
+		__field(unsigned long, ratio)
+	),
+
+	TP_fast_assign(
+		__entry->cpu   = cpu;
+		__entry->ratio = ratio;
+	),
+
+	TP_printk("cpu=%d ratio=%lu",
+			__entry->cpu,
+			__entry->ratio)
+);
+
+/*
  * Tracepoint for showing tracked rq runnable load.
  */
 TRACE_EVENT(sched_rq_runnable_load,
@@ -706,6 +730,64 @@ TRACE_EVENT(sched_hmp_offload_succeed,
 	TP_printk("cpu=%d dest=%d",
 		__entry->cpu,
 		__entry->dest_cpu)
+);
+
+TRACE_EVENT(sched_hp_event_thread_group,
+
+	TP_PROTO(struct task_struct *g_tsk, struct task_struct *tsk, unsigned long g_ratio, int nr_thread_gr, unsigned long load_avg_ratio, char *label),
+
+	TP_ARGS(g_tsk, tsk, g_ratio, nr_thread_gr, load_avg_ratio, label),
+
+	TP_STRUCT__entry(
+		__array(char, comm, TASK_COMM_LEN)
+		__array(char, comm2, TASK_COMM_LEN)
+		__field(pid_t, g_pid)
+		__field(pid_t, pid)
+		__field(unsigned long, g_ratio)
+		__field(int, nr_thread_gr)
+		__field(unsigned long, load_avg_ratio)
+		__array(char, label, 64)
+	),
+
+	TP_fast_assign(
+		strncpy(__entry->comm, g_tsk->comm, TASK_COMM_LEN);
+		strncpy(__entry->comm2, tsk->comm, TASK_COMM_LEN);
+		__entry->g_pid            = g_tsk->pid;
+		__entry->pid            = tsk->pid;
+		__entry->g_ratio = g_ratio;
+		__entry->nr_thread_gr = nr_thread_gr;
+		__entry->load_avg_ratio = load_avg_ratio;
+		strncpy(__entry->label, label, 64);
+	),
+
+	TP_printk("g_comm %s g_pid=%d comm=%s pid=%d group_load=%lu group_cnt=%d avg_ratio=%lu label=%s",
+			__entry->comm, __entry->g_pid, __entry->comm2, __entry->pid, __entry->g_ratio,
+			__entry->nr_thread_gr, __entry->load_avg_ratio, __entry->label)
+);
+
+TRACE_EVENT(sched_hp_event_system_load,
+
+	TP_PROTO(int cpu, int data0, int data1, char *label),
+
+	TP_ARGS(cpu,data0,data1,label),
+
+	TP_STRUCT__entry(
+		__array(char, label, 64)
+		__field(int, cpu)
+		__field(int, data0)
+		__field(int, data1)
+	),
+
+	TP_fast_assign(
+		strncpy(__entry->label, label, 64);
+		__entry->cpu   = cpu;
+		__entry->data0 = data0;
+		__entry->data1 = data1;
+	),
+
+	TP_printk("cpu=%d data0=%d data1=%d label=%s",
+		__entry->cpu, __entry->data0, __entry->data1,
+		__entry->label)
 );
 
 #endif /* _TRACE_SCHED_H */
