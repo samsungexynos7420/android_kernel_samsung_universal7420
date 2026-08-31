@@ -29,4 +29,6 @@ struct gpio_keys_platform_data {
 	const char *name;		/* input device name */
 };
 
+extern bool wakeup_by_key(void);
+
 #endif

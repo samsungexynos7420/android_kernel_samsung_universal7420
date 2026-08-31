@@ -59,6 +59,13 @@ menuconfig SEC_BSP
 	help
 	  Samsung TN BSP Feature.
 
+config SEC_HOTPLUG
+	bool "Control cpu qos for samsung feature"
+	default y
+	depends on SENSORS_FP_LOCKSCREEN_MODE
+	help
+	  Request wakeup with big core for samsung fingerprint
+
 comment "Samsung TN logging feature"
 config SEC_AVC_LOG
 	default n

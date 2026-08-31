@@ -28,3 +28,5 @@ obj-$(CONFIG_SEC_SLOW_MODE)	+= sec_slow.o
 obj-$(CONFIG_ARGOS)		+= sec_argos.o
 # Samsung sec bsp Feature
 obj-$(CONFIG_SEC_BSP)          += sec_bsp.o
+
+obj-$(CONFIG_SEC_HOTPLUG)	+= sec_hotplug.o
