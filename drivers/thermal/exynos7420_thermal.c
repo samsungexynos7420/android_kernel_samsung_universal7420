@@ -47,6 +47,7 @@
 #include <mach/asv-exynos.h>
 #include <mach/exynos-pm.h>
 #include "cal_tmu7420.h"
+#include <linux/pm_qos.h>
 
 static unsigned int HOT_NORMAL_TEMP = 95;
 static unsigned int HOT_CRITICAL_TEMP = 110;
@@ -593,6 +594,7 @@ static int exynos_get_trend(struct thermal_zone_device *thermal,
 	return 0;
 }
 
+struct pm_qos_request thermal_cpu_hotplug_request;
 static int __ref exynos_throttle_cpu_hotplug(struct thermal_zone_device *thermal)
 {
 	int ret = 0;
@@ -612,14 +614,10 @@ static int __ref exynos_throttle_cpu_hotplug(struct thermal_zone_device *thermal
 			 * If current temperature is lower than low threshold,
 			 * call cluster1_cores_hotplug(false) for hotplugged out cpus.
 			 */
-			ret = cluster1_cores_hotplug(false);
-			if (ret) {
-				pr_err("%s: failed cluster1 cores hotplug in\n",
-							__func__);
-			} else {
-				is_cpu_hotplugged_out = false;
-				cpufreq_device->cpufreq_state = 0;
-			}
+			pm_qos_update_request(&thermal_cpu_hotplug_request, NR_CPUS);
+
+			is_cpu_hotplugged_out = false;
+			cpufreq_device->cpufreq_state = 0;
 		}
 	} else {
 		if (cur_temp >= pdata->hotplug_out_threshold) {
@@ -627,12 +625,9 @@ static int __ref exynos_throttle_cpu_hotplug(struct thermal_zone_device *thermal
 			 * If current temperature is higher than high threshold,
 			 * call cluster1_cores_hotplug(true) to hold temperature down.
 			 */
-			ret = cluster1_cores_hotplug(true);
-			if (ret)
-				pr_err("%s: failed cluster1 cores hotplug out\n",
-							__func__);
-			else
-				is_cpu_hotplugged_out = true;
+			is_cpu_hotplugged_out = true;
+
+			pm_qos_update_request(&thermal_cpu_hotplug_request, 4);
 		}
 	}
 
@@ -747,6 +742,9 @@ static int exynos_register_thermal(struct thermal_sensor_conf *sensor_conf)
 	}
 #endif
 	th_zone->cool_dev_size = count;
+	
+	pm_qos_add_request(&thermal_cpu_hotplug_request, PM_QOS_CPU_ONLINE_MAX,
+						PM_QOS_CPU_ONLINE_MAX_DEFAULT_VALUE);
 
 	th_zone->therm_dev = thermal_zone_device_register(sensor_conf->name,
 			th_zone->sensor_conf->trip_data.trip_count, 0, NULL, &exynos_dev_ops, NULL, PASSIVE_INTERVAL,
@@ -1020,7 +1018,12 @@ static int exynos_tmu_read(struct exynos_tmu_data *data)
 #if defined(CONFIG_CPU_THERMAL_IPA)
 int ipa_hotplug(bool removecores)
 {
-	return cluster1_cores_hotplug(removecores);
+	if (removecores)
+		pm_qos_update_request(&thermal_cpu_hotplug_request, 4);
+	else
+		pm_qos_update_request(&thermal_cpu_hotplug_request, NR_CPUS);
+
+	return 0;
 }
 #endif
 

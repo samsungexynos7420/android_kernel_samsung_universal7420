@@ -195,7 +195,6 @@ bool is_cluster1_hotplugged(void);
 static inline int cluster1_cores_hotplug(bool out_flag) {return 0;}
 static inline int cluster0_core1_hotplug_in(bool in_flag) {return 0;}
 static inline void event_hotplug_in(void) {}
-static inline bool is_cluster1_hotplugged(void) {return 0;}
 #endif
 #elif defined(CONFIG_SOC_EXYNOS7580)
 #else

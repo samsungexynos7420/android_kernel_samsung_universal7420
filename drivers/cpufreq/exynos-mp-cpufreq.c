@@ -1319,11 +1319,8 @@ static ssize_t store_cpufreq_max_limit(struct kobject *kobj, struct attribute *a
 
 	if (cluster1_input >= (int)freq_min[CL_ONE]) {
 		if (cluster1_hotplugged) {
-			if (cluster1_cores_hotplug(false))
-				pr_err("%s: failed cluster1 cores hotplug in\n",
-							__func__);
-			else
-				cluster1_hotplugged = false;
+			enable_nonboot_cluster_cpus();
+			cluster1_hotplugged = false;
 		}
 
 		cluster1_input = max(cluster1_input, (int)freq_min[CL_ONE]);
@@ -1331,11 +1328,8 @@ static ssize_t store_cpufreq_max_limit(struct kobject *kobj, struct attribute *a
 	} else if (cluster1_input < (int)freq_min[CL_ONE]) {
 		if (cluster1_input < 0) {
 			if (cluster1_hotplugged) {
-				if (cluster1_cores_hotplug(false))
-					pr_err("%s: failed cluster1 cores hotplug in\n",
-							__func__);
-				else
-					cluster1_hotplugged = false;
+				enable_nonboot_cluster_cpus();
+				cluster1_hotplugged = false;
 			}
 
 			cluster1_input = core_max_qos_const[CL_ONE].default_value;
@@ -1347,11 +1341,8 @@ static ssize_t store_cpufreq_max_limit(struct kobject *kobj, struct attribute *a
 			cluster1_input = qos_min_default_value[CL_ONE];
 
 			if (!cluster1_hotplugged) {
-				if (cluster1_cores_hotplug(true))
-					pr_err("%s: failed cluster1 cores hotplug out\n",
-							__func__);
-				else
-					cluster1_hotplugged = true;
+				disable_nonboot_cluster_cpus();
+				cluster1_hotplugged = true;
 			}
 		}
 	}
