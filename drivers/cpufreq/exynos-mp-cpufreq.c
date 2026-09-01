@@ -2305,7 +2305,6 @@ err_cpufreq:
 	unregister_pm_notifier(&exynos_cpufreq_nb);
 	unregister_hotcpu_notifier(&exynos_cpufreq_cpu_up_nb);
 	unregister_hotcpu_notifier(&exynos_cpufreq_cpu_down_nb);
-err_alloc:
 err_init:
 	for (cluster = 0; cluster < CL_END; cluster++) {
 		/* remove all pm_qos requests */
@@ -2321,12 +2320,6 @@ err_init:
 			/* Release regulater handles */
 			if (exynos_info[cluster]->regulator)
 				regulator_put(exynos_info[cluster]->regulator);
-
-			/* Free allocated memory */
-			if (freqs[cluster])
-				kfree(freqs[cluster]);
-			if (exynos_info[cluster])
-				kfree(exynos_info[cluster]);
 		}
 	}
 	pr_err("%s: failed initialization\n", __func__);
@@ -2363,7 +2356,7 @@ static int exynos_mp_cpufreq_probe(struct platform_device *pdev)
 	for (cluster = 0; cluster < CL_END; cluster++) {
 		exynos_info[cluster] = kzalloc(sizeof(struct exynos_dvfs_info), GFP_KERNEL);
 		if (!exynos_info[cluster]) {
-			ret = -ENOMEM;
+			return -ENOMEM;
 			goto err_init;
 		}
 
