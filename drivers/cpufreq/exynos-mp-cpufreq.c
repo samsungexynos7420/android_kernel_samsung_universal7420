@@ -137,8 +137,10 @@ static int qos_min_class[CL_END] = {PM_QOS_CLUSTER0_FREQ_MIN, PM_QOS_CLUSTER1_FR
 //static int qos_max_default_value[CL_END] = {PM_QOS_CLUSTER0_FREQ_MAX_DEFAULT_VALUE, PM_QOS_CLUSTER1_FREQ_MAX_DEFAULT_VALUE};
 static int qos_min_default_value[CL_END] = {PM_QOS_CLUSTER0_FREQ_MIN_DEFAULT_VALUE, PM_QOS_CLUSTER1_FREQ_MIN_DEFAULT_VALUE};
 
+#ifndef CONFIG_EXYNOS5_DYNAMIC_CPU_HOTPLUG
 /* For limit number of online cpus through cpuhotplug */
 struct pm_qos_request cpufreq_cpu_hotplug_max_request;
+#endif
 
 /*
  * CPUFREQ init notifier
@@ -1299,6 +1301,7 @@ static ssize_t show_cpufreq_max_limit(struct kobject *kobj,
 	return nsize;
 }
 
+#ifndef CONFIG_EXYNOS5_DYNAMIC_CPU_HOTPLUG
 static void enable_nonboot_cluster_cpus(void)
 {
 	pm_qos_update_request(&cpufreq_cpu_hotplug_max_request, NR_CPUS);
@@ -1308,6 +1311,7 @@ static void disable_nonboot_cluster_cpus(void)
 {
 	pm_qos_update_request(&cpufreq_cpu_hotplug_max_request, NR_CLUST1_CPUS);
 }
+#endif
 
 static ssize_t store_cpufreq_max_limit(struct kobject *kobj, struct attribute *attr,
 					const char *buf, size_t count)
@@ -1319,8 +1323,16 @@ static ssize_t store_cpufreq_max_limit(struct kobject *kobj, struct attribute *a
 
 	if (cluster1_input >= (int)freq_min[CL_ONE]) {
 		if (cluster1_hotplugged) {
+#ifdef CONFIG_EXYNOS5_DYNAMIC_CPU_HOTPLUG
+			if (cluster1_cores_hotplug(false))
+				pr_err("%s: failed cluster1 cores hotplug in\n",
+							__func__);
+			else
+				cluster1_hotplugged = false;
+#else
 			enable_nonboot_cluster_cpus();
 			cluster1_hotplugged = false;
+#endif
 		}
 
 		cluster1_input = max(cluster1_input, (int)freq_min[CL_ONE]);
@@ -1328,8 +1340,16 @@ static ssize_t store_cpufreq_max_limit(struct kobject *kobj, struct attribute *a
 	} else if (cluster1_input < (int)freq_min[CL_ONE]) {
 		if (cluster1_input < 0) {
 			if (cluster1_hotplugged) {
+#ifdef CONFIG_EXYNOS5_DYNAMIC_CPU_HOTPLUG
+				if (cluster1_cores_hotplug(false))
+					pr_err("%s: failed cluster1 cores hotplug in\n",
+							__func__);
+				else
+					cluster1_hotplugged = false;
+#else
 				enable_nonboot_cluster_cpus();
 				cluster1_hotplugged = false;
+#endif
 			}
 
 			cluster1_input = core_max_qos_const[CL_ONE].default_value;
@@ -1341,8 +1361,16 @@ static ssize_t store_cpufreq_max_limit(struct kobject *kobj, struct attribute *a
 			cluster1_input = qos_min_default_value[CL_ONE];
 
 			if (!cluster1_hotplugged) {
+#ifdef CONFIG_EXYNOS5_DYNAMIC_CPU_HOTPLUG
+				if (cluster1_cores_hotplug(true))
+					pr_err("%s: failed cluster1 cores hotplug out\n",
+							__func__);
+				else
+					cluster1_hotplugged = true;
+#else
 				disable_nonboot_cluster_cpus();
 				cluster1_hotplugged = true;
+#endif
 			}
 		}
 	}
@@ -2327,8 +2355,10 @@ static int exynos_mp_cpufreq_probe(struct platform_device *pdev)
 	int ret;
 	cluster_type cluster;
 
+#ifndef CONFIG_EXYNOS5_DYNAMIC_CPU_HOTPLUG
 	pm_qos_add_request(&cpufreq_cpu_hotplug_max_request, PM_QOS_CPU_ONLINE_MAX,
 		PM_QOS_CPU_ONLINE_MAX_DEFAULT_VALUE);
+#endif
 
 	for (cluster = 0; cluster < CL_END; cluster++) {
 		exynos_info[cluster] = kzalloc(sizeof(struct exynos_dvfs_info), GFP_KERNEL);

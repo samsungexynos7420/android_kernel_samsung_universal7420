@@ -277,10 +277,12 @@ static int thermal_call_chain(int freq, int idx)
 	return blocking_notifier_call_chain(&thermal_notifier_list, THERMAL_NEW_MAX_FREQ, &limits);
 }
 
+#ifndef CONFIG_EXYNOS5_DYNAMIC_CPU_HOTPLUG
 static bool is_cluster1_hotplugged(void)
 {
 	return cpumask_empty(cpu_coregroup_mask(4));
 }
+#endif
 
 static void arbiter_set_cpu_freq_limit(int freq, int idx)
 {
