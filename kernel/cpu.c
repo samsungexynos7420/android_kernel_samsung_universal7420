@@ -182,6 +182,15 @@ int __ref register_cpu_notifier(struct notifier_block *nb)
 	return ret;
 }
 
+int __ref register_cpus_notifier(struct notifier_block *nb)
+{
+	int ret;
+	cpu_maps_update_begin();
+	ret = raw_notifier_chain_register(&cpus_chain, nb);
+	cpu_maps_update_done();
+	return ret;
+}
+
 int __ref __register_cpu_notifier(struct notifier_block *nb)
 {
 	return raw_notifier_chain_register(&cpu_chain, nb);
@@ -239,6 +248,14 @@ void __ref unregister_cpu_notifier(struct notifier_block *nb)
 	cpu_maps_update_done();
 }
 EXPORT_SYMBOL(unregister_cpu_notifier);
+
+void __ref unregister_cpus_notifier(struct notifier_block *nb)
+{
+	cpu_maps_update_begin();
+	raw_notifier_chain_unregister(&cpus_chain, nb);
+	cpu_maps_update_done();
+}
+EXPORT_SYMBOL(unregister_cpus_notifier);
 
 void __ref __unregister_cpu_notifier(struct notifier_block *nb)
 {
@@ -317,12 +334,18 @@ static int __ref take_cpu_down(void *_param)
 	struct take_cpu_down_param *param = _param;
 	int err;
 
+	void *hcpu;
+	if ((long)param->hcpu == NR_CPUS)
+		hcpu = (void *)(long)smp_processor_id();
+	else
+		hcpu = param->hcpu;
+
 	/* Ensure this CPU doesn't handle any more interrupts. */
 	err = __cpu_disable();
 	if (err < 0)
 		return err;
 
-	cpu_notify(CPU_DYING | param->mod, param->hcpu);
+	cpu_notify(CPU_DYING | param->mod, hcpu);
 	/* Park the stopper thread */
 	kthread_park(current);
 	return 0;
@@ -338,6 +361,7 @@ static int __ref _cpu_down(unsigned int cpu, int tasks_frozen)
 		.mod = mod,
 		.hcpu = hcpu,
 	};
+	unsigned int timeout = 3000;
 
 	if (num_online_cpus() == 1)
 		return -EBUSY;
@@ -376,8 +400,14 @@ static int __ref _cpu_down(unsigned int cpu, int tasks_frozen)
 	 *
 	 * Wait for the stop thread to go away.
 	 */
-	while (!idle_cpu(cpu))
+	while (!idle_cpu(cpu)){
 		cpu_relax();
+
+		mdelay(1);
+		timeout--;
+
+		BUG_ON(cpu_rq(cpu)->nr_running || !timeout);
+	}
 
 	/* This actually kills the CPU. */
 	__cpu_die(cpu);
