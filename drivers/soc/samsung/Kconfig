@@ -34,6 +34,7 @@ config EXYNOS5_DYNAMIC_CPU_HOTPLUG_SLEEP_PREPARE
 		defaut value is "4" to activate all cores in cluster0.
 
 config EXYNOS_HOTPLUG_GOVERNOR
+	depends on !EXYNOS5_DYNAMIC_CPU_HOTPLUG
 	bool "Enable Exynos dynamic hotplug governor"
 
 config SCHED_HP_EVENT
