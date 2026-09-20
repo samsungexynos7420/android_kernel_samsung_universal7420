@@ -1587,6 +1587,7 @@ again:
 	if (likely(order == 0)) {
 		struct per_cpu_pages *pcp;
 		struct list_head *list;
+		int mt;
 
 		local_irq_save(flags);
 		pcp = &this_cpu_ptr(zone->pageset)->pcp;
@@ -1605,9 +1606,16 @@ again:
 		else
 			page = list_entry(list->next, struct page, lru);
 
+		mt = get_freepage_migratetype(page);
+		if ((!(gfp_flags & __GFP_CMA) && is_migrate_cma(mt))) {
+			page = NULL;
+			local_irq_restore(flags);
+			goto retry;
+		}
 		list_del(&page->lru);
 		pcp->count--;
 	} else {
+retry:
 		if (unlikely(gfp_flags & __GFP_NOFAIL)) {
 			/*
 			 * __GFP_NOFAIL is not to be used in new code.
@@ -2492,7 +2500,7 @@ gfp_to_alloc_flags(gfp_t gfp_mask)
 			alloc_flags |= ALLOC_NO_WATERMARKS;
 	}
 #ifdef CONFIG_CMA
-	if (allocflags_to_migratetype(gfp_mask) == MIGRATE_MOVABLE)
+	if (gfp_mask & __GFP_CMA)
 		alloc_flags |= ALLOC_CMA;
 #endif
 	return alloc_flags;
@@ -2777,6 +2785,9 @@ __alloc_pages_nodemask(gfp_t gfp_mask, unsigned int order,
 	if (unlikely(!zonelist->_zonerefs->zone))
 		return NULL;
 
+	if (IS_ENABLED(CONFIG_CMA) && !!(gfp_mask & __GFP_CMA))
+			alloc_flags |= ALLOC_CMA;
+	
 	/*
 	 * Will only have any effect when __GFP_KMEMCG is set.  This is
 	 * verified in the (always inline) callee
