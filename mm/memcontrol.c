@@ -6373,7 +6373,6 @@ static void mem_cgroup_css_offline(struct cgroup_subsys_state *css)
 		rcu_read_lock();
 	}
 	rcu_read_unlock();
-	mem_cgroup_reparent_charges(memcg);
 
 	mem_cgroup_destroy_all_caches(memcg);
 	vmpressure_cleanup(&memcg->vmpressure);
