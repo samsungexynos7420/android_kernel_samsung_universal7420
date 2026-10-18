@@ -152,12 +152,6 @@ static int bpf_map_release(struct inode *inode, struct file *filp)
 	return 0;
 }
 
-static int bpf_map_release(struct inode *inode, struct file *filp)
-{
-	bpf_map_put_with_uref(filp->private_data);
-	return 0;
-}
-
 static const struct file_operations bpf_map_fops = {
 #ifdef CONFIG_PROC_FS
 	.show_fdinfo	= bpf_map_show_fdinfo,
