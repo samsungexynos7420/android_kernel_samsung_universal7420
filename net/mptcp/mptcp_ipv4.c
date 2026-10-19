@@ -108,7 +108,7 @@ static int mptcp_v4_join_init_req(struct request_sock *req, struct sock *sk,
 						    ip_hdr(skb)->daddr,
 						    tcp_hdr(skb)->source,
 						    tcp_hdr(skb)->dest);
-	addr.ip = inet_rsk(req)->loc_addr;
+	addr.ip = inet_rsk(req)->ir_loc_addr;
 	loc_id = mpcb->pm_ops->get_local_id(AF_INET, &addr, sock_net(sk), &low_prio);
 	if (loc_id == -1)
 		return -1;
@@ -136,8 +136,8 @@ static void mptcp_v4_reqsk_queue_hash_add(struct sock *meta_sk,
 					  struct request_sock *req,
 					  const unsigned long timeout)
 {
-	const u32 h1 = inet_synq_hash(inet_rsk(req)->rmt_addr,
-				     inet_rsk(req)->rmt_port,
+	const u32 h1 = inet_synq_hash(inet_rsk(req)->ir_rmt_addr,
+				     inet_rsk(req)->ir_rmt_port,
 				     0, MPTCP_HASH_SIZE);
 	/* We cannot call inet_csk_reqsk_queue_hash_add(), because we do not
 	 * want to reset the keepalive-timer (responsible for retransmitting
@@ -150,8 +150,8 @@ static void mptcp_v4_reqsk_queue_hash_add(struct sock *meta_sk,
 	 */
 	struct inet_connection_sock *meta_icsk = inet_csk(meta_sk);
 	struct listen_sock *lopt = meta_icsk->icsk_accept_queue.listen_opt;
-	const u32 h2 = inet_synq_hash(inet_rsk(req)->rmt_addr,
-				     inet_rsk(req)->rmt_port,
+	const u32 h2 = inet_synq_hash(inet_rsk(req)->ir_rmt_addr,
+				     inet_rsk(req)->ir_rmt_port,
 				     lopt->hash_rnd, lopt->nr_table_entries);
 
 	reqsk_queue_hash_req(&meta_icsk->icsk_accept_queue, h2, req, timeout);
@@ -297,9 +297,9 @@ begin:
 		struct inet_request_sock *ireq = inet_rsk(rev_mptcp_rsk(mtreq));
 		meta_sk = mtreq->mptcp_mpcb->meta_sk;
 
-		if (ireq->rmt_port == rport &&
-		    ireq->rmt_addr == raddr &&
-		    ireq->loc_addr == laddr &&
+		if (ireq->ir_rmt_port == rport &&
+		    ireq->ir_rmt_addr == raddr &&
+		    ireq->ir_loc_addr == laddr &&
 		    rev_mptcp_rsk(mtreq)->rsk_ops->family == AF_INET &&
 		    net_eq(net, sock_net(meta_sk)))
 			goto found;

@@ -36,10 +36,7 @@
 
 #include <net/mptcp.h>
 
-struct mptcp6_request_sock {
-	struct mptcp_request_sock	mptcp6rsk_tcp;
-	struct inet6_request_sock	mptcp6rsk_inet6;
-};
+
 #ifdef CONFIG_MPTCP
 extern const struct inet_connection_sock_af_ops mptcp_v6_mapped;
 extern const struct inet_connection_sock_af_ops mptcp_v6_specific;

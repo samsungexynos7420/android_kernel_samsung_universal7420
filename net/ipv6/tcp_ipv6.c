@@ -840,18 +840,18 @@ static int tcp_v6_inbound_md5_hash(struct sock *sk, const struct sk_buff *skb)
 static int tcp_v6_init_req(struct request_sock *req, struct sock *sk,
 			   struct sk_buff *skb)
 {
-	struct inet6_request_sock *ireq = inet6_rsk(req);
+	struct inet_request_sock *ireq = inet_rsk(req);
 	struct ipv6_pinfo *np = inet6_sk(sk);
 
-	ireq->rmt_addr = ipv6_hdr(skb)->saddr;
-	ireq->loc_addr = ipv6_hdr(skb)->daddr;
+	ireq->ir_v6_rmt_addr = ipv6_hdr(skb)->saddr;
+	ireq->ir_v6_loc_addr = ipv6_hdr(skb)->daddr;
 
-	ireq->iif = sk->sk_bound_dev_if;
+	ireq->ir_iif = sk->sk_bound_dev_if;
 
 	/* So that link locals have meaning */
 	if (!sk->sk_bound_dev_if &&
-	    ipv6_addr_type(&ireq->rmt_addr) & IPV6_ADDR_LINKLOCAL)
-		ireq->iif = inet6_iif(skb);
+	    ipv6_addr_type(&ireq->ir_v6_rmt_addr) & IPV6_ADDR_LINKLOCAL)
+		ireq->ir_iif = inet6_iif(skb);
 	
 	/* MPTCP: We need to check for np, because sk may be IPv4 only */
 	if (!TCP_SKB_CB(skb)->when && np &&

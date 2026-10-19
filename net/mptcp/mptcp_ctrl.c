@@ -270,14 +270,14 @@ static void mptcp_set_key_reqsk(struct request_sock *req,
 	if (skb->protocol == htons(ETH_P_IP)) {
 		mtreq->mptcp_loc_key = mptcp_v4_get_key(ip_hdr(skb)->saddr,
 							ip_hdr(skb)->daddr,
-							ireq->loc_port,
-							ireq->rmt_port);
+							ireq->ir_loc_addr,
+							ireq->ir_rmt_addr);
 #if IS_ENABLED(CONFIG_IPV6)
 	} else {
 		mtreq->mptcp_loc_key = mptcp_v6_get_key(ipv6_hdr(skb)->saddr.s6_addr32,
 							ipv6_hdr(skb)->daddr.s6_addr32,
-							ireq->loc_port,
-							ireq->rmt_port);
+							ireq->ir_loc_addr,
+							ireq->ir_rmt_addr);
 #endif
 	}
 

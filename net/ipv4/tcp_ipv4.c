@@ -1440,8 +1440,8 @@ static int tcp_v4_init_req(struct request_sock *req, struct sock *sk,
 {
 	struct inet_request_sock *ireq = inet_rsk(req);
 
-	ireq->loc_addr = ip_hdr(skb)->daddr;
-	ireq->rmt_addr = ip_hdr(skb)->saddr;
+	ireq->ir_loc_addr = ip_hdr(skb)->daddr;
+	ireq->ir_rmt_addr = ip_hdr(skb)->saddr;
 	ireq->no_srccheck = inet_sk(sk)->transparent;
 	ireq->opt = tcp_v4_save_options(skb);
 
@@ -1455,7 +1455,7 @@ static struct dst_entry *tcp_v4_route_req(struct sock *sk, struct flowi *fl,
 	struct dst_entry *dst = inet_csk_route_req(sk, &fl->u.ip4, req);
 
 	if (strict) {
-		if (fl->u.ip4.daddr == inet_rsk(req)->rmt_addr)
+		if (fl->u.ip4.daddr == inet_rsk(req)->ir_rmt_addr)
 			*strict = true;
 		else
 			*strict = false;
