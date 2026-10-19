@@ -91,7 +91,8 @@ static int basic_init(struct tcf_proto *tp)
 static void basic_delete_filter(struct rcu_head *head)
 {
 	struct basic_filter *f = container_of(head, struct basic_filter, rcu);
-
+	struct tcf_proto *tp = f->tp;
+	
 	tcf_exts_destroy(&f->exts);
 	tcf_em_tree_destroy(tp, &f->ematches);
 	kfree(f);
