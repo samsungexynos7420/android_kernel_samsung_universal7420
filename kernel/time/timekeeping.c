@@ -219,15 +219,15 @@ static inline s64 timekeeping_get_ns_raw(struct timekeeper *tk)
  * partially updated.  Since the tk->offs_boot update is a rare event, this
  * should be a rare occurrence which postprocessing should be able to handle.
  */
- u64 notrace ktime_get_boot_fast_ns(void)
- {
-	 struct timekeeper *tk = &timekeeper;
-	 u64 mono;
- 
-	 mono = ktime_to_ns(timespec_to_ktime(tk->xtime)) + ktime_to_ns(timespec_to_ktime(tk->wall_to_monotonic));
-	 return (mono + ktime_to_ns(tk->offs_boot));
- }
- EXPORT_SYMBOL_GPL(ktime_get_boot_fast_ns);
+u64 notrace ktime_get_boot_fast_ns(void)
+{
+	struct timekeeper *tk = &timekeeper;
+	u64 mono;
+
+	mono = ktime_to_ns(timespec_to_ktime(tk_xtime(tk))) + ktime_to_ns(timespec_to_ktime(tk->wall_to_monotonic));
+	return (mono + ktime_to_ns(tk->offs_boot));
+}
+EXPORT_SYMBOL_GPL(ktime_get_boot_fast_ns);
 
 static RAW_NOTIFIER_HEAD(pvclock_gtod_chain);
 
