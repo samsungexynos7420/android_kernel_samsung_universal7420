@@ -459,7 +459,7 @@ static int ss333_boot_off(struct modem_ctl *mc)
 
 	atomic_set(&mc->forced_cp_crash, 0);
 
-	modem_notify_event(MODEM_EVENT_ONLINE);
+	modem_notify_event(STATE_ONLINE);
 
 	mif_err("---\n");
 	return 0;
