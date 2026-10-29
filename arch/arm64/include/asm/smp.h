@@ -51,7 +51,7 @@ extern void set_smp_cross_call(void (*)(const struct cpumask *, unsigned int));
 /*
  * Called from the secondary holding pen, this is the secondary CPU entry point.
  */
-asmlinkage void secondary_start_kernel(void);
+asmlinkage void __cpuinit secondary_start_kernel(void);
 
 /*
  * Initial data for bringing up a secondary CPU.
