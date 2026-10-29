@@ -303,7 +303,7 @@ static void exynos7420_set_ema_CA53(unsigned int volt)
 	exynos_set_ema(ID_CL0, volt);
 }
 
-int __init exynos_cpufreq_cluster0_init(struct exynos_dvfs_info *info)
+int exynos_cpufreq_cluster0_init(struct exynos_dvfs_info *info)
 {
 	unsigned long rate;
 
