@@ -1111,7 +1111,7 @@ static int exynos_mipi_lli_probe(struct platform_device *pdev)
 #endif
 
 	INIT_WORK(&lli->wq_print_dump, exynos_lli_print_dump);
-	lli->wq = alloc_workqueue("lli_wq", WQ_NON_REENTRANT | WQ_UNBOUND | WQ_HIGHPRI, 1);
+	lli->wq = alloc_workqueue("lli_wq", WQ_UNBOUND | WQ_HIGHPRI, 1);
 
 	if (!lli->wq) {
 		dev_err(dev, "ERR! fail to create lli workqueue!! \n");
